@@ -1,0 +1,5 @@
+/bin/*.exe
+/bin/*.spv
+/obj/
+.vscode/
+*.o
