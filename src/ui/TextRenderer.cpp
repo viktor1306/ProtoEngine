@@ -3,24 +3,34 @@
 #include <iostream>
 #include <stdexcept>
 
-constexpr int MAX_FRAMES = 3; // Match renderer
+// Use the canonical constant from Renderer to avoid magic numbers
+static constexpr int MAX_FRAMES = gfx::Renderer::MAX_FRAMES_IN_FLIGHT;
 
 namespace ui {
 
 TextRenderer::TextRenderer(gfx::VulkanContext& context, gfx::Renderer& renderer)
     : m_context(context), m_renderer(renderer) {
     
-    // Initialize FontSDF
-    // Assuming font is at bin/fonts/consola.ttf
-    try {
-        m_fontSDF = std::make_unique<FontSDF>(context, renderer.getBindlessSystem(), "bin/fonts/consola.ttf");
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to load SDF Font: " << e.what() << std::endl;
-        throw;
+    // Initialize FontSDF — try multiple paths to support running from project root or bin/
+    static const char* fontPaths[] = {
+        "bin/fonts/consola.ttf",   // run from project root
+        "fonts/consola.ttf",       // run from bin/
+        "../bin/fonts/consola.ttf" // run from obj/ or similar
+    };
+    bool fontLoaded = false;
+    for (const char* path : fontPaths) {
+        try {
+            m_fontSDF = std::make_unique<FontSDF>(context, renderer.getBindlessSystem(), path);
+            fontLoaded = true;
+            break;
+        } catch (...) {}
+    }
+    if (!fontLoaded) {
+        throw std::runtime_error("Failed to load SDF Font from any known path (bin/fonts/consola.ttf)");
     }
 
     if (renderer.getSwapchain().getImages().size() > 0) {
-         createPipeline({renderer.getSwapchain().getDateFormat()}, renderer.getSwapchain().getDepthFormat());
+         createPipeline({renderer.getSwapchain().getImageFormat()}, renderer.getSwapchain().getDepthFormat());
     } else {
         throw std::runtime_error("Swapchain images not ready when creating TextRenderer!");
     }

@@ -4,8 +4,16 @@
 
 ## Ключові Компоненти
 
-### `Camera`
-- Представляє спостерігача у 3D світі.
-- **FPS Control**: Обертання Pitch/Yaw, вектори руху.
-- Розраховує матриці Виду (View) та Проекції (Projection).
-- Обробляє оновлення співвідношення сторін (aspect ratio) від вікна.
+### `Camera` (`Camera.hpp/cpp`)
+- Представляє спостерігача у 3D світі (FPS-стиль).
+- **Керування**: Pitch/Yaw обертання через мишу (ПКМ), рух через `WASD`.
+- Розраховує матриці:
+  - `getViewMatrix()` — матриця виду (lookAt).
+  - `getProjectionMatrix()` — матриця проекції (perspective, Vulkan NDC).
+- `update(window, dt)` — оновлення позиції та орієнтації на основі введення.
+- `setAspectRatio(ratio)` — оновлення при зміні розміру вікна.
+
+## Майбутні розширення
+- `SceneManager` — керування списком об'єктів сцени, culling, LOD.
+- `Transform` — компонент трансформації (position, rotation, scale).
+- `Light` — джерела освітлення (directional, point, spot).

@@ -2,28 +2,26 @@
 #include <cstring>
 #include <stdexcept>
 
-gfx::Buffer::Buffer(VulkanContext& context, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags)
-    : context(context), size(size) {
-    
+gfx::Buffer::Buffer(VulkanContext& context, VkDeviceSize size, VkBufferUsageFlags usage,
+                    VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags)
+    : context(context), size(size)
+{
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
     bufferInfo.usage = usage;
-    
-    // Crucial for BDA: Shader must be able to retrieve the address
-    if ((usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) || (usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) || (usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT)) {
+    if ((usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) ||
+        (usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)  ||
+        (usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT))
         bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-    }
-
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VmaAllocationCreateInfo allocInfo = {};
+    VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = memoryUsage;
     allocInfo.flags = allocFlags;
 
-    if (vmaCreateBuffer(context.getAllocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS) {
+    if (vmaCreateBuffer(context.getAllocator(), &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS)
         throw std::runtime_error("failed to allocate buffer!");
-    }
 }
 
 gfx::Buffer::~Buffer() {
@@ -46,7 +44,7 @@ void gfx::Buffer::upload(const void* data, size_t size) {
     void* mappedData;
     map(&mappedData);
     std::memcpy(mappedData, data, size);
-    flush(); 
+    flush();
     unmap();
 }
 

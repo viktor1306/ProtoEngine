@@ -1,5 +1,4 @@
 #include "Mesh.hpp"
-#include <cstring>
 
 namespace gfx {
 

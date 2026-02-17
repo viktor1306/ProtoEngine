@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../gfx/VulkanContext.hpp"
-#include "../gfx/BindlessSystem.hpp"
+#include "gfx/core/VulkanContext.hpp"
+#include "gfx/rendering/BindlessSystem.hpp"
 #include <string>
 #include <vector>
 #include <map>

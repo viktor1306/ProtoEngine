@@ -1,20 +1,22 @@
 #include <iostream>
 #include <stdexcept>
-#include <chrono>
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
+#include <windows.h>
+
+#include "core/Timer.hpp"
 
 #include "core/Window.hpp"
 #include "core/InputManager.hpp"
-#include "gfx/VulkanContext.hpp"
-#include "gfx/Swapchain.hpp"
-#include "gfx/Renderer.hpp"
-#include "gfx/Pipeline.hpp"
-#include "gfx/BindlessSystem.hpp"
-#include "gfx/GeometryManager.hpp"
-#include "gfx/Texture.hpp"
-#include "gfx/Mesh.hpp"
+#include "gfx/core/VulkanContext.hpp"
+#include "gfx/core/Swapchain.hpp"
+#include "gfx/rendering/Renderer.hpp"
+#include "gfx/rendering/Pipeline.hpp"
+#include "gfx/rendering/BindlessSystem.hpp"
+#include "gfx/resources/GeometryManager.hpp"
+#include "gfx/resources/Texture.hpp"
+#include "gfx/resources/Mesh.hpp"
 #include "scene/Camera.hpp"
 #include "core/Math.hpp"
 #include "ui/TextRenderer.hpp"
@@ -101,6 +103,21 @@ struct PushConstants {
 };
 
 int main() {
+    // Set working directory to the parent of the executable (project root)
+    // so that relative paths like "bin/shaders/..." and "bin/fonts/..." always work,
+    // regardless of whether the exe is launched from bin/ or the project root.
+    {
+        wchar_t exePath[MAX_PATH] = {};
+        GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+        std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
+        // exe is in <project>/bin/ — go one level up to project root
+        std::filesystem::path projectRoot = exeDir.parent_path();
+        if (std::filesystem::exists(projectRoot / "bin")) {
+            std::filesystem::current_path(projectRoot);
+        }
+        // If already at project root (e.g. launched via VS Code debugger), do nothing
+    }
+
     try {
         const uint32_t WIDTH = 1280;
         const uint32_t HEIGHT = 720;
@@ -153,7 +170,7 @@ int main() {
 
         // Main Pipeline
         gfx::PipelineConfig mainPipelineConfig{};
-        mainPipelineConfig.colorAttachmentFormats = {swapchain.getDateFormat()};
+        mainPipelineConfig.colorAttachmentFormats = {swapchain.getImageFormat()};
         mainPipelineConfig.depthAttachmentFormat = swapchain.getDepthFormat();
         
         mainPipelineConfig.vertexShaderPath = vertPath;
@@ -205,12 +222,12 @@ int main() {
 
         scene::Camera camera({0.0f, 2.0f, 5.0f}, 60.0f, renderer.getAspectRatio());
 
-
-        // Simple time tracking
-        auto startTime = std::chrono::high_resolution_clock::now();
-        auto lastTime = startTime;
+        core::Timer timer;
 
         while (!window.shouldClose()) {
+            timer.update();
+            float dt = timer.getDeltaTime();
+
             core::InputManager::get().update();
             window.pollEvents();
             
@@ -223,13 +240,9 @@ int main() {
             if (window.shouldClose()) {
                 break;
             }
-            
-            auto currentTime = std::chrono::high_resolution_clock::now();
-            float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
-            lastTime = currentTime;
 
             camera.setAspectRatio(renderer.getAspectRatio());
-            camera.update(window, dt);
+            camera.update(dt);
 
             // Light Matrix
             core::math::Vec3 lightPos = {5.0f, 10.0f, 3.0f}; 
@@ -252,7 +265,7 @@ int main() {
                 {
                     // Draw Cube (Shadow)
                     core::math::Mat4 model = core::math::Mat4::translate({0.0f, 1.0f, 0.0f});
-                    model = model * core::math::Mat4::rotate(std::chrono::duration<float>(currentTime.time_since_epoch()).count(), {0.0f, 1.0f, 0.0f});
+                    model = model * core::math::Mat4::rotate(static_cast<float>(timer.getTotalTime()), {0.0f, 1.0f, 0.0f});
 
                     gfx::BindlessSystem::ObjectDataSSBO cubeData{};
                     cubeData.modelMatrix = model;
@@ -323,30 +336,13 @@ int main() {
                 }
                 
                 // --- Text UI ---
-
                 float white[] = {1.0f, 1.0f, 1.0f};
-                
-                static float fpsAccumulator = 0.0f;
-                static int fpsCounter = 0;
-                static float displayFps = 0.0f;
-                
-                fpsAccumulator += dt;
-                fpsCounter++;
-                
-                if (fpsAccumulator >= 0.5f) { // Update every 0.5s
-                    displayFps = fpsCounter / fpsAccumulator; // Approx FPS
-                    // Or just use instant FPS averaged
-                    displayFps = 1.0f / dt;
-                    
-                    fpsAccumulator = 0.0f;
-                    fpsCounter = 0;
-                }
 
-                // Begin Frame for Text (resets offsets)
                 textRenderer.beginFrame(renderer.getCurrentFrameIndex());
 
                 std::stringstream ss;
-                ss << "FPS: " << std::fixed << std::setprecision(1) << displayFps;
+                ss << "FPS: " << std::fixed << std::setprecision(1) << timer.getFPS()
+                   << "  dt: " << std::setprecision(2) << timer.getDeltaTimeMs() << " ms";
                 textRenderer.renderText(commandBuffer, ss.str(), -0.95f, -0.90f, 0.05f, white);
 
                 renderer.endMainPass(commandBuffer);

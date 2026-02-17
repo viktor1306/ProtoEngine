@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../gfx/VulkanContext.hpp"
-#include "../gfx/Renderer.hpp"
-#include "../gfx/Pipeline.hpp"
+#include "gfx/core/VulkanContext.hpp"
+#include "gfx/rendering/Renderer.hpp"
+#include "gfx/rendering/Pipeline.hpp"
 #include "FontSDF.hpp"
 #include <memory>
 

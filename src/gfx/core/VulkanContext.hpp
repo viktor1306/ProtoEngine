@@ -7,8 +7,8 @@
 #include <vulkan/vulkan_win32.h>
 
 #define VMA_VULKAN_VERSION 1003000 // Vulkan 1.3
-#include "../vendor/vk_mem_alloc.h"
-#include "../core/Window.hpp"
+#include "../../vendor/vk_mem_alloc.h"
+#include "../../core/Window.hpp"
 
 namespace gfx {
 
@@ -40,18 +40,17 @@ public:
     VkCommandPool getCommandPool() const { return m_commandPool; }
     VkInstance getInstance() const { return m_instance; }
     VmaAllocator getAllocator() const { return m_allocator; }
-    
+
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    
+
     VkFormat findDepthFormat();
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
-    // Helpers
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
-    
+
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 
@@ -70,14 +69,14 @@ private:
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
     VmaAllocator m_allocator;
-    VkCommandPool m_commandPool; // Default graphics command pool
+    VkCommandPool m_commandPool;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
 #else
     const bool enableValidationLayers = true;
 #endif
-    
+
     const std::vector<const char*> validationLayers = {
         "VK_LAYER_KHRONOS_validation"
     };

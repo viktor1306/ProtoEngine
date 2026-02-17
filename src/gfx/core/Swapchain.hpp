@@ -15,12 +15,11 @@ public:
     void recreate();
 
     VkSwapchainKHR getHandle() const { return m_swapchain; }
-    VkFormat getDateFormat() const { return m_swapchainImageFormat; }
+    VkFormat getImageFormat() const { return m_swapchainImageFormat; }
     VkExtent2D getExtent() const { return m_swapchainExtent; }
     const std::vector<VkImageView>& getImageViews() const { return m_swapchainImageViews; }
     const std::vector<VkImage>& getImages() const { return m_swapchainImages; }
-    
-    // Depth resources
+
     VkImage getDepthImage() const { return m_depthImage; }
     VkImageView getDepthImageView() const { return m_depthImageView; }
     VkFormat getDepthFormat() const { return m_depthFormat; }
