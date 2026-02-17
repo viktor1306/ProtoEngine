@@ -63,6 +63,13 @@ Mesh* GeometryManager::uploadMesh(const std::vector<Vertex>& vertices, const std
     return new Mesh(static_cast<uint32_t>(indices.size()), firstIndex, vertexOffset);
 }
 
+void GeometryManager::reset() {
+    // Reset write offsets — GPU buffers are reused from the beginning.
+    // All Mesh* pointers issued before this call are now invalid.
+    m_vertexOffset = 0;
+    m_indexOffset  = 0;
+}
+
 void GeometryManager::bind(VkCommandBuffer commandBuffer) {
     VkBuffer     vbufs[]   = {m_globalVertexBuffer->getBuffer()};
     VkDeviceSize offsets[] = {0};

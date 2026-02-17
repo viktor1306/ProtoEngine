@@ -1,8 +1,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <filesystem>
-#include <iomanip>
-#include <sstream>
 #include <windows.h>
 
 #include "core/Timer.hpp"
@@ -21,80 +19,10 @@
 #include "core/Math.hpp"
 #include "ui/TextRenderer.hpp"
 #include "core/ShaderHotReloader.hpp"
-
-const std::vector<gfx::Vertex> cubeVertices = {
-    // Front Face (Normal +Z)
-    // V0 (BL) -> UV(0, 1)
-    {{-0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-    // V1 (BR) -> UV(1, 1)
-    {{ 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-    // V2 (TR) -> UV(1, 0)
-    {{ 0.5f,  0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-    // V3 (TL) -> UV(0, 0)
-    {{-0.5f,  0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-
-    // Back Face (Normal -Z)
-    // Same pattern: BL(0,1), BR(1,1), TR(1,0), TL(0,0) relative to looking at face
-    // Looking at Back: X goes Right to Left? No, View Space.
-    // Let's standard map:
-    // V4 (BR relative to front, BL looking at back): {0.5, -0.5, -0.5} -> UV(0, 1)
-    {{ 0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-    // V5 (BL relative to front, BR looking at back): {-0.5, -0.5, -0.5} -> UV(1, 1)
-    {{-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-    // V6 (TL relative to front, TR looking at back): {-0.5, 0.5, -0.5} -> UV(1, 0)
-    {{-0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-    // V7 (TR relative to front, TL looking at back): {0.5, 0.5, -0.5} -> UV(0, 0)
-    {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-
-    // Top Face (Normal +Y)
-    // Map X to U, -Z to V? 
-    // TL: {-0.5, 0.5, -0.5} -> 0,0
-    // TR: {0.5, 0.5, -0.5} -> 1,0
-    // BL: {-0.5, 0.5, 0.5} -> 0,1
-    // BR: {0.5, 0.5, 0.5} -> 1,1
-    {{-0.5f,  0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}, // BL
-    {{ 0.5f,  0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}, // BR
-    {{ 0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}}, // TR
-    {{-0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}, // TL
-
-    // Bottom Face (Normal -Y)
-    {{-0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-    {{ 0.5f, -0.5f, -0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-    {{ 0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-    {{-0.5f, -0.5f,  0.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-
-    // Right Face (Normal +X)
-    {{ 0.5f, -0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-    {{ 0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-    {{ 0.5f,  0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-    {{ 0.5f,  0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-
-    // Left Face (Normal -X)
-    {{-0.5f, -0.5f, -0.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, -0.5f,  0.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f,  0.5f,  0.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-    {{-0.5f,  0.5f, -0.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}
-};
-
-const std::vector<uint32_t> cubeIndices = {
-    0, 1, 2, 2, 3, 0,       // Front
-    4, 5, 6, 6, 7, 4,       // Back
-    8, 9, 10, 10, 11, 8,    // Top
-    12, 13, 14, 14, 15, 12, // Bottom
-    16, 17, 18, 18, 19, 16, // Right
-    20, 21, 22, 22, 23, 20  // Left
-};
-
-const std::vector<gfx::Vertex> planeVertices = {
-    {{-10.0f, 0.0f, -10.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {0.0f, 0.0f}},
-    {{ 10.0f, 0.0f, -10.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {10.0f, 0.0f}},
-    {{ 10.0f, 0.0f,  10.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {10.0f, 10.0f}},
-    {{-10.0f, 0.0f,  10.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {0.0f, 10.0f}}
-};
-
-const std::vector<uint32_t> planeIndices = {
-    0, 3, 2, 2, 1, 0
-};
+#include "ui/ImGuiManager.hpp"
+#include "imgui.h"
+#include "world/BlockType.hpp"
+#include "world/World.hpp"
 
 struct PushConstants {
     core::math::Mat4 viewProj;
@@ -146,6 +74,17 @@ int main() {
 
         ui::TextRenderer textRenderer(vulkanContext, renderer);
         std::cout << "TextRenderer created." << std::endl;
+
+        ui::ImGuiManager imguiManager(vulkanContext, window, swapchain);
+        std::cout << "ImGuiManager created." << std::endl;
+
+        float cameraSpeed = 5.0f; // Exposed to ImGui slider
+
+        // --- Voxel World ---
+        world::BlockRegistry::registerDefaults();
+        world::World voxelWorld(geometryManager);
+        voxelWorld.generateTestWorld();
+        std::cout << "Voxel World created." << std::endl;
 
 
         std::string vertPath = "bin/shaders/simple.vert.spv";
@@ -215,12 +154,7 @@ int main() {
         
         gfx::Pipeline shadowPipeline(vulkanContext, shadowPipelineConfig);
         
-        // MESH LOADING via GeometryManager
-        // Note: pointers returned, we should manage them (e.g. unique_ptr or just raw delete at end)
-        std::unique_ptr<gfx::Mesh> cubeMesh(geometryManager.uploadMesh(cubeVertices, cubeIndices));
-        std::unique_ptr<gfx::Mesh> planeMesh(geometryManager.uploadMesh(planeVertices, planeIndices));
-
-        scene::Camera camera({0.0f, 2.0f, 5.0f}, 60.0f, renderer.getAspectRatio());
+        scene::Camera camera({0.0f, 12.0f, 20.0f}, 60.0f, renderer.getAspectRatio());
 
         core::Timer timer;
 
@@ -242,7 +176,45 @@ int main() {
             }
 
             camera.setAspectRatio(renderer.getAspectRatio());
-            camera.update(dt);
+
+            // Only update camera when ImGui is not capturing mouse/keyboard
+            if (!ImGui::GetIO().WantCaptureMouse && !ImGui::GetIO().WantCaptureKeyboard)
+                camera.update(dt);
+
+            // --- ImGui frame begin (before any ImGui::* calls) ---
+            imguiManager.beginFrame();
+
+            // Debug Tools window
+            {
+                auto pos = camera.getPosition();
+                ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImVec2(300, 160), ImGuiCond_Once);
+                ImGui::Begin("Debug Tools");
+                ImGui::Text("FPS:    %.1f", timer.getFPS());
+                ImGui::Text("dt:     %.2f ms", timer.getDeltaTimeMs());
+                ImGui::Separator();
+                ImGui::Text("Camera: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
+                ImGui::Text("Yaw: %.1f  Pitch: %.1f", camera.getYaw(), camera.getPitch());
+                ImGui::Separator();
+                ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 50.0f);
+                ImGui::Separator();
+                ImGui::Text("--- World Stats ---");
+                ImGui::Text("Chunks:   %u", voxelWorld.getChunkCount());
+                ImGui::Text("Vertices: %u", voxelWorld.getTotalVertices());
+                ImGui::Text("Indices:  %u", voxelWorld.getTotalIndices());
+                if (ImGui::Button("Regenerate World (Random)")) {
+                    vkDeviceWaitIdle(vulkanContext.getDevice());
+                    geometryManager.reset();
+                    voxelWorld.getChunks()[0]->fillRandom();
+                    voxelWorld.rebuildMeshes();
+                }
+                if (ImGui::Button("Regenerate World (Terrain)")) {
+                    vkDeviceWaitIdle(vulkanContext.getDevice());
+                    geometryManager.reset();
+                    voxelWorld.generateTestWorld();
+                }
+                ImGui::End();
+            }
 
             // Light Matrix
             core::math::Vec3 lightPos = {5.0f, 10.0f, 3.0f}; 
@@ -253,97 +225,49 @@ int main() {
             VkCommandBuffer commandBuffer = renderer.beginFrame();
             if (commandBuffer) {
                 
-                // --- Shadow Pass ---
-                renderer.beginShadowPass(commandBuffer);
-                shadowPipeline.bind(commandBuffer);
-                
-                // BIND GLOBAL GEOMETRY
-                geometryManager.bind(commandBuffer);
-
                 uint32_t currentFrame = renderer.getCurrentFrameIndex();
 
-                {
-                    // Draw Cube (Shadow)
-                    core::math::Mat4 model = core::math::Mat4::translate({0.0f, 1.0f, 0.0f});
-                    model = model * core::math::Mat4::rotate(static_cast<float>(timer.getTotalTime()), {0.0f, 1.0f, 0.0f});
-
-                    gfx::BindlessSystem::ObjectDataSSBO cubeData{};
-                    cubeData.modelMatrix = model;
-                    cubeData.textureID = checkerTexture.getID();
-                    bindlessSystem.updateObject(currentFrame, 0, cubeData);
-
-                    struct ShadowPC {
-                        core::math::Mat4 lightSpaceMatrix;
-                        uint32_t objectIndex;
-                    } shadowPC;
-                    shadowPC.lightSpaceMatrix = lightSpaceMatrix;
-                    shadowPC.objectIndex = 0;
-                    
-                    vkCmdPushConstants(commandBuffer, shadowPipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ShadowPC), &shadowPC);
-                    
-                    bindlessSystem.bind(commandBuffer, shadowPipeline.getLayout(), currentFrame, 1);
-                    
-                    cubeMesh->draw(commandBuffer);
-
-                    // Draw Plane (Shadow)
-                    model = core::math::Mat4::translate({0.0f, 0.0f, 0.0f});
-                    
-                    gfx::BindlessSystem::ObjectDataSSBO planeData{};
-                    planeData.modelMatrix = model;
-                    planeData.textureID = checkerTexture.getID(); 
-                    bindlessSystem.updateObject(currentFrame, 1, planeData);
-
-                    shadowPC.objectIndex = 1;
-                    vkCmdPushConstants(commandBuffer, shadowPipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ShadowPC), &shadowPC);
-                    planeMesh->draw(commandBuffer);
-                }
+                // --- Shadow Pass (empty — no shadow casters for now) ---
+                renderer.beginShadowPass(commandBuffer);
                 renderer.endShadowPass(commandBuffer);
 
                 // --- Main Pass ---
                 renderer.beginMainPass(commandBuffer);
                 mainPipeline.bind(commandBuffer);
-                
-                // BIND GLOBAL GEOMETRY
                 geometryManager.bind(commandBuffer);
 
                 VkDescriptorSet descriptorSet = renderer.getDescriptorSet();
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline.getLayout(), 0, 1, &descriptorSet, 0, nullptr);
-                
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    mainPipeline.getLayout(), 0, 1, &descriptorSet, 0, nullptr);
                 bindlessSystem.bind(commandBuffer, mainPipeline.getLayout(), currentFrame, 1);
 
                 core::math::Mat4 viewProj = camera.getProjectionMatrix() * camera.getViewMatrix();
-                
-                // Draw Cube (Main)
+
+                // --- Voxel World ---
                 {
+                    // Upload identity model matrix for the world chunk (objectIndex = 0)
+                    gfx::BindlessSystem::ObjectDataSSBO worldData{};
+                    worldData.modelMatrix = core::math::Mat4::identity();
+                    worldData.textureID   = 0; // vertex color only
+                    bindlessSystem.updateObject(currentFrame, 0, worldData);
+
                     PushConstants pc{};
-                    pc.viewProj = viewProj;
+                    pc.viewProj         = viewProj;
                     pc.lightSpaceMatrix = lightSpaceMatrix;
-                    pc.objectIndex = 0; 
-                    
-                    vkCmdPushConstants(commandBuffer, mainPipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &pc);
-                    cubeMesh->draw(commandBuffer);
+                    pc.objectIndex      = 0;
+                    vkCmdPushConstants(commandBuffer, mainPipeline.getLayout(),
+                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                        0, sizeof(PushConstants), &pc);
+                    voxelWorld.render(commandBuffer);
                 }
 
-                // Draw Plane (Main)
-                {
-                    PushConstants pc{};
-                    pc.viewProj = viewProj;
-                    pc.lightSpaceMatrix = lightSpaceMatrix;
-                    pc.objectIndex = 1;
-
-                    vkCmdPushConstants(commandBuffer, mainPipeline.getLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &pc);
-                    planeMesh->draw(commandBuffer);
-                }
-                
-                // --- Text UI ---
-                float white[] = {1.0f, 1.0f, 1.0f};
-
+                // --- Text UI (SDF) ---
+                // FPS is already shown in ImGui Debug Tools window — no need to duplicate here.
+                // Keep TextRenderer active for future in-world labels / HUD elements.
                 textRenderer.beginFrame(renderer.getCurrentFrameIndex());
 
-                std::stringstream ss;
-                ss << "FPS: " << std::fixed << std::setprecision(1) << timer.getFPS()
-                   << "  dt: " << std::setprecision(2) << timer.getDeltaTimeMs() << " ms";
-                textRenderer.renderText(commandBuffer, ss.str(), -0.95f, -0.90f, 0.05f, white);
+                // --- ImGui render (inside active vkCmdBeginRendering block) ---
+                imguiManager.render(commandBuffer);
 
                 renderer.endMainPass(commandBuffer);
                 renderer.endFrame(commandBuffer);

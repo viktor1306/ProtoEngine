@@ -19,6 +19,11 @@ public:
     Mesh* uploadMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
     void  bind(VkCommandBuffer commandBuffer);
 
+    // Reset buffer offsets to 0 so the GPU buffers can be reused from scratch.
+    // All previously returned Mesh* pointers become invalid after this call.
+    // Caller must ensure GPU is idle (vkDeviceWaitIdle) before calling.
+    void reset();
+
 private:
     VulkanContext& m_context;
 

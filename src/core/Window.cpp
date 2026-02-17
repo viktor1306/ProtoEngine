@@ -2,6 +2,11 @@
 #include "InputManager.hpp"
 #include <iostream>
 
+// Forward declaration of ImGui Win32 message handler.
+// Defined in imgui_impl_win32.cpp — linked when ImGui is included in the build.
+// We avoid including imgui headers here to keep Window.cpp independent.
+extern "C++" LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 namespace core {
 
 Window::Window(const std::string& title, uint32_t width, uint32_t height)
@@ -69,6 +74,10 @@ void Window::pollEvents() {
 }
 
 LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    // Let ImGui process input first (when ImGui is active)
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+        return true;
+
     Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
     if (uMsg == WM_NCCREATE) {
