@@ -1,148 +1,307 @@
 #include "Chunk.hpp"
-#include <cstdlib>  // rand()
-#include <cmath>    // std::abs
+#include <cstdlib>  // rand
 
 namespace world {
 
 // ---------------------------------------------------------------------------
-// Face definitions: 6 faces, each with 4 vertices (quad) and a normal.
-// Vertex positions are offsets from the block's (x,y,z) corner.
-// Winding order: counter-clockwise when viewed from outside (matches main pipeline).
+// Heightmap noise — deterministic hash-based pseudo-noise
+// Returns height in [minH, minH + range)
 // ---------------------------------------------------------------------------
-struct FaceDef {
-    // 4 corner offsets (relative to block origin)
-    float verts[4][3];
-    // Face normal
-    float normal[3];
-    // Neighbour offset to check for occlusion
-    int nx, ny, nz;
-};
+static int hashNoise(int wx, int wz, int seed) {
+    uint32_t h = static_cast<uint32_t>(wx * 1619 + wz * 31337 + seed * 1013904223);
+    h = h * 1664525u + 1013904223u;
+    h ^= (h >> 16);
+    return static_cast<int>(h & 0xFFFF);
+}
 
-static constexpr FaceDef k_faces[6] = {
-    // +X (Right)
-    {{{1,0,0},{1,1,0},{1,1,1},{1,0,1}}, { 1, 0, 0},  1, 0, 0},
-    // -X (Left)
-    {{{0,0,1},{0,1,1},{0,1,0},{0,0,0}}, {-1, 0, 0}, -1, 0, 0},
-    // +Y (Top)
-    {{{0,1,0},{0,1,1},{1,1,1},{1,1,0}}, { 0, 1, 0},  0, 1, 0},
-    // -Y (Bottom)
-    {{{0,0,1},{0,0,0},{1,0,0},{1,0,1}}, { 0,-1, 0},  0,-1, 0},
-    // +Z (Front)
-    {{{0,0,1},{1,0,1},{1,1,1},{0,1,1}}, { 0, 0, 1},  0, 0, 1},
-    // -Z (Back)
-    {{{1,0,0},{0,0,0},{0,1,0},{1,1,0}}, { 0, 0,-1},  0, 0,-1},
-};
+static float smoothNoise(int wx, int wz, int seed, int scale) {
+    int gx = wx / scale;
+    int gz = wz / scale;
+    float fx = static_cast<float>(wx % scale) / scale;
+    float fz = static_cast<float>(wz % scale) / scale;
+    // Smoothstep
+    fx = fx * fx * (3.0f - 2.0f * fx);
+    fz = fz * fz * (3.0f - 2.0f * fz);
+
+    float h00 = hashNoise(gx,     gz,     seed) / 65535.0f;
+    float h10 = hashNoise(gx + 1, gz,     seed) / 65535.0f;
+    float h01 = hashNoise(gx,     gz + 1, seed) / 65535.0f;
+    float h11 = hashNoise(gx + 1, gz + 1, seed) / 65535.0f;
+
+    return h00 * (1-fx)*(1-fz) + h10 * fx*(1-fz) +
+           h01 * (1-fx)*fz     + h11 * fx*fz;
+}
+
+static int getTerrainHeight(int wx, int wz, int seed) {
+    float n  = smoothNoise(wx, wz, seed,     8) * 0.5f;
+    n       += smoothNoise(wx, wz, seed + 1, 4) * 0.3f;
+    n       += smoothNoise(wx, wz, seed + 2, 2) * 0.2f;
+    return 4 + static_cast<int>(n * 20.0f); // height 4..24
+}
 
 // ---------------------------------------------------------------------------
-Chunk::Chunk(core::math::Vec3 worldPos)
-    : m_worldPos(worldPos)
+// Chunk
+// ---------------------------------------------------------------------------
+Chunk::Chunk(int cx, int cy, int cz)
+    : m_cx(cx), m_cy(cy), m_cz(cz)
 {
-    // Default: all AIR
-    std::fill(std::begin(m_blocks), std::end(m_blocks), BlockID{0});
+    // Zero-init: all voxels = VOXEL_AIR (raw=0)
 }
 
-void Chunk::setBlock(int x, int y, int z, BlockID id) {
-    m_blocks[idx(x, y, z)] = id;
+void Chunk::setVoxel(int x, int y, int z, VoxelData v) {
+    m_voxels[idx(x, y, z)] = v;
+    m_isDirty = true;
 }
 
-BlockID Chunk::getBlock(int x, int y, int z) const {
-    return m_blocks[idx(x, y, z)];
+VoxelData Chunk::getVoxel(int x, int y, int z) const {
+    return m_voxels[idx(x, y, z)];
 }
 
-void Chunk::fill(BlockID id) {
-    std::fill(std::begin(m_blocks), std::end(m_blocks), id);
+void Chunk::fill(VoxelData v) {
+    for (auto& vox : m_voxels) vox = v;
+    m_isDirty = true;
 }
 
-void Chunk::fillTerrain(int groundY) {
+void Chunk::fillTerrain(int seed) {
+    // Palette indices: 1=stone, 2=dirt, 3=grass, 0=air
+    const VoxelData stone = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);
+    const VoxelData dirt  = VoxelData::make(2, 255, 0, VOXEL_FLAG_SOLID);
+    const VoxelData grass = VoxelData::make(3, 255, 0, VOXEL_FLAG_SOLID);
+
+    int worldBaseY = m_cy * CHUNK_SIZE;
+
     for (int z = 0; z < CHUNK_SIZE; ++z) {
         for (int x = 0; x < CHUNK_SIZE; ++x) {
+            int wx = m_cx * CHUNK_SIZE + x;
+            int wz = m_cz * CHUNK_SIZE + z;
+            int terrainH = getTerrainHeight(wx, wz, seed);
+
             for (int y = 0; y < CHUNK_SIZE; ++y) {
-                BlockID id = 0; // AIR
-                if (y < groundY - 1)
-                    id = 1; // STONE
-                else if (y == groundY - 1)
-                    id = 3; // DIRT
-                else if (y == groundY)
-                    id = 2; // GRASS
-                // above groundY → AIR
-                setBlock(x, y, z, id);
+                int wy = worldBaseY + y;
+                VoxelData v = VOXEL_AIR;
+                if      (wy < terrainH - 3) v = stone;
+                else if (wy < terrainH - 1) v = dirt;
+                else if (wy == terrainH - 1) v = grass;
+                m_voxels[idx(x, y, z)] = v;
             }
         }
     }
+    m_isDirty = true;
 }
 
-void Chunk::fillRandom() {
-    static const BlockID palette[] = {0, 0, 0, 1, 1, 2}; // weighted: more air
-    for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; ++i) {
-        m_blocks[i] = palette[rand() % 6];
+void Chunk::fillRandom(int seed) {
+    const VoxelData stone = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);
+    uint32_t rng = static_cast<uint32_t>(seed ^ 0xDEADBEEF);
+    for (auto& v : m_voxels) {
+        rng = rng * 1664525u + 1013904223u;
+        v = ((rng >> 16) & 3) ? stone : VOXEL_AIR;
     }
+    m_isDirty = true;
 }
 
-bool Chunk::isAirAt(int x, int y, int z) const {
-    // Out-of-bounds → treat as AIR (emit face at chunk boundary)
-    if (x < 0 || x >= CHUNK_SIZE ||
-        y < 0 || y >= CHUNK_SIZE ||
-        z < 0 || z >= CHUNK_SIZE)
-        return true;
-    return !BlockRegistry::isSolid(m_blocks[idx(x, y, z)]);
+// ---------------------------------------------------------------------------
+// isAirAt — checks local or neighbour chunk
+// Face order: 0=+X, 1=-X, 2=+Y, 3=-Y, 4=+Z, 5=-Z
+// ---------------------------------------------------------------------------
+bool Chunk::isAirAt(int x, int y, int z,
+                    const std::array<const Chunk*, 6>& neighbors) const
+{
+    // In-bounds: check local voxel
+    if (x >= 0 && x < CHUNK_SIZE &&
+        y >= 0 && y < CHUNK_SIZE &&
+        z >= 0 && z < CHUNK_SIZE)
+    {
+        return !m_voxels[idx(x, y, z)].isSolid();
+    }
+
+    // Out-of-bounds: determine which neighbour to query
+    // +X=0, -X=1, +Y=2, -Y=3, +Z=4, -Z=5
+    const Chunk* nb = nullptr;
+    int lx = x, ly = y, lz = z;
+
+    if (x >= CHUNK_SIZE) { nb = neighbors[0]; lx = x - CHUNK_SIZE; }
+    else if (x < 0)      { nb = neighbors[1]; lx = x + CHUNK_SIZE; }
+    else if (y >= CHUNK_SIZE) { nb = neighbors[2]; ly = y - CHUNK_SIZE; }
+    else if (y < 0)           { nb = neighbors[3]; ly = y + CHUNK_SIZE; }
+    else if (z >= CHUNK_SIZE) { nb = neighbors[4]; lz = z - CHUNK_SIZE; }
+    else if (z < 0)           { nb = neighbors[5]; lz = z + CHUNK_SIZE; }
+
+    if (!nb) return true; // no neighbour → treat as AIR (emit face)
+    return !nb->m_voxels[idx(lx, ly, lz)].isSolid();
 }
 
-MeshData Chunk::generateMesh() const {
-    MeshData data;
-    data.vertices.reserve(4096);
-    data.indices.reserve(6144);
+// ---------------------------------------------------------------------------
+// computeAO — vertex ambient occlusion (0=dark, 3=bright)
+// ---------------------------------------------------------------------------
+uint8_t Chunk::computeAO(bool side1, bool side2, bool corner) {
+    if (side1 && side2) return 0;
+    return static_cast<uint8_t>(3 - static_cast<int>(side1)
+                                   - static_cast<int>(side2)
+                                   - static_cast<int>(corner));
+}
 
-    uint32_t vertBase = 0;
+// ---------------------------------------------------------------------------
+// generateMesh — Hidden Face Culling
+//
+// For each solid voxel, check 6 neighbours.
+// If neighbour is AIR → emit a quad (4 VoxelVertex + 6 indices).
+// VoxelVertex coordinates are LOCAL (0-31) — shader adds chunkOffset.
+//
+// Face vertex layout (CCW winding, front face = counter-clockwise):
+//   v0---v3
+//   |  \ |
+//   v1---v2
+// Indices: 0,1,2, 0,2,3
+// ---------------------------------------------------------------------------
+
+// Per-face: 4 corner offsets (dx,dy,dz) relative to voxel origin
+// Order: v0, v1, v2, v3 (CCW when viewed from outside)
+static constexpr int8_t k_faceCorners[6][4][3] = {
+    // +X (faceID=0): normal = +X, quad on x+1 plane
+    {{1,0,1},{1,0,0},{1,1,0},{1,1,1}},
+    // -X (faceID=1): normal = -X, quad on x=0 plane
+    {{0,0,0},{0,0,1},{0,1,1},{0,1,0}},
+    // +Y (faceID=2): normal = +Y, quad on y+1 plane
+    {{0,1,0},{1,1,0},{1,1,1},{0,1,1}},
+    // -Y (faceID=3): normal = -Y, quad on y=0 plane
+    {{0,0,1},{1,0,1},{1,0,0},{0,0,0}},
+    // +Z (faceID=4): normal = +Z, quad on z+1 plane
+    {{0,0,1},{1,0,1},{1,1,1},{0,1,1}},  // wait — duplicate of +Y? No, different plane
+    // -Z (faceID=5): normal = -Z, quad on z=0 plane
+    {{1,0,0},{0,0,0},{0,1,0},{1,1,0}},
+};
+
+// AO sample offsets for each face corner (side1, side2, corner)
+// Each entry: 3 offsets relative to the voxel being meshed
+// side1 and side2 are edge-adjacent; corner is diagonal
+static constexpr int8_t k_aoSamples[6][4][3][3] = {
+    // +X face
+    {
+        {{1,0,1},{1,-1,0},{1,-1,1}}, // v0
+        {{1,0,-1},{1,-1,0},{1,-1,-1}}, // v1
+        {{1,0,-1},{1,1,0},{1,1,-1}}, // v2
+        {{1,0,1},{1,1,0},{1,1,1}},   // v3
+    },
+    // -X face
+    {
+        {{-1,0,-1},{-1,-1,0},{-1,-1,-1}},
+        {{-1,0,1},{-1,-1,0},{-1,-1,1}},
+        {{-1,0,1},{-1,1,0},{-1,1,1}},
+        {{-1,0,-1},{-1,1,0},{-1,1,-1}},
+    },
+    // +Y face
+    {
+        {{-1,1,0},{0,1,-1},{-1,1,-1}},
+        {{1,1,0},{0,1,-1},{1,1,-1}},
+        {{1,1,0},{0,1,1},{1,1,1}},
+        {{-1,1,0},{0,1,1},{-1,1,1}},
+    },
+    // -Y face
+    {
+        {{-1,-1,0},{0,-1,1},{-1,-1,1}},
+        {{1,-1,0},{0,-1,1},{1,-1,1}},
+        {{1,-1,0},{0,-1,-1},{1,-1,-1}},
+        {{-1,-1,0},{0,-1,-1},{-1,-1,-1}},
+    },
+    // +Z face
+    {
+        {{-1,0,1},{0,-1,1},{-1,-1,1}},
+        {{1,0,1},{0,-1,1},{1,-1,1}},
+        {{1,0,1},{0,1,1},{1,1,1}},
+        {{-1,0,1},{0,1,1},{-1,1,1}},
+    },
+    // -Z face
+    {
+        {{1,0,-1},{0,-1,-1},{1,-1,-1}},
+        {{-1,0,-1},{0,-1,-1},{-1,-1,-1}},
+        {{-1,0,-1},{0,1,-1},{-1,1,-1}},
+        {{1,0,-1},{0,1,-1},{1,1,-1}},
+    },
+};
+
+// Neighbour direction per faceID
+static constexpr int8_t k_faceDir[6][3] = {
+    { 1, 0, 0}, {-1, 0, 0},
+    { 0, 1, 0}, { 0,-1, 0},
+    { 0, 0, 1}, { 0, 0,-1},
+};
+
+VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors) const
+{
+    VoxelMeshData mesh;
+    mesh.vertices.reserve(4096);
+    mesh.indices.reserve(6144);
 
     for (int z = 0; z < CHUNK_SIZE; ++z) {
         for (int y = 0; y < CHUNK_SIZE; ++y) {
             for (int x = 0; x < CHUNK_SIZE; ++x) {
-                BlockID bid = m_blocks[idx(x, y, z)];
-                if (!BlockRegistry::isSolid(bid))
-                    continue; // skip AIR / transparent blocks
+                const VoxelData& vox = m_voxels[idx(x, y, z)];
+                if (!vox.isSolid()) continue;
 
-                const BlockInfo& info = BlockRegistry::get(bid);
-                // Vertex color from block definition (RGB from Vec4)
-                float r = info.color.x;
-                float g = info.color.y;
-                float b = info.color.z;
+                uint16_t palIdx = vox.getPaletteIndex();
 
-                // World-space origin of this block
-                float wx = m_worldPos.x + static_cast<float>(x);
-                float wy = m_worldPos.y + static_cast<float>(y);
-                float wz = m_worldPos.z + static_cast<float>(z);
+                for (int f = 0; f < 6; ++f) {
+                    int nx = x + k_faceDir[f][0];
+                    int ny = y + k_faceDir[f][1];
+                    int nz = z + k_faceDir[f][2];
 
-                for (const auto& face : k_faces) {
-                    // Only emit face if neighbour is AIR
-                    if (!isAirAt(x + face.nx, y + face.ny, z + face.nz))
-                        continue;
+                    if (!isAirAt(nx, ny, nz, neighbors)) continue;
 
-                    // 4 vertices for this quad
-                    for (int v = 0; v < 4; ++v) {
-                        gfx::Vertex vert{};
-                        vert.position = {wx + face.verts[v][0],
-                                         wy + face.verts[v][1],
-                                         wz + face.verts[v][2]};
-                        vert.normal   = {face.normal[0], face.normal[1], face.normal[2]};
-                        vert.color    = {r, g, b};
-                        vert.uv       = {0.0f, 0.0f}; // texture atlas later
-                        data.vertices.push_back(vert);
+                    // Emit quad — 4 vertices
+                    uint32_t baseIdx = static_cast<uint32_t>(mesh.vertices.size());
+
+                    for (int c = 0; c < 4; ++c) {
+                        int vx = x + k_faceCorners[f][c][0];
+                        int vy = y + k_faceCorners[f][c][1];
+                        int vz = z + k_faceCorners[f][c][2];
+
+                        // AO: sample 3 neighbours around this corner
+                        const auto& ao = k_aoSamples[f][c];
+                        bool s1 = !isAirAt(x + ao[0][0], y + ao[0][1], z + ao[0][2], neighbors);
+                        bool s2 = !isAirAt(x + ao[1][0], y + ao[1][1], z + ao[1][2], neighbors);
+                        bool cr = !isAirAt(x + ao[2][0], y + ao[2][1], z + ao[2][2], neighbors);
+                        uint8_t aoVal = computeAO(s1, s2, cr);
+
+                        VoxelVertex vert{};
+                        vert.x          = static_cast<uint8_t>(vx);
+                        vert.y          = static_cast<uint8_t>(vy);
+                        vert.z          = static_cast<uint8_t>(vz);
+                        vert.faceID     = static_cast<uint8_t>(f);
+                        vert.ao         = aoVal;
+                        vert.reserved   = 0;
+                        vert.paletteIdx = palIdx;
+                        mesh.vertices.push_back(vert);
                     }
 
-                    // 2 triangles (CCW): 0-1-2, 0-2-3
-                    data.indices.push_back(vertBase + 0);
-                    data.indices.push_back(vertBase + 1);
-                    data.indices.push_back(vertBase + 2);
-                    data.indices.push_back(vertBase + 0);
-                    data.indices.push_back(vertBase + 2);
-                    data.indices.push_back(vertBase + 3);
-                    vertBase += 4;
+                    // 2 triangles (CCW): 0,1,2 and 0,2,3
+                    // AO-correct flipping: if ao[0]+ao[2] < ao[1]+ao[3], flip diagonal
+                    uint8_t ao0 = mesh.vertices[baseIdx + 0].ao;
+                    uint8_t ao1 = mesh.vertices[baseIdx + 1].ao;
+                    uint8_t ao2 = mesh.vertices[baseIdx + 2].ao;
+                    uint8_t ao3 = mesh.vertices[baseIdx + 3].ao;
+
+                    if (ao0 + ao2 < ao1 + ao3) {
+                        // Flip diagonal for better AO interpolation
+                        mesh.indices.push_back(baseIdx + 1);
+                        mesh.indices.push_back(baseIdx + 2);
+                        mesh.indices.push_back(baseIdx + 3);
+                        mesh.indices.push_back(baseIdx + 1);
+                        mesh.indices.push_back(baseIdx + 3);
+                        mesh.indices.push_back(baseIdx + 0);
+                    } else {
+                        mesh.indices.push_back(baseIdx + 0);
+                        mesh.indices.push_back(baseIdx + 1);
+                        mesh.indices.push_back(baseIdx + 2);
+                        mesh.indices.push_back(baseIdx + 0);
+                        mesh.indices.push_back(baseIdx + 2);
+                        mesh.indices.push_back(baseIdx + 3);
+                    }
                 }
             }
         }
     }
 
-    return data;
+    return mesh;
 }
 
 } // namespace world

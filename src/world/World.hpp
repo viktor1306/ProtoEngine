@@ -8,9 +8,9 @@
 
 namespace world {
 
-// Manages a collection of chunks and their GPU meshes.
-// Owns Chunk objects; Mesh pointers are owned by GeometryManager's GPU buffers.
-// Call rebuildMeshes() after any chunk data change (or after GeometryManager::reset()).
+// Legacy World class — kept for backward compatibility.
+// New code should use ChunkManager instead.
+// This class now uses the updated Chunk API (32³, VoxelData, VoxelVertex).
 class World {
 public:
     explicit World(gfx::GeometryManager& geometryManager);
@@ -19,10 +19,9 @@ public:
     void generateTestWorld();
 
     // Re-generate all chunk meshes and upload to GeometryManager.
-    // Must be called after GeometryManager::reset() to refresh GPU data.
     void rebuildMeshes();
 
-    // Draw all chunk meshes. Call inside an active render pass.
+    // Draw all chunk meshes.
     void render(VkCommandBuffer cmd);
 
     // Stats for ImGui
@@ -30,13 +29,13 @@ public:
     uint32_t getTotalVertices() const { return m_totalVertices; }
     uint32_t getTotalIndices()  const { return m_totalIndices; }
 
-    // Direct chunk access (for per-chunk operations like fillRandom)
+    // Direct chunk access
     std::vector<std::unique_ptr<Chunk>>& getChunks() { return m_chunks; }
 
 private:
     gfx::GeometryManager&                    m_geometryManager;
     std::vector<std::unique_ptr<Chunk>>      m_chunks;
-    std::vector<std::unique_ptr<gfx::Mesh>>  m_meshes; // owns Mesh objects
+    std::vector<std::unique_ptr<gfx::Mesh>>  m_meshes;
     uint32_t m_totalVertices = 0;
     uint32_t m_totalIndices  = 0;
 };

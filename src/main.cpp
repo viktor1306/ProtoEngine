@@ -4,7 +4,6 @@
 #include <windows.h>
 
 #include "core/Timer.hpp"
-
 #include "core/Window.hpp"
 #include "core/InputManager.hpp"
 #include "gfx/core/VulkanContext.hpp"
@@ -23,262 +22,303 @@
 #include "imgui.h"
 #include "world/BlockType.hpp"
 #include "world/World.hpp"
+#include "world/ChunkManager.hpp"
+#include "world/VoxelData.hpp"
 
+// ---------------------------------------------------------------------------
+// Push constants for the standard (simple) pipeline
+// ---------------------------------------------------------------------------
 struct PushConstants {
     core::math::Mat4 viewProj;
     core::math::Mat4 lightSpaceMatrix;
     uint32_t objectIndex;
 };
 
+// ---------------------------------------------------------------------------
+// Push constants for the voxel pipeline (matches voxel.vert layout)
+// ---------------------------------------------------------------------------
+struct VoxelPushConstants {
+    core::math::Mat4 viewProj;          // 64 bytes
+    core::math::Mat4 lightSpaceMatrix;  // 64 bytes (kept for future shadow pass)
+    float chunkOffsetX;                 // 16 bytes total (vec3 + pad)
+    float chunkOffsetY;
+    float chunkOffsetZ;
+    float _pad;
+};
+static_assert(sizeof(VoxelPushConstants) == 144, "VoxelPushConstants size mismatch");
+
 int main() {
-    // Set working directory to the parent of the executable (project root)
-    // so that relative paths like "bin/shaders/..." and "bin/fonts/..." always work,
-    // regardless of whether the exe is launched from bin/ or the project root.
+    // Set working directory to project root (parent of bin/)
     {
         wchar_t exePath[MAX_PATH] = {};
         GetModuleFileNameW(nullptr, exePath, MAX_PATH);
         std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
-        // exe is in <project>/bin/ — go one level up to project root
         std::filesystem::path projectRoot = exeDir.parent_path();
         if (std::filesystem::exists(projectRoot / "bin")) {
             std::filesystem::current_path(projectRoot);
         }
-        // If already at project root (e.g. launched via VS Code debugger), do nothing
     }
 
     try {
-        const uint32_t WIDTH = 1280;
+        const uint32_t WIDTH  = 1280;
         const uint32_t HEIGHT = 720;
-        
-        core::Window window("Vulkan Voxel Engine", WIDTH, HEIGHT);
-        std::cout << "Window created." << std::endl;
-        
+
+        core::Window window("ProtoEngine — Voxel World", WIDTH, HEIGHT);
+        std::cout << "Window created.\n";
+
         gfx::VulkanContext vulkanContext(window);
-        std::cout << "VulkanContext created." << std::endl;
-        
+        std::cout << "VulkanContext created.\n";
+
         gfx::Swapchain swapchain(vulkanContext, window);
-        std::cout << "Swapchain created." << std::endl;
-        
+        std::cout << "Swapchain created.\n";
+
         gfx::BindlessSystem bindlessSystem(vulkanContext);
-        std::cout << "BindlessSystem created." << std::endl;
-        
+        std::cout << "BindlessSystem created.\n";
+
         gfx::Renderer renderer(vulkanContext, swapchain, window, bindlessSystem);
-        std::cout << "Renderer created." << std::endl;
+        std::cout << "Renderer created.\n";
 
         gfx::GeometryManager geometryManager(vulkanContext);
-        std::cout << "GeometryManager created." << std::endl;
-        
+        std::cout << "GeometryManager created.\n";
+
         gfx::Texture checkerTexture(vulkanContext, bindlessSystem);
         checkerTexture.createCheckerboard(256, 256);
-        std::cout << "Checkerboard Texture created (ID=" << checkerTexture.getID() << ")." << std::endl;
+        std::cout << "Checkerboard Texture created (ID=" << checkerTexture.getID() << ").\n";
 
         ui::TextRenderer textRenderer(vulkanContext, renderer);
-        std::cout << "TextRenderer created." << std::endl;
+        std::cout << "TextRenderer created.\n";
 
         ui::ImGuiManager imguiManager(vulkanContext, window, swapchain);
-        std::cout << "ImGuiManager created." << std::endl;
+        std::cout << "ImGuiManager created.\n";
 
-        float cameraSpeed = 5.0f; // Exposed to ImGui slider
+        // ---- Voxel World (ChunkManager) ------------------------------------
+        world::ChunkManager chunkManager(geometryManager);
+        int worldRadius = 3; // 7×7 = 49 chunks
+        int worldSeed   = 42;
+        chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
+        chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
+        std::cout << "ChunkManager created: " << chunkManager.getChunkCount() << " chunks.\n";
 
-        // --- Voxel World ---
+        // ---- Legacy World (kept for reference, not rendered) ---------------
         world::BlockRegistry::registerDefaults();
-        world::World voxelWorld(geometryManager);
-        voxelWorld.generateTestWorld();
-        std::cout << "Voxel World created." << std::endl;
 
-
-        std::string vertPath = "bin/shaders/simple.vert.spv";
-        std::string fragPath = "bin/shaders/simple.frag.spv";
+        // ---- Shader paths --------------------------------------------------
+        std::string vertPath       = "bin/shaders/simple.vert.spv";
+        std::string fragPath       = "bin/shaders/simple.frag.spv";
         std::string shadowVertPath = "bin/shaders/shadow.vert.spv";
         std::string shadowFragPath = "bin/shaders/shadow.frag.spv";
-        
+        std::string voxelVertPath  = "bin/shaders/voxel.vert.spv";
+        std::string voxelFragPath  = "bin/shaders/voxel.frag.spv";
+
         if (!std::filesystem::exists(vertPath)) {
-            vertPath = "shaders/simple.vert.spv";
-            fragPath = "shaders/simple.frag.spv";
+            vertPath       = "shaders/simple.vert.spv";
+            fragPath       = "shaders/simple.frag.spv";
             shadowVertPath = "shaders/shadow.vert.spv";
             shadowFragPath = "shaders/shadow.frag.spv";
+            voxelVertPath  = "shaders/voxel.vert.spv";
+            voxelFragPath  = "shaders/voxel.frag.spv";
         }
 
-        // HOT RELOADER
+        // ---- Hot Reloader --------------------------------------------------
         core::ShaderHotReloader reloader;
         reloader.watch("shaders/simple.vert");
         reloader.watch("shaders/simple.frag");
         reloader.watch("shaders/shadow.vert");
-        reloader.watch("shaders/shadow.frag"); // If exists
+        reloader.watch("shaders/shadow.frag");
+        reloader.watch("shaders/voxel.vert");
+        reloader.watch("shaders/voxel.frag");
         reloader.start();
 
-        // Main Pipeline
+        // ---- Push constant ranges ------------------------------------------
+        VkPushConstantRange stdPCRange{};
+        stdPCRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        stdPCRange.offset     = 0;
+        stdPCRange.size       = sizeof(PushConstants);
+
+        VkPushConstantRange voxelPCRange{};
+        voxelPCRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        voxelPCRange.offset     = 0;
+        voxelPCRange.size       = sizeof(VoxelPushConstants);
+
+        // ---- Main Pipeline (standard gfx::Vertex) --------------------------
         gfx::PipelineConfig mainPipelineConfig{};
         mainPipelineConfig.colorAttachmentFormats = {swapchain.getImageFormat()};
-        mainPipelineConfig.depthAttachmentFormat = swapchain.getDepthFormat();
-        
-        mainPipelineConfig.vertexShaderPath = vertPath;
-        mainPipelineConfig.fragmentShaderPath = fragPath;
-        mainPipelineConfig.enableDepthTest = true;
-        mainPipelineConfig.cullMode = VK_CULL_MODE_BACK_BIT;
-        mainPipelineConfig.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // Standard mesh winding
-        mainPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout()); // Set 0: Shadows
-        mainPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout()); // Set 1: Bindless
-        
-        // Push Constants
-        VkPushConstantRange pushConstantRange{};
-        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(PushConstants);
-        
-        mainPipelineConfig.pushConstantRanges.push_back(pushConstantRange);
-        
+        mainPipelineConfig.depthAttachmentFormat  = swapchain.getDepthFormat();
+        mainPipelineConfig.vertexShaderPath       = vertPath;
+        mainPipelineConfig.fragmentShaderPath     = fragPath;
+        mainPipelineConfig.enableDepthTest        = true;
+        mainPipelineConfig.cullMode               = VK_CULL_MODE_BACK_BIT;
+        mainPipelineConfig.frontFace              = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        mainPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout());
+        mainPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
+        mainPipelineConfig.pushConstantRanges.push_back(stdPCRange);
         gfx::Pipeline mainPipeline(vulkanContext, mainPipelineConfig);
 
-        // Shadow Pipeline
+        // ---- Shadow Pipeline -----------------------------------------------
         gfx::PipelineConfig shadowPipelineConfig{};
-        // Shadow pass is depth-only, so no color attachments
-        shadowPipelineConfig.colorAttachmentFormats = {}; 
-        shadowPipelineConfig.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT; 
-        
-        shadowPipelineConfig.pushConstantRanges.push_back(pushConstantRange);
-        
-        // Shadow pipeline needs Bindless Set (Set 1) for ObjectBuffer.
-        // We also provide Set 0 to keep indices consistent, even if unused.
+        shadowPipelineConfig.colorAttachmentFormats = {};
+        shadowPipelineConfig.depthAttachmentFormat  = VK_FORMAT_D32_SFLOAT;
+        shadowPipelineConfig.vertexShaderPath       = shadowVertPath;
+        shadowPipelineConfig.fragmentShaderPath     = shadowFragPath;
+        shadowPipelineConfig.enableDepthTest        = true;
+        shadowPipelineConfig.cullMode               = VK_CULL_MODE_FRONT_BIT;
+        shadowPipelineConfig.frontFace              = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        shadowPipelineConfig.depthBiasEnable        = false;
         shadowPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout());
         shadowPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
-
-        shadowPipelineConfig.vertexShaderPath = shadowVertPath;
-        shadowPipelineConfig.fragmentShaderPath = shadowFragPath;
-        shadowPipelineConfig.enableDepthTest = true;
-        shadowPipelineConfig.cullMode = VK_CULL_MODE_FRONT_BIT; // Render Back Faces to Shadow Map
-        shadowPipelineConfig.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-        shadowPipelineConfig.depthBiasEnable = false; // Disable HW Bias to avoid Peter Panning
-        shadowPipelineConfig.depthBiasConstant = 0.0f;
-        shadowPipelineConfig.depthBiasSlope = 0.0f;
-        
+        shadowPipelineConfig.pushConstantRanges.push_back(stdPCRange);
         gfx::Pipeline shadowPipeline(vulkanContext, shadowPipelineConfig);
-        
-        scene::Camera camera({0.0f, 12.0f, 20.0f}, 60.0f, renderer.getAspectRatio());
 
+        // ---- Voxel Pipeline (VoxelVertex — 8 bytes) ------------------------
+        {
+            // Verify VoxelVertex binding/attribute descriptions compile
+            [[maybe_unused]] auto vb = world::VoxelVertex::getBindingDescription();
+            [[maybe_unused]] auto va = world::VoxelVertex::getAttributeDescriptions();
+        }
+
+        gfx::PipelineConfig voxelPipelineConfig{};
+        voxelPipelineConfig.colorAttachmentFormats = {swapchain.getImageFormat()};
+        voxelPipelineConfig.depthAttachmentFormat  = swapchain.getDepthFormat();
+        voxelPipelineConfig.vertexShaderPath       = voxelVertPath;
+        voxelPipelineConfig.fragmentShaderPath     = voxelFragPath;
+        voxelPipelineConfig.enableDepthTest        = true;
+        voxelPipelineConfig.cullMode               = VK_CULL_MODE_BACK_BIT;
+        voxelPipelineConfig.frontFace              = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        // VoxelVertex binding + attributes
+        voxelPipelineConfig.bindingDescriptions   = {world::VoxelVertex::getBindingDescription()};
+        auto voxelAttrs = world::VoxelVertex::getAttributeDescriptions();
+        voxelPipelineConfig.attributeDescriptions = {voxelAttrs[0], voxelAttrs[1]};
+        // Descriptor sets: set=0 (shadow/renderer), set=1 (bindless + palette)
+        voxelPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout());
+        voxelPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
+        voxelPipelineConfig.pushConstantRanges.push_back(voxelPCRange);
+        gfx::Pipeline voxelPipeline(vulkanContext, voxelPipelineConfig);
+
+        // ---- Camera --------------------------------------------------------
+        scene::Camera camera({0.0f, 20.0f, 60.0f}, 60.0f, renderer.getAspectRatio());
+        float cameraSpeed = 20.0f;
+
+        // ---- Timer ---------------------------------------------------------
         core::Timer timer;
 
+        // ---- Main Loop -----------------------------------------------------
         while (!window.shouldClose()) {
             timer.update();
             float dt = timer.getDeltaTime();
 
             core::InputManager::get().update();
             window.pollEvents();
-            
-            // Check for Hot Reload
+
             if (reloader.shouldReload()) {
                 renderer.reloadShaders();
                 reloader.ackReload();
             }
 
-            if (window.shouldClose()) {
-                break;
-            }
+            if (window.shouldClose()) break;
 
             camera.setAspectRatio(renderer.getAspectRatio());
-
-            // Only update camera when ImGui is not capturing mouse/keyboard
             if (!ImGui::GetIO().WantCaptureMouse && !ImGui::GetIO().WantCaptureKeyboard)
                 camera.update(dt);
 
-            // --- ImGui frame begin (before any ImGui::* calls) ---
+            // ---- ImGui frame -----------------------------------------------
             imguiManager.beginFrame();
-
-            // Debug Tools window
             {
                 auto pos = camera.getPosition();
                 ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Once);
-                ImGui::SetNextWindowSize(ImVec2(300, 160), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImVec2(320, 220), ImGuiCond_Once);
                 ImGui::Begin("Debug Tools");
-                ImGui::Text("FPS:    %.1f", timer.getFPS());
-                ImGui::Text("dt:     %.2f ms", timer.getDeltaTimeMs());
+
+                ImGui::Text("FPS:  %.1f  (%.2f ms)", timer.getFPS(), timer.getDeltaTimeMs());
                 ImGui::Separator();
-                ImGui::Text("Camera: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
+                ImGui::Text("Camera: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
                 ImGui::Text("Yaw: %.1f  Pitch: %.1f", camera.getYaw(), camera.getPitch());
+                ImGui::SliderFloat("Speed", &cameraSpeed, 1.0f, 100.0f);
                 ImGui::Separator();
-                ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 50.0f);
+
+                ImGui::Text("--- ChunkManager ---");
+                ImGui::Text("Chunks:   %u", chunkManager.getChunkCount());
+                ImGui::Text("Vertices: %u", chunkManager.getTotalVertices());
+                ImGui::Text("Indices:  %u", chunkManager.getTotalIndices());
+                ImGui::Text("Rebuild:  %.2f ms", chunkManager.getLastRebuildMs());
+
                 ImGui::Separator();
-                ImGui::Text("--- World Stats ---");
-                ImGui::Text("Chunks:   %u", voxelWorld.getChunkCount());
-                ImGui::Text("Vertices: %u", voxelWorld.getTotalVertices());
-                ImGui::Text("Indices:  %u", voxelWorld.getTotalIndices());
-                if (ImGui::Button("Regenerate World (Random)")) {
-                    vkDeviceWaitIdle(vulkanContext.getDevice());
-                    geometryManager.reset();
-                    voxelWorld.getChunks()[0]->fillRandom();
-                    voxelWorld.rebuildMeshes();
+                if (ImGui::Button("Regenerate (Terrain)")) {
+                    chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
+                    chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
                 }
-                if (ImGui::Button("Regenerate World (Terrain)")) {
-                    vkDeviceWaitIdle(vulkanContext.getDevice());
-                    geometryManager.reset();
-                    voxelWorld.generateTestWorld();
+                ImGui::SameLine();
+                if (ImGui::Button("New Seed")) {
+                    worldSeed = (worldSeed + 1337) % 99999;
+                    chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
+                    chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
                 }
+
                 ImGui::End();
             }
 
-            // Light Matrix
-            core::math::Vec3 lightPos = {5.0f, 10.0f, 3.0f}; 
-            core::math::Mat4 lightView = core::math::Mat4::lookAt(lightPos, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f});
-            core::math::Mat4 lightProj = core::math::Mat4::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 20.0f);
+            // ---- Light matrices --------------------------------------------
+            core::math::Vec3 lightPos = {5.0f, 10.0f, 3.0f};
+            core::math::Mat4 lightView = core::math::Mat4::lookAt(
+                lightPos, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f});
+            core::math::Mat4 lightProj = core::math::Mat4::ortho(
+                -10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 20.0f);
             core::math::Mat4 lightSpaceMatrix = lightProj * lightView;
 
+            // ---- Render frame ----------------------------------------------
             VkCommandBuffer commandBuffer = renderer.beginFrame();
             if (commandBuffer) {
-                
                 uint32_t currentFrame = renderer.getCurrentFrameIndex();
 
-                // --- Shadow Pass (empty — no shadow casters for now) ---
+                // Shadow pass (empty for now)
                 renderer.beginShadowPass(commandBuffer);
                 renderer.endShadowPass(commandBuffer);
 
-                // --- Main Pass ---
+                // Main pass
                 renderer.beginMainPass(commandBuffer);
-                mainPipeline.bind(commandBuffer);
+
+                // Bind geometry buffers (shared by all pipelines)
                 geometryManager.bind(commandBuffer);
 
+                // Bind descriptor sets (set 0 + set 1)
                 VkDescriptorSet descriptorSet = renderer.getDescriptorSet();
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    mainPipeline.getLayout(), 0, 1, &descriptorSet, 0, nullptr);
-                bindlessSystem.bind(commandBuffer, mainPipeline.getLayout(), currentFrame, 1);
+                    voxelPipeline.getLayout(), 0, 1, &descriptorSet, 0, nullptr);
+                bindlessSystem.bind(commandBuffer, voxelPipeline.getLayout(), currentFrame, 1);
 
-                core::math::Mat4 viewProj = camera.getProjectionMatrix() * camera.getViewMatrix();
+                // ---- Voxel World -------------------------------------------
+                if (chunkManager.hasMesh()) {
+                    voxelPipeline.bind(commandBuffer);
 
-                // --- Voxel World ---
-                {
-                    // Upload identity model matrix for the world chunk (objectIndex = 0)
-                    gfx::BindlessSystem::ObjectDataSSBO worldData{};
-                    worldData.modelMatrix = core::math::Mat4::identity();
-                    worldData.textureID   = 0; // vertex color only
-                    bindlessSystem.updateObject(currentFrame, 0, worldData);
+                    core::math::Mat4 viewProj = camera.getProjectionMatrix() * camera.getViewMatrix();
 
-                    PushConstants pc{};
-                    pc.viewProj         = viewProj;
-                    pc.lightSpaceMatrix = lightSpaceMatrix;
-                    pc.objectIndex      = 0;
-                    vkCmdPushConstants(commandBuffer, mainPipeline.getLayout(),
+                    VoxelPushConstants vpc{};
+                    vpc.viewProj         = viewProj;
+                    vpc.lightSpaceMatrix = lightSpaceMatrix;
+                    vpc.chunkOffsetX     = 0.0f; // world coords pre-baked into vertices
+                    vpc.chunkOffsetY     = 0.0f;
+                    vpc.chunkOffsetZ     = 0.0f;
+                    vpc._pad             = 0.0f;
+                    vkCmdPushConstants(commandBuffer, voxelPipeline.getLayout(),
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                        0, sizeof(PushConstants), &pc);
-                    voxelWorld.render(commandBuffer);
+                        0, sizeof(VoxelPushConstants), &vpc);
+
+                    chunkManager.render(commandBuffer);
                 }
 
-                // --- Text UI (SDF) ---
-                // FPS is already shown in ImGui Debug Tools window — no need to duplicate here.
-                // Keep TextRenderer active for future in-world labels / HUD elements.
-                textRenderer.beginFrame(renderer.getCurrentFrameIndex());
-
-                // --- ImGui render (inside active vkCmdBeginRendering block) ---
+                // ---- ImGui -------------------------------------------------
+                textRenderer.beginFrame(currentFrame);
                 imguiManager.render(commandBuffer);
 
                 renderer.endMainPass(commandBuffer);
                 renderer.endFrame(commandBuffer);
             }
         }
-        
+
         vkDeviceWaitIdle(vulkanContext.getDevice());
 
     } catch (const std::exception& e) {
         std::cerr << "Fatal Error: " << e.what() << std::endl;
-        system("pause"); // Keep console open
+        system("pause");
         return EXIT_FAILURE;
     }
 

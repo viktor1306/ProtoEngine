@@ -1,59 +1,77 @@
 #pragma once
 
-#include "BlockType.hpp"
+#include "VoxelData.hpp"
 #include "gfx/resources/Mesh.hpp"
 #include <vector>
+#include <array>
 #include <cstdint>
 
 namespace world {
 
-constexpr int CHUNK_SIZE = 16;
+constexpr int CHUNK_SIZE = 32;
 
-// CPU-side mesh data ready to be uploaded via GeometryManager::uploadMesh().
-// Chunk never touches Vulkan directly.
-struct MeshData {
-    std::vector<gfx::Vertex>   vertices;
-    std::vector<uint32_t>      indices;
-
+// CPU-side voxel mesh data (uses compressed VoxelVertex — 8 bytes each)
+struct VoxelMeshData {
+    std::vector<VoxelVertex> vertices;
+    std::vector<uint32_t>    indices;
     bool empty() const { return vertices.empty(); }
 };
 
 class Chunk {
 public:
-    // worldPos: position of the chunk's (0,0,0) corner in world space (block units)
-    explicit Chunk(core::math::Vec3 worldPos = {0.0f, 0.0f, 0.0f});
+    // chunkCoord: grid position (multiply by CHUNK_SIZE to get world offset)
+    explicit Chunk(int cx = 0, int cy = 0, int cz = 0);
 
-    // Block access — bounds-checked in debug, unchecked in release
-    void    setBlock(int x, int y, int z, BlockID id);
-    BlockID getBlock(int x, int y, int z) const;
+    // ---- Voxel access -------------------------------------------------------
+    void      setVoxel(int x, int y, int z, VoxelData v);
+    VoxelData getVoxel(int x, int y, int z) const;
 
-    // Fill entire chunk with one block type
-    void fill(BlockID id);
+    // ---- Fill helpers -------------------------------------------------------
+    void fill(VoxelData v);
+    void fillTerrain(int seed = 0);   // heightmap-based terrain
+    void fillRandom(int seed = 0);    // random solid/air for testing
 
-    // Fill with a simple terrain: stone below groundY, grass at groundY, air above
-    void fillTerrain(int groundY = 8);
+    // ---- Mesh generation ----------------------------------------------------
+    // Hidden Face Culling — only emit faces adjacent to AIR.
+    // neighbors[6]: adjacent chunks in order +X,-X,+Y,-Y,+Z,-Z.
+    // Pass nullptr for a neighbour to treat that boundary as AIR.
+    // Coordinates in VoxelVertex are LOCAL (0-31) — chunk offset is applied
+    // in the vertex shader via push constants (chunkOffset).
+    VoxelMeshData generateMesh(const std::array<const Chunk*, 6>& neighbors = {}) const;
 
-    // Fill with random blocks (stone/grass/air) — for testing Culled Meshing
-    void fillRandom();
+    // ---- State --------------------------------------------------------------
+    bool isDirty()  const { return m_isDirty; }
+    void markDirty()      { m_isDirty = true; }
+    void markClean()      { m_isDirty = false; }
 
-    // Culled Meshing: only emit faces adjacent to AIR or chunk boundary.
-    // Returns CPU vertex/index data ready for GeometryManager::uploadMesh().
-    MeshData generateMesh() const;
+    // Grid coordinate of this chunk
+    int getCX() const { return m_cx; }
+    int getCY() const { return m_cy; }
+    int getCZ() const { return m_cz; }
 
-    core::math::Vec3 getWorldPos() const { return m_worldPos; }
+    // World-space offset of this chunk's (0,0,0) corner (in block units)
+    float getWorldOffsetX() const { return static_cast<float>(m_cx * CHUNK_SIZE); }
+    float getWorldOffsetY() const { return static_cast<float>(m_cy * CHUNK_SIZE); }
+    float getWorldOffsetZ() const { return static_cast<float>(m_cz * CHUNK_SIZE); }
 
 private:
-    // Flat 3D array: index = x + y*CHUNK_SIZE + z*CHUNK_SIZE*CHUNK_SIZE
-    BlockID m_blocks[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE]{};
-    core::math::Vec3 m_worldPos;
-
-    // Returns true if the block at (x,y,z) is transparent/non-solid.
-    // Out-of-bounds coords are treated as AIR (chunk boundary → emit face).
-    bool isAirAt(int x, int y, int z) const;
+    VoxelData m_voxels[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE]{};
+    int  m_cx, m_cy, m_cz;
+    bool m_isDirty = true;
 
     static int idx(int x, int y, int z) {
         return x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE;
     }
+
+    // Returns true if the voxel at local (x,y,z) is non-solid (AIR).
+    // Out-of-bounds coords query the appropriate neighbour chunk.
+    // If neighbour is nullptr, treat as AIR (emit face at world boundary).
+    bool isAirAt(int x, int y, int z,
+                 const std::array<const Chunk*, 6>& neighbors) const;
+
+    // Compute simple AO value (0-3) for a face vertex.
+    // side1, side2: two edge-adjacent voxels; corner: diagonal voxel.
+    static uint8_t computeAO(bool side1, bool side2, bool corner);
 };
 
 } // namespace world
