@@ -24,6 +24,7 @@
 #include "world/World.hpp"
 #include "world/ChunkManager.hpp"
 #include "world/VoxelData.hpp"
+#include "scene/Frustum.hpp"
 
 // ---------------------------------------------------------------------------
 // Push constants for the standard (simple) pipeline
@@ -92,12 +93,15 @@ int main() {
         std::cout << "ImGuiManager created.\n";
 
         // ---- Voxel World (ChunkManager) ------------------------------------
+        // MeshWorker uses hardware_concurrency() threads by default
         world::ChunkManager chunkManager(geometryManager);
         int worldRadius = 3; // 7×7 = 49 chunks
         int worldSeed   = 42;
         chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
+        // Wait for all async meshing to complete before first frame
         chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
-        std::cout << "ChunkManager created: " << chunkManager.getChunkCount() << " chunks.\n";
+        std::cout << "ChunkManager created: " << chunkManager.getChunkCount()
+                  << " chunks, " << chunkManager.getWorkerThreads() << " worker threads.\n";
 
         // ---- Legacy World (kept for reference, not rendered) ---------------
         world::BlockRegistry::registerDefaults();
@@ -195,7 +199,15 @@ int main() {
         gfx::Pipeline voxelPipeline(vulkanContext, voxelPipelineConfig);
 
         // ---- Camera --------------------------------------------------------
-        scene::Camera camera({0.0f, 20.0f, 60.0f}, 60.0f, renderer.getAspectRatio());
+        // Камера над центром світу, дивиться вперед (+Z напрямок)
+        // Чанки від (-48,0,-48) до (48,16,48) у world space
+        // Yaw=0 → front=(1,0,0); Yaw=90 → front=(0,0,1)
+        // Стартова позиція: над центром, дивимось на -Z (yaw=-90 за замовчуванням)
+        // Але чанки є і в +Z і в -Z, тому ставимо камеру вище і дивимось вниз
+        // Камера над центром, дивиться вниз під кутом 45°
+        // Чанки: cx=-3..3, cz=-3..3 → world coords -48..48 (без bias)
+        scene::Camera camera({0.0f, 80.0f, 80.0f}, 60.0f, renderer.getAspectRatio());
+        camera.setPitch(-45.0f); // дивимось вниз на ландшафт
         float cameraSpeed = 20.0f;
 
         // ---- Timer ---------------------------------------------------------
@@ -220,12 +232,21 @@ int main() {
             if (!ImGui::GetIO().WantCaptureMouse && !ImGui::GetIO().WantCaptureKeyboard)
                 camera.update(dt);
 
+            // ---- Collect async mesh results (non-blocking) -----------------
+            chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
+
+            // ---- Build frustum for this frame ------------------------------
+            core::math::Mat4 viewProjForFrustum =
+                camera.getProjectionMatrix() * camera.getViewMatrix();
+            scene::Frustum frustum;
+            frustum.extractPlanes(viewProjForFrustum);
+
             // ---- ImGui frame -----------------------------------------------
             imguiManager.beginFrame();
             {
                 auto pos = camera.getPosition();
                 ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Once);
-                ImGui::SetNextWindowSize(ImVec2(320, 220), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImVec2(340, 280), ImGuiCond_Once);
                 ImGui::Begin("Debug Tools");
 
                 ImGui::Text("FPS:  %.1f  (%.2f ms)", timer.getFPS(), timer.getDeltaTimeMs());
@@ -236,21 +257,23 @@ int main() {
                 ImGui::Separator();
 
                 ImGui::Text("--- ChunkManager ---");
-                ImGui::Text("Chunks:   %u", chunkManager.getChunkCount());
-                ImGui::Text("Vertices: %u", chunkManager.getTotalVertices());
-                ImGui::Text("Indices:  %u", chunkManager.getTotalIndices());
-                ImGui::Text("Rebuild:  %.2f ms", chunkManager.getLastRebuildMs());
+                ImGui::Text("Chunks total:   %u", chunkManager.getChunkCount());
+                ImGui::Text("Visible:        %u", chunkManager.getVisibleCount());
+                ImGui::Text("Culled:         %u", chunkManager.getCulledCount());
+                ImGui::Text("Verts (vis):    %u", chunkManager.getVisibleVertices());
+                ImGui::Text("Verts (total):  %u", chunkManager.getTotalVertices());
+                ImGui::Text("Rebuild:        %.2f ms", chunkManager.getLastRebuildMs());
+                ImGui::Text("Worker threads: %u", chunkManager.getWorkerThreads());
+                ImGui::Text("Pending meshes: %d", chunkManager.getPendingMeshes());
 
                 ImGui::Separator();
-                if (ImGui::Button("Regenerate (Terrain)")) {
+                if (ImGui::Button("Regenerate")) {
                     chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
-                    chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("New Seed")) {
                     worldSeed = (worldSeed + 1337) % 99999;
                     chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
-                    chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
                 }
 
                 ImGui::End();
@@ -303,7 +326,7 @@ int main() {
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0, sizeof(VoxelPushConstants), &vpc);
 
-                    chunkManager.render(commandBuffer);
+                    chunkManager.render(commandBuffer, frustum);
                 }
 
                 // ---- ImGui -------------------------------------------------

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Chunk.hpp"
+#include "MeshWorker.hpp"
+#include "scene/Frustum.hpp"
 #include "gfx/resources/GeometryManager.hpp"
 #include "gfx/resources/Mesh.hpp"
 #include <unordered_map>
@@ -22,7 +24,6 @@ struct IVec3Key {
 
 struct IVec3Hash {
     size_t operator()(const IVec3Key& k) const noexcept {
-        // FNV-1a inspired hash
         size_t h = 2166136261u;
         h ^= static_cast<size_t>(k.x); h *= 16777619u;
         h ^= static_cast<size_t>(k.y); h *= 16777619u;
@@ -32,71 +33,107 @@ struct IVec3Hash {
 };
 
 // ---------------------------------------------------------------------------
+// ChunkRenderData — per-chunk GPU sub-allocation info
+//
+// Each chunk has its own Mesh (sub-allocated from GeometryManager).
+// This enables:
+//   1. Per-chunk frustum culling (skip vkCmdDrawIndexed for invisible chunks)
+//   2. Partial GPU updates (only dirty chunks re-upload, no full reset)
+//   3. BDA-ready: firstIndex + vertexOffset passed directly to draw call
+// ---------------------------------------------------------------------------
+struct ChunkRenderData {
+    std::unique_ptr<gfx::Mesh> mesh;
+    scene::AABB                aabb;       // world-space AABB for frustum culling
+    uint32_t                   vertexCount = 0;
+    uint32_t                   indexCount  = 0;
+    bool                       valid       = false;
+};
+
+// ---------------------------------------------------------------------------
 // ChunkManager
 //
-// Manages a collection of Chunks and their combined GPU mesh.
-// All chunks are merged into ONE draw call via GeometryManager::uploadMeshRaw.
-// Chunk world position is encoded in VoxelVertex coordinates:
-//   vertex.x/y/z = local coord (0-31)
-//   chunkOffset  = passed per-draw via push constants in the voxel pipeline
-//
-// Since we use a single merged mesh, chunkOffset = (0,0,0) and all vertices
-// are pre-offset on the CPU side (local coords + chunk world offset).
-// This avoids per-chunk draw calls entirely.
+// Manages a collection of Chunks and their per-chunk GPU meshes.
+// Supports:
+//   - Frustum culling (per-chunk AABB test before draw)
+//   - Async meshing via MeshWorker thread pool
+//   - Partial GPU updates (only dirty chunks re-upload)
+//   - BDA-compatible per-chunk draw calls
 // ---------------------------------------------------------------------------
 class ChunkManager {
 public:
-    explicit ChunkManager(gfx::GeometryManager& geometryManager);
+    explicit ChunkManager(gfx::GeometryManager& geometryManager,
+                          uint32_t meshWorkerThreads = 0);
     ~ChunkManager() = default;
 
-    // Generate a flat grid of chunks (radiusX × radiusZ around origin)
-    // with heightmap-based terrain. cy=0 only (single vertical layer).
+    // Generate a flat grid of chunks (radiusX × radiusZ around origin).
+    // Submits all chunks to MeshWorker for async meshing.
+    // Call rebuildDirtyChunks() after to upload results to GPU.
     void generateWorld(int radiusX, int radiusZ, int seed = 42);
 
-    // Rebuild meshes for all dirty chunks and upload to GPU.
-    // Calls vkDeviceWaitIdle internally — safe for MAX_FRAMES_IN_FLIGHT=3.
+    // Upload completed async mesh results to GPU.
+    // Only processes chunks that finished meshing (non-blocking if async).
+    // Pass device for vkDeviceWaitIdle on dirty chunks only.
     void rebuildDirtyChunks(VkDevice device);
 
-    // Draw the world mesh (must be called inside an active render pass
-    // with the voxel pipeline bound and geometry buffers bound).
-    void render(VkCommandBuffer cmd);
+    // Draw visible chunks using frustum culling.
+    // Updates m_visibleCount / m_culledCount stats.
+    void render(VkCommandBuffer cmd, const scene::Frustum& frustum);
 
     // Mark a chunk as dirty (e.g. after block edit)
     void markDirty(int cx, int cy, int cz);
 
     // ---- Stats (for ImGui) --------------------------------------------------
-    uint32_t getChunkCount()    const { return static_cast<uint32_t>(m_chunks.size()); }
-    uint32_t getTotalVertices() const { return m_totalVertices; }
-    uint32_t getTotalIndices()  const { return m_totalIndices; }
-    float    getLastRebuildMs() const { return m_lastRebuildMs; }
-    bool     hasMesh()          const { return m_worldMesh != nullptr; }
+    uint32_t getChunkCount()      const { return static_cast<uint32_t>(m_chunks.size()); }
+    uint32_t getTotalVertices()   const { return m_totalVertices; }
+    uint32_t getTotalIndices()    const { return m_totalIndices; }
+    float    getLastRebuildMs()   const { return m_lastRebuildMs; }
+    uint32_t getVisibleCount()    const { return m_visibleCount; }
+    uint32_t getCulledCount()     const { return m_culledCount; }
+    uint32_t getVisibleVertices() const { return m_visibleVertices; }
+    uint32_t getWorkerThreads()   const { return m_meshWorker.getThreadCount(); }
+    int      getPendingMeshes()   const { return m_meshWorker.getActiveTasks(); }
 
     // World-space offset to subtract in the shader (= -bias in world units)
     float getWorldOriginX() const { return -static_cast<float>(m_worldBiasX); }
     float getWorldOriginY() const { return -static_cast<float>(m_worldBiasY); }
     float getWorldOriginZ() const { return -static_cast<float>(m_worldBiasZ); }
 
+    // True if at least one chunk has a valid mesh
+    bool hasMesh() const;
+
 private:
     gfx::GeometryManager& m_geometryManager;
+    MeshWorker            m_meshWorker;
 
-    std::unordered_map<IVec3Key, std::unique_ptr<Chunk>, IVec3Hash> m_chunks;
+    std::unordered_map<IVec3Key, std::unique_ptr<Chunk>,       IVec3Hash> m_chunks;
+    std::unordered_map<IVec3Key, ChunkRenderData,              IVec3Hash> m_renderData;
 
-    // Single merged mesh for the entire world
-    std::unique_ptr<gfx::Mesh> m_worldMesh;
+    // CPU-side mesh cache: зберігає останні VoxelMeshData для кожного чанку
+    // (без world bias — bias застосовується при upload).
+    // Потрібен для повного re-upload при GeometryManager::reset().
+    std::unordered_map<IVec3Key, VoxelMeshData,                IVec3Hash> m_pendingMeshData;
 
     // Stats
-    uint32_t m_totalVertices = 0;
-    uint32_t m_totalIndices  = 0;
-    float    m_lastRebuildMs = 0.0f;
+    uint32_t m_totalVertices   = 0;
+    uint32_t m_totalIndices    = 0;
+    float    m_lastRebuildMs   = 0.0f;
+    uint32_t m_visibleCount    = 0;
+    uint32_t m_culledCount     = 0;
+    uint32_t m_visibleVertices = 0;
 
     // World bias: added to vertex coords so all values are non-negative (uint8_t safe).
-    // Shader subtracts this via chunkOffset push constant to restore true world coords.
     int m_worldBiasX = 0;
     int m_worldBiasY = 0;
     int m_worldBiasZ = 0;
 
     // Get neighbour chunk pointer (nullptr if not loaded)
     const Chunk* getNeighbour(int cx, int cy, int cz) const;
+
+    // Build world-space AABB for a chunk at (cx, cy, cz)
+    scene::AABB buildAABB(int cx, int cy, int cz) const;
+
+    // Upload a single chunk's mesh data to GPU
+    void uploadChunkMesh(const IVec3Key& key, VoxelMeshData& meshData, VkDevice device);
 };
 
 } // namespace world

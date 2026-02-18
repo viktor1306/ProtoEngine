@@ -5,9 +5,17 @@
 
 namespace world {
 
-ChunkManager::ChunkManager(gfx::GeometryManager& geometryManager)
+// ---------------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------------
+ChunkManager::ChunkManager(gfx::GeometryManager& geometryManager,
+                           uint32_t meshWorkerThreads)
     : m_geometryManager(geometryManager)
-{}
+    , m_meshWorker(meshWorkerThreads)
+{
+    std::cout << "[ChunkManager] MeshWorker threads: "
+              << m_meshWorker.getThreadCount() << "\n" << std::flush;
+}
 
 // ---------------------------------------------------------------------------
 // getNeighbour
@@ -18,18 +26,42 @@ const Chunk* ChunkManager::getNeighbour(int cx, int cy, int cz) const {
 }
 
 // ---------------------------------------------------------------------------
-// generateWorld — create a radiusX × radiusZ grid of terrain chunks
+// buildAABB — world-space AABB for a chunk (true world coords, no bias)
+// ---------------------------------------------------------------------------
+scene::AABB ChunkManager::buildAABB(int cx, int cy, int cz) const {
+    float wx = static_cast<float>(cx * CHUNK_SIZE);
+    float wy = static_cast<float>(cy * CHUNK_SIZE);
+    float wz = static_cast<float>(cz * CHUNK_SIZE);
+    float sz = static_cast<float>(CHUNK_SIZE);
+    return {
+        {wx,      wy,      wz     },
+        {wx + sz, wy + sz, wz + sz}
+    };
+}
+
+// ---------------------------------------------------------------------------
+// generateWorld — create terrain chunks and submit async meshing
 // ---------------------------------------------------------------------------
 void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
+    // Wait for any in-flight meshing from previous world
+    m_meshWorker.waitAll();
+    m_meshWorker.collect(); // discard old results
+
     m_chunks.clear();
-    m_worldMesh.reset();
+    m_renderData.clear();
+    m_pendingMeshData.clear(); // скидаємо CPU кеш при повній регенерації
+    m_totalVertices   = 0;
+    m_totalIndices    = 0;
+    m_visibleCount    = 0;
+    m_culledCount     = 0;
+    m_visibleVertices = 0;
 
     // Bias: shift all world coords so minimum = 0 (avoids uint8_t underflow)
-    // Min chunk coord = -radiusX, min block coord = -radiusX * CHUNK_SIZE
     m_worldBiasX = radiusX * CHUNK_SIZE;
-    m_worldBiasY = 0; // cy=0 only, y coords always >= 0
+    m_worldBiasY = 0;
     m_worldBiasZ = radiusZ * CHUNK_SIZE;
 
+    // Generate chunk data
     int count = 0;
     for (int cz = -radiusZ; cz <= radiusZ; ++cz) {
         for (int cx = -radiusX; cx <= radiusX; ++cx) {
@@ -43,58 +75,9 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
     std::cout << "[ChunkManager] Generated " << count
               << " chunks (" << (2*radiusX+1) << "x" << (2*radiusZ+1) << " grid)."
               << " Bias=(" << m_worldBiasX << ",0," << m_worldBiasZ << ")\n" << std::flush;
-}
 
-// ---------------------------------------------------------------------------
-// markDirty
-// ---------------------------------------------------------------------------
-void ChunkManager::markDirty(int cx, int cy, int cz) {
-    auto it = m_chunks.find({cx, cy, cz});
-    if (it != m_chunks.end()) it->second->markDirty();
-}
-
-// ---------------------------------------------------------------------------
-// rebuildDirtyChunks
-//
-// Strategy: merge ALL dirty chunk meshes into one big CPU buffer,
-// then reset GeometryManager and upload as a single draw call.
-//
-// Key insight: VoxelVertex stores LOCAL coords (0-31).
-// We pre-offset each vertex on the CPU:
-//   worldX = chunkCX * CHUNK_SIZE + localX
-// This fits in uint8_t only if chunkCX * CHUNK_SIZE + 31 <= 255,
-// i.e. chunkCX <= 7. For larger worlds we use uint16_t-equivalent
-// by storing the offset in a separate world-space vertex field.
-//
-// SOLUTION: We expand VoxelVertex to world-space uint16_t coords here
-// by converting to gfx::Vertex (48 bytes) for the merged mesh.
-// This keeps the GPU pipeline simple and avoids per-chunk draw calls.
-//
-// For the voxel pipeline we use a SEPARATE vertex buffer with world-space
-// float positions derived from the packed data + chunk offset.
-// ---------------------------------------------------------------------------
-void ChunkManager::rebuildDirtyChunks(VkDevice device) {
-    // Check if any chunk is dirty
-    bool anyDirty = false;
+    // Submit all chunks for async meshing
     for (auto& [key, chunk] : m_chunks) {
-        if (chunk->isDirty()) { anyDirty = true; break; }
-    }
-    if (!anyDirty) return;
-
-    std::cout << "[ChunkManager] rebuildDirtyChunks: generating meshes...\n" << std::flush;
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-
-    // Collect merged mesh from ALL chunks (full rebuild for simplicity)
-    // Future: incremental rebuild of only dirty chunks
-    std::vector<VoxelVertex> allVertices;
-    std::vector<uint32_t>    allIndices;
-    allVertices.reserve(1 << 21); // 2M vertices pre-alloc (safe for 49 chunks)
-    allIndices.reserve(1 << 22);  // 4M indices pre-alloc
-
-    int chunkIdx = 0;
-    for (auto& [key, chunk] : m_chunks) {
-        // Build neighbour array: +X,-X,+Y,-Y,+Z,-Z
         std::array<const Chunk*, 6> neighbors = {
             getNeighbour(key.x + 1, key.y,     key.z    ),
             getNeighbour(key.x - 1, key.y,     key.z    ),
@@ -103,78 +86,204 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device) {
             getNeighbour(key.x,     key.y,     key.z + 1),
             getNeighbour(key.x,     key.y,     key.z - 1),
         };
-
-        VoxelMeshData meshData = chunk->generateMesh(neighbors);
-        ++chunkIdx;
-        if (meshData.empty()) {
-            chunk->markClean();
-            continue;
-        }
-
-        // Pre-offset vertices: add chunk world offset to local coords.
-        // We bias by (radiusX * CHUNK_SIZE) so all coords are non-negative.
-        // The shader subtracts this bias via chunkOffset push constant.
-        int worldOffX = key.x * CHUNK_SIZE;
-        int worldOffY = key.y * CHUNK_SIZE;
-        int worldOffZ = key.z * CHUNK_SIZE;
-
-        uint32_t indexOffset = static_cast<uint32_t>(allVertices.size());
-
-        for (VoxelVertex v : meshData.vertices) {
-            int wx = worldOffX + static_cast<int>(v.x);
-            int wy = worldOffY + static_cast<int>(v.y);
-            int wz = worldOffZ + static_cast<int>(v.z);
-            // Add bias so coords are always non-negative (max radius=3: bias=96)
-            // uint8_t range 0-255 is sufficient for radius ≤ 3 (max coord = 96+32+32=160)
-            wx += m_worldBiasX;
-            wy += m_worldBiasY;
-            wz += m_worldBiasZ;
-            v.x = static_cast<uint8_t>(wx);
-            v.y = static_cast<uint8_t>(wy);
-            v.z = static_cast<uint8_t>(wz);
-            allVertices.push_back(v);
-        }
-
-        for (uint32_t i : meshData.indices) {
-            allIndices.push_back(i + indexOffset);
-        }
-
-        chunk->markClean();
+        MeshTask task;
+        task.chunk     = chunk.get();
+        task.neighbors = neighbors;
+        task.cx        = key.x;
+        task.cy        = key.y;
+        task.cz        = key.z;
+        m_meshWorker.submit(std::move(task));
     }
 
-    if (allVertices.empty()) {
-        m_totalVertices = 0;
-        m_totalIndices  = 0;
-        m_worldMesh.reset();
-        return;
+    std::cout << "[ChunkManager] Submitted " << count
+              << " meshing tasks to " << m_meshWorker.getThreadCount()
+              << " worker threads.\n" << std::flush;
+}
+
+// ---------------------------------------------------------------------------
+// markDirty
+// ---------------------------------------------------------------------------
+void ChunkManager::markDirty(int cx, int cy, int cz) {
+    auto it = m_chunks.find({cx, cy, cz});
+    if (it == m_chunks.end()) return;
+    it->second->markDirty();
+
+    // Re-submit for async meshing
+    std::array<const Chunk*, 6> neighbors = {
+        getNeighbour(cx + 1, cy,     cz    ),
+        getNeighbour(cx - 1, cy,     cz    ),
+        getNeighbour(cx,     cy + 1, cz    ),
+        getNeighbour(cx,     cy - 1, cz    ),
+        getNeighbour(cx,     cy,     cz + 1),
+        getNeighbour(cx,     cy,     cz - 1),
+    };
+    MeshTask task;
+    task.chunk     = it->second.get();
+    task.neighbors = neighbors;
+    task.cx        = cx;
+    task.cy        = cy;
+    task.cz        = cz;
+    m_meshWorker.submit(std::move(task));
+}
+
+// ---------------------------------------------------------------------------
+// uploadChunkMesh — upload one chunk's mesh to GPU (partial update)
+// ---------------------------------------------------------------------------
+void ChunkManager::uploadChunkMesh(const IVec3Key& key,
+                                   VoxelMeshData& meshData,
+                                   [[maybe_unused]] VkDevice device)
+{
+    // Apply world bias to vertex coords
+    int worldOffX = key.x * CHUNK_SIZE + m_worldBiasX;
+    int worldOffY = key.y * CHUNK_SIZE + m_worldBiasY;
+    int worldOffZ = key.z * CHUNK_SIZE + m_worldBiasZ;
+
+    for (VoxelVertex& v : meshData.vertices) {
+        int wx = worldOffX + static_cast<int>(v.x);
+        int wy = worldOffY + static_cast<int>(v.y);
+        int wz = worldOffZ + static_cast<int>(v.z);
+        v.x = static_cast<uint8_t>(wx);
+        v.y = static_cast<uint8_t>(wy);
+        v.z = static_cast<uint8_t>(wz);
     }
 
-    // GPU upload — reset and re-upload entire world mesh
+    // Get or create render data for this chunk
+    auto& rd = m_renderData[key];
+
+    // Destroy old mesh (if any) — partial update: only this chunk
+    if (rd.valid) {
+        // Update stats: subtract old counts
+        m_totalVertices -= rd.vertexCount;
+        m_totalIndices  -= rd.indexCount;
+        rd.mesh.reset();
+        rd.valid = false;
+    }
+
+    if (meshData.empty()) return;
+
+    // Upload new mesh
+    rd.mesh.reset(m_geometryManager.uploadMeshRaw(meshData.vertices, meshData.indices));
+    rd.aabb        = buildAABB(key.x, key.y, key.z);
+    rd.vertexCount = static_cast<uint32_t>(meshData.vertices.size());
+    rd.indexCount  = static_cast<uint32_t>(meshData.indices.size());
+    rd.valid       = true;
+
+    m_totalVertices += rd.vertexCount;
+    m_totalIndices  += rd.indexCount;
+}
+
+// ---------------------------------------------------------------------------
+// rebuildDirtyChunks — collect async results and upload to GPU
+//
+// GeometryManager використовує лінійний аллокатор (без звільнення окремих
+// блоків). Тому при будь-якому оновленні ми:
+//   1. Збираємо готові меші з MeshWorker (non-blocking).
+//   2. Зберігаємо нові дані в m_pendingMeshData.
+//   3. Робимо GeometryManager::reset() — скидаємо весь буфер.
+//   4. Перезавантажуємо ВСІ валідні чанки (старі + нові).
+//
+// Це гарантує що буфер ніколи не переповниться.
+// vkDeviceWaitIdle тільки якщо є що завантажувати.
+// ---------------------------------------------------------------------------
+void ChunkManager::rebuildDirtyChunks(VkDevice device) {
+    auto t0 = std::chrono::high_resolution_clock::now();
+
+    // Collect completed tasks (non-blocking)
+    auto done = m_meshWorker.collect();
+    if (done.empty()) return;
+
+    std::cout << "[ChunkManager] Uploading " << done.size()
+              << " chunk meshes to GPU...\n" << std::flush;
+
+    // Merge new results into pending cache
+    for (auto& task : done) {
+        IVec3Key key{task.cx, task.cy, task.cz};
+        if (!task.result.empty()) {
+            m_pendingMeshData[key] = std::move(task.result);
+        } else {
+            m_pendingMeshData.erase(key);
+        }
+        auto it = m_chunks.find(key);
+        if (it != m_chunks.end()) it->second->markClean();
+    }
+
+    // GPU idle — safe to reset and re-upload
     vkDeviceWaitIdle(device);
+
+    // Reset GeometryManager (linear allocator — full reset required)
     m_geometryManager.reset();
+    m_renderData.clear();
+    m_totalVertices = 0;
+    m_totalIndices  = 0;
 
-    m_worldMesh.reset(
-        m_geometryManager.uploadMeshRaw(allVertices, allIndices)
-    );
+    // Re-upload ALL cached chunk meshes
+    for (auto& [key, meshData] : m_pendingMeshData) {
+        if (meshData.empty()) continue;
 
-    m_totalVertices = static_cast<uint32_t>(allVertices.size());
-    m_totalIndices  = static_cast<uint32_t>(allIndices.size());
+        // Apply world bias
+        int worldOffX = key.x * CHUNK_SIZE + m_worldBiasX;
+        int worldOffY = key.y * CHUNK_SIZE + m_worldBiasY;
+        int worldOffZ = key.z * CHUNK_SIZE + m_worldBiasZ;
+
+        // Copy and apply bias (meshData is our cache — don't modify in-place)
+        std::vector<VoxelVertex> biasedVerts = meshData.vertices;
+        for (VoxelVertex& v : biasedVerts) {
+            v.x = static_cast<uint8_t>(worldOffX + static_cast<int>(v.x));
+            v.y = static_cast<uint8_t>(worldOffY + static_cast<int>(v.y));
+            v.z = static_cast<uint8_t>(worldOffZ + static_cast<int>(v.z));
+        }
+
+        auto& rd = m_renderData[key];
+        rd.mesh.reset(m_geometryManager.uploadMeshRaw(biasedVerts, meshData.indices));
+        rd.aabb        = buildAABB(key.x, key.y, key.z);
+        rd.vertexCount = static_cast<uint32_t>(biasedVerts.size());
+        rd.indexCount  = static_cast<uint32_t>(meshData.indices.size());
+        rd.valid       = true;
+
+        m_totalVertices += rd.vertexCount;
+        m_totalIndices  += rd.indexCount;
+    }
 
     auto t1 = std::chrono::high_resolution_clock::now();
     m_lastRebuildMs = std::chrono::duration<float, std::milli>(t1 - t0).count();
 
-    std::cout << "[ChunkManager] Rebuilt: "
-              << m_totalVertices << " vertices, "
-              << m_totalIndices  << " indices, "
-              << m_lastRebuildMs << " ms\n";
+    std::cout << "[ChunkManager] Upload done: "
+              << m_totalVertices << " total vertices, "
+              << m_totalIndices  << " total indices, "
+              << m_lastRebuildMs << " ms\n" << std::flush;
 }
 
 // ---------------------------------------------------------------------------
-// render
+// render — draw visible chunks with frustum culling
 // ---------------------------------------------------------------------------
-void ChunkManager::render(VkCommandBuffer cmd) {
-    if (!m_worldMesh) return;
-    m_worldMesh->draw(cmd);
+void ChunkManager::render(VkCommandBuffer cmd, const scene::Frustum& frustum) {
+    m_visibleCount    = 0;
+    m_culledCount     = 0;
+    m_visibleVertices = 0;
+
+    for (auto& [key, rd] : m_renderData) {
+        if (!rd.valid || !rd.mesh) continue;
+
+        // Frustum cull: skip chunks outside the view frustum
+        if (!frustum.isVisible(rd.aabb)) {
+            ++m_culledCount;
+            continue;
+        }
+
+        rd.mesh->draw(cmd);
+        ++m_visibleCount;
+        m_visibleVertices += rd.vertexCount;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// hasMesh
+// ---------------------------------------------------------------------------
+bool ChunkManager::hasMesh() const {
+    for (auto& [key, rd] : m_renderData) {
+        if (rd.valid && rd.mesh) return true;
+    }
+    return false;
 }
 
 } // namespace world

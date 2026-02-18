@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Math.hpp"
+#include <algorithm>
 
 namespace scene {
 
@@ -15,6 +16,8 @@ public:
     core::math::Mat4 getProjectionMatrix() const;
 
     void setAspectRatio(float aspect) { m_aspect = aspect; }
+    void setYaw(float yaw)     { m_yaw = yaw;     updateVectors(); }
+    void setPitch(float pitch) { m_pitch = std::clamp(pitch, -89.0f, 89.0f); updateVectors(); }
     core::math::Vec3 getPosition()    const { return m_position; }
 
     float getYaw()   const { return m_yaw; }
