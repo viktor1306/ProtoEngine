@@ -15,10 +15,12 @@ static int hashNoise(int wx, int wz, int seed) {
 }
 
 static float smoothNoise(int wx, int wz, int seed, int scale) {
-    int gx = wx / scale;
-    int gz = wz / scale;
-    float fx = static_cast<float>(wx % scale) / scale;
-    float fz = static_cast<float>(wz % scale) / scale;
+    // Use floor division to handle negative coordinates correctly
+    int gx = (wx >= 0) ? (wx / scale) : ((wx - scale + 1) / scale);
+    int gz = (wz >= 0) ? (wz / scale) : ((wz - scale + 1) / scale);
+    // Fractional part always in [0, 1)
+    float fx = static_cast<float>(wx - gx * scale) / static_cast<float>(scale);
+    float fz = static_cast<float>(wz - gz * scale) / static_cast<float>(scale);
     // Smoothstep
     fx = fx * fx * (3.0f - 2.0f * fx);
     fz = fz * fz * (3.0f - 2.0f * fz);
@@ -114,19 +116,31 @@ bool Chunk::isAirAt(int x, int y, int z,
         return !m_voxels[idx(x, y, z)].isSolid();
     }
 
-    // Out-of-bounds: determine which neighbour to query
-    // +X=0, -X=1, +Y=2, -Y=3, +Z=4, -Z=5
+    // Out-of-bounds: AO samples can exit on multiple axes simultaneously.
+    // Clamp each coordinate to [0, CHUNK_SIZE-1] for cross-chunk AO queries.
+    // This is an approximation — for AO we just need "is there a solid block
+    // roughly in that direction", so clamping is acceptable.
+    int cx = (x < 0) ? 0 : (x >= CHUNK_SIZE ? CHUNK_SIZE - 1 : x);
+    int cy = (y < 0) ? 0 : (y >= CHUNK_SIZE ? CHUNK_SIZE - 1 : y);
+    int cz = (z < 0) ? 0 : (z >= CHUNK_SIZE ? CHUNK_SIZE - 1 : z);
+
+    // Determine primary out-of-bounds axis for neighbour lookup
+    // Priority: X > Y > Z (arbitrary but consistent)
     const Chunk* nb = nullptr;
-    int lx = x, ly = y, lz = z;
+    int lx = cx, ly = cy, lz = cz;
 
-    if (x >= CHUNK_SIZE) { nb = neighbors[0]; lx = x - CHUNK_SIZE; }
-    else if (x < 0)      { nb = neighbors[1]; lx = x + CHUNK_SIZE; }
-    else if (y >= CHUNK_SIZE) { nb = neighbors[2]; ly = y - CHUNK_SIZE; }
-    else if (y < 0)           { nb = neighbors[3]; ly = y + CHUNK_SIZE; }
-    else if (z >= CHUNK_SIZE) { nb = neighbors[4]; lz = z - CHUNK_SIZE; }
-    else if (z < 0)           { nb = neighbors[5]; lz = z + CHUNK_SIZE; }
+    if (x >= CHUNK_SIZE)      { nb = neighbors[0]; lx = x - CHUNK_SIZE; if (lx >= CHUNK_SIZE) lx = CHUNK_SIZE-1; }
+    else if (x < 0)           { nb = neighbors[1]; lx = x + CHUNK_SIZE; if (lx < 0) lx = 0; }
+    else if (y >= CHUNK_SIZE) { nb = neighbors[2]; ly = y - CHUNK_SIZE; if (ly >= CHUNK_SIZE) ly = CHUNK_SIZE-1; }
+    else if (y < 0)           { nb = neighbors[3]; ly = y + CHUNK_SIZE; if (ly < 0) ly = 0; }
+    else if (z >= CHUNK_SIZE) { nb = neighbors[4]; lz = z - CHUNK_SIZE; if (lz >= CHUNK_SIZE) lz = CHUNK_SIZE-1; }
+    else if (z < 0)           { nb = neighbors[5]; lz = z + CHUNK_SIZE; if (lz < 0) lz = 0; }
 
-    if (!nb) return true; // no neighbour → treat as AIR (emit face)
+    if (!nb) return true; // no neighbour → treat as AIR
+    // Clamp local coords to valid range before indexing
+    lx = (lx < 0) ? 0 : (lx >= CHUNK_SIZE ? CHUNK_SIZE-1 : lx);
+    ly = (ly < 0) ? 0 : (ly >= CHUNK_SIZE ? CHUNK_SIZE-1 : ly);
+    lz = (lz < 0) ? 0 : (lz >= CHUNK_SIZE ? CHUNK_SIZE-1 : lz);
     return !nb->m_voxels[idx(lx, ly, lz)].isSolid();
 }
 
@@ -155,67 +169,83 @@ uint8_t Chunk::computeAO(bool side1, bool side2, bool corner) {
 // ---------------------------------------------------------------------------
 
 // Per-face: 4 corner offsets (dx,dy,dz) relative to voxel origin
-// Order: v0, v1, v2, v3 (CCW when viewed from outside)
+// Order: v0, v1, v2, v3 — CCW winding when viewed from OUTSIDE (from the normal direction)
+// Vulkan: VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_CULL_MODE_BACK_BIT
+// Right-hand rule: cross(v1-v0, v2-v0) must point toward the face normal
+// Per-face: 4 corner offsets (dx,dy,dz) relative to voxel origin
+// Order: v0,v1,v2,v3 — CCW winding when viewed from OUTSIDE (from the normal direction)
+// Vulkan: VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_CULL_MODE_BACK_BIT
+// Verification: cross(v1-v0, v2-v0) must point in the face normal direction.
+//
+// Coordinate system: X=right, Y=up, Z=toward viewer (right-handed)
+// When looking from outside along -N direction, CCW = left-hand turn v0→v1→v2
+// Verified with cross(v1-v0, v2-v0) = face normal for each face.
 static constexpr int8_t k_faceCorners[6][4][3] = {
-    // +X (faceID=0): normal = +X, quad on x+1 plane
+    // +X: cross((0,0,-1),(0,1,-1)) = (1,0,0) ✓
     {{1,0,1},{1,0,0},{1,1,0},{1,1,1}},
-    // -X (faceID=1): normal = -X, quad on x=0 plane
+    // -X: cross((0,0,1),(0,1,1)) = (-1,0,0) ✓
     {{0,0,0},{0,0,1},{0,1,1},{0,1,0}},
-    // +Y (faceID=2): normal = +Y, quad on y+1 plane
-    {{0,1,0},{1,1,0},{1,1,1},{0,1,1}},
-    // -Y (faceID=3): normal = -Y, quad on y=0 plane
-    {{0,0,1},{1,0,1},{1,0,0},{0,0,0}},
-    // +Z (faceID=4): normal = +Z, quad on z+1 plane
-    {{0,0,1},{1,0,1},{1,1,1},{0,1,1}},  // wait — duplicate of +Y? No, different plane
-    // -Z (faceID=5): normal = -Z, quad on z=0 plane
+    // +Y: v0=(1,1,0),v1=(0,1,0),v2=(0,1,1) → cross((-1,0,0),(-1,0,1))=(0,1,0) ✓
+    {{1,1,0},{0,1,0},{0,1,1},{1,1,1}},
+    // -Y: v0=(0,0,0),v1=(1,0,0),v2=(1,0,1) → cross((1,0,0),(1,0,1))=(0,-1,0) ✓
+    {{0,0,0},{1,0,0},{1,0,1},{0,0,1}},
+    // +Z: v0=(0,0,1),v1=(1,0,1),v2=(1,1,1) → cross((1,0,0),(1,1,0))=(0,0,1) ✓
+    {{0,0,1},{1,0,1},{1,1,1},{0,1,1}},
+    // -Z: v0=(1,0,0),v1=(0,0,0),v2=(0,1,0) → cross((-1,0,0),(-1,1,0))=(0,0,-1) ✓
     {{1,0,0},{0,0,0},{0,1,0},{1,1,0}},
 };
 
 // AO sample offsets for each face corner (side1, side2, corner)
-// Each entry: 3 offsets relative to the voxel being meshed
-// side1 and side2 are edge-adjacent; corner is diagonal
+// Matches the new k_faceCorners order exactly.
+// For each corner vertex, we sample 2 edge-adjacent blocks + 1 diagonal block.
+// All offsets are relative to the voxel origin (not the vertex position).
+// AO sample offsets matching the new k_faceCorners exactly.
+// For each corner vertex, sample 2 edge-adjacent + 1 diagonal neighbour block.
+// Offsets are relative to the voxel origin.
+// Format: [face][corner][sample] = {dx, dy, dz}
+// sample[0]=side1, sample[1]=side2, sample[2]=corner
 static constexpr int8_t k_aoSamples[6][4][3][3] = {
-    // +X face
+    // +X face: corners {(1,0,1),(1,0,0),(1,1,0),(1,1,1)}
     {
-        {{1,0,1},{1,-1,0},{1,-1,1}}, // v0
-        {{1,0,-1},{1,-1,0},{1,-1,-1}}, // v1
-        {{1,0,-1},{1,1,0},{1,1,-1}}, // v2
-        {{1,0,1},{1,1,0},{1,1,1}},   // v3
+        {{1,-1,0},{1,0, 1},{1,-1, 1}}, // v0 (1,0,1): below + front
+        {{1,-1,0},{1,0,-1},{1,-1,-1}}, // v1 (1,0,0): below + back
+        {{1, 1,0},{1,0,-1},{1, 1,-1}}, // v2 (1,1,0): above + back
+        {{1, 1,0},{1,0, 1},{1, 1, 1}}, // v3 (1,1,1): above + front
     },
-    // -X face
+    // -X face: corners {(0,0,0),(0,0,1),(0,1,1),(0,1,0)}
     {
-        {{-1,0,-1},{-1,-1,0},{-1,-1,-1}},
-        {{-1,0,1},{-1,-1,0},{-1,-1,1}},
-        {{-1,0,1},{-1,1,0},{-1,1,1}},
-        {{-1,0,-1},{-1,1,0},{-1,1,-1}},
+        {{-1,-1,0},{-1,0,-1},{-1,-1,-1}}, // v0 (0,0,0): below + back
+        {{-1,-1,0},{-1,0, 1},{-1,-1, 1}}, // v1 (0,0,1): below + front
+        {{-1, 1,0},{-1,0, 1},{-1, 1, 1}}, // v2 (0,1,1): above + front
+        {{-1, 1,0},{-1,0,-1},{-1, 1,-1}}, // v3 (0,1,0): above + back
     },
-    // +Y face
+    // +Y face: corners {(1,1,0),(0,1,0),(0,1,1),(1,1,1)}
     {
-        {{-1,1,0},{0,1,-1},{-1,1,-1}},
-        {{1,1,0},{0,1,-1},{1,1,-1}},
-        {{1,1,0},{0,1,1},{1,1,1}},
-        {{-1,1,0},{0,1,1},{-1,1,1}},
+        {{ 1,1,0},{0,1,-1},{ 1,1,-1}}, // v0 (1,1,0): right + back
+        {{-1,1,0},{0,1,-1},{-1,1,-1}}, // v1 (0,1,0): left + back
+        {{-1,1,0},{0,1, 1},{-1,1, 1}}, // v2 (0,1,1): left + front
+        {{ 1,1,0},{0,1, 1},{ 1,1, 1}}, // v3 (1,1,1): right + front
     },
-    // -Y face
+    // -Y face: corners {(0,0,0),(1,0,0),(1,0,1),(0,0,1)}
     {
-        {{-1,-1,0},{0,-1,1},{-1,-1,1}},
-        {{1,-1,0},{0,-1,1},{1,-1,1}},
-        {{1,-1,0},{0,-1,-1},{1,-1,-1}},
-        {{-1,-1,0},{0,-1,-1},{-1,-1,-1}},
+        {{-1,-1,0},{0,-1,-1},{-1,-1,-1}}, // v0 (0,0,0): left + back
+        {{ 1,-1,0},{0,-1,-1},{ 1,-1,-1}}, // v1 (1,0,0): right + back
+        {{ 1,-1,0},{0,-1, 1},{ 1,-1, 1}}, // v2 (1,0,1): right + front
+        {{-1,-1,0},{0,-1, 1},{-1,-1, 1}}, // v3 (0,0,1): left + front
     },
-    // +Z face
+    // +Z face: corners {(0,0,1),(1,0,1),(1,1,1),(0,1,1)}
     {
-        {{-1,0,1},{0,-1,1},{-1,-1,1}},
-        {{1,0,1},{0,-1,1},{1,-1,1}},
-        {{1,0,1},{0,1,1},{1,1,1}},
-        {{-1,0,1},{0,1,1},{-1,1,1}},
+        {{-1,0,1},{0,-1,1},{-1,-1,1}}, // v0 (0,0,1): left + below
+        {{ 1,0,1},{0,-1,1},{ 1,-1,1}}, // v1 (1,0,1): right + below
+        {{ 1,0,1},{0, 1,1},{ 1, 1,1}}, // v2 (1,1,1): right + above
+        {{-1,0,1},{0, 1,1},{-1, 1,1}}, // v3 (0,1,1): left + above
     },
-    // -Z face
+    // -Z face: corners {(1,0,0),(0,0,0),(0,1,0),(1,1,0)}
     {
-        {{1,0,-1},{0,-1,-1},{1,-1,-1}},
-        {{-1,0,-1},{0,-1,-1},{-1,-1,-1}},
-        {{-1,0,-1},{0,1,-1},{-1,1,-1}},
-        {{1,0,-1},{0,1,-1},{1,1,-1}},
+        {{ 1,0,-1},{0,-1,-1},{ 1,-1,-1}}, // v0 (1,0,0): right + below
+        {{-1,0,-1},{0,-1,-1},{-1,-1,-1}}, // v1 (0,0,0): left + below
+        {{-1,0,-1},{0, 1,-1},{-1, 1,-1}}, // v2 (0,1,0): left + above
+        {{ 1,0,-1},{0, 1,-1},{ 1, 1,-1}}, // v3 (1,1,0): right + above
     },
 };
 

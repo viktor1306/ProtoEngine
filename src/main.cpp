@@ -294,9 +294,10 @@ int main() {
                     VoxelPushConstants vpc{};
                     vpc.viewProj         = viewProj;
                     vpc.lightSpaceMatrix = lightSpaceMatrix;
-                    vpc.chunkOffsetX     = 0.0f; // world coords pre-baked into vertices
-                    vpc.chunkOffsetY     = 0.0f;
-                    vpc.chunkOffsetZ     = 0.0f;
+                    // chunkOffset = -bias: converts biased uint8 coords back to true world coords
+                    vpc.chunkOffsetX     = chunkManager.getWorldOriginX();
+                    vpc.chunkOffsetY     = chunkManager.getWorldOriginY();
+                    vpc.chunkOffsetZ     = chunkManager.getWorldOriginZ();
                     vpc._pad             = 0.0f;
                     vkCmdPushConstants(commandBuffer, voxelPipeline.getLayout(),
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,

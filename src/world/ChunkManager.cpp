@@ -24,16 +24,25 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
     m_chunks.clear();
     m_worldMesh.reset();
 
+    // Bias: shift all world coords so minimum = 0 (avoids uint8_t underflow)
+    // Min chunk coord = -radiusX, min block coord = -radiusX * CHUNK_SIZE
+    m_worldBiasX = radiusX * CHUNK_SIZE;
+    m_worldBiasY = 0; // cy=0 only, y coords always >= 0
+    m_worldBiasZ = radiusZ * CHUNK_SIZE;
+
+    int count = 0;
     for (int cz = -radiusZ; cz <= radiusZ; ++cz) {
         for (int cx = -radiusX; cx <= radiusX; ++cx) {
             auto chunk = std::make_unique<Chunk>(cx, 0, cz);
             chunk->fillTerrain(seed);
             m_chunks[{cx, 0, cz}] = std::move(chunk);
+            ++count;
         }
     }
 
-    std::cout << "[ChunkManager] Generated " << m_chunks.size()
-              << " chunks (" << (2*radiusX+1) << "x" << (2*radiusZ+1) << " grid).\n";
+    std::cout << "[ChunkManager] Generated " << count
+              << " chunks (" << (2*radiusX+1) << "x" << (2*radiusZ+1) << " grid)."
+              << " Bias=(" << m_worldBiasX << ",0," << m_worldBiasZ << ")\n" << std::flush;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,15 +81,18 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device) {
     }
     if (!anyDirty) return;
 
+    std::cout << "[ChunkManager] rebuildDirtyChunks: generating meshes...\n" << std::flush;
+
     auto t0 = std::chrono::high_resolution_clock::now();
 
     // Collect merged mesh from ALL chunks (full rebuild for simplicity)
     // Future: incremental rebuild of only dirty chunks
     std::vector<VoxelVertex> allVertices;
     std::vector<uint32_t>    allIndices;
-    allVertices.reserve(1 << 20); // 1M vertices pre-alloc
-    allIndices.reserve(1 << 21);  // 2M indices pre-alloc
+    allVertices.reserve(1 << 21); // 2M vertices pre-alloc (safe for 49 chunks)
+    allIndices.reserve(1 << 22);  // 4M indices pre-alloc
 
+    int chunkIdx = 0;
     for (auto& [key, chunk] : m_chunks) {
         // Build neighbour array: +X,-X,+Y,-Y,+Z,-Z
         std::array<const Chunk*, 6> neighbors = {
@@ -93,17 +105,15 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device) {
         };
 
         VoxelMeshData meshData = chunk->generateMesh(neighbors);
+        ++chunkIdx;
         if (meshData.empty()) {
             chunk->markClean();
             continue;
         }
 
-        // Pre-offset vertices: add chunk world offset to local coords
-        // We store world coords as uint16_t by packing into x(lo)+y(lo)+z(lo)
-        // BUT VoxelVertex only has uint8_t x,y,z (0-255).
-        // For chunks within ±3 (world coords 0-127) this fits fine.
-        // For larger worlds: use a different vertex format or instancing.
-        // Here we clamp to uint8_t range — sufficient for ±3 chunk radius.
+        // Pre-offset vertices: add chunk world offset to local coords.
+        // We bias by (radiusX * CHUNK_SIZE) so all coords are non-negative.
+        // The shader subtracts this bias via chunkOffset push constant.
         int worldOffX = key.x * CHUNK_SIZE;
         int worldOffY = key.y * CHUNK_SIZE;
         int worldOffZ = key.z * CHUNK_SIZE;
@@ -114,10 +124,14 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device) {
             int wx = worldOffX + static_cast<int>(v.x);
             int wy = worldOffY + static_cast<int>(v.y);
             int wz = worldOffZ + static_cast<int>(v.z);
-            // Clamp to uint8_t range (0-255) — world must fit in 8 blocks × 8 chunks
-            v.x = static_cast<uint8_t>(wx & 0xFF);
-            v.y = static_cast<uint8_t>(wy & 0xFF);
-            v.z = static_cast<uint8_t>(wz & 0xFF);
+            // Add bias so coords are always non-negative (max radius=3: bias=96)
+            // uint8_t range 0-255 is sufficient for radius ≤ 3 (max coord = 96+32+32=160)
+            wx += m_worldBiasX;
+            wy += m_worldBiasY;
+            wz += m_worldBiasZ;
+            v.x = static_cast<uint8_t>(wx);
+            v.y = static_cast<uint8_t>(wy);
+            v.z = static_cast<uint8_t>(wz);
             allVertices.push_back(v);
         }
 

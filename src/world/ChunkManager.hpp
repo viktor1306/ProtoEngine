@@ -71,6 +71,11 @@ public:
     float    getLastRebuildMs() const { return m_lastRebuildMs; }
     bool     hasMesh()          const { return m_worldMesh != nullptr; }
 
+    // World-space offset to subtract in the shader (= -bias in world units)
+    float getWorldOriginX() const { return -static_cast<float>(m_worldBiasX); }
+    float getWorldOriginY() const { return -static_cast<float>(m_worldBiasY); }
+    float getWorldOriginZ() const { return -static_cast<float>(m_worldBiasZ); }
+
 private:
     gfx::GeometryManager& m_geometryManager;
 
@@ -83,6 +88,12 @@ private:
     uint32_t m_totalVertices = 0;
     uint32_t m_totalIndices  = 0;
     float    m_lastRebuildMs = 0.0f;
+
+    // World bias: added to vertex coords so all values are non-negative (uint8_t safe).
+    // Shader subtracts this via chunkOffset push constant to restore true world coords.
+    int m_worldBiasX = 0;
+    int m_worldBiasY = 0;
+    int m_worldBiasZ = 0;
 
     // Get neighbour chunk pointer (nullptr if not loaded)
     const Chunk* getNeighbour(int cx, int cy, int cz) const;
