@@ -4,8 +4,12 @@
 namespace core {
 
 void InputManager::update() {
-    m_mouseDeltaX = 0;
-    m_mouseDeltaY = 0;
+    // Save current state as previous (for JustPressed detection)
+    m_mouseButtonsPrev = m_mouseButtons;
+    // Reset per-frame deltas
+    m_mouseDeltaX    = 0;
+    m_mouseDeltaY    = 0;
+    m_mouseWheelDelta = 0.0f;
 }
 
 bool InputManager::isKeyPressed(int key) const {
@@ -13,9 +17,21 @@ bool InputManager::isKeyPressed(int key) const {
     return m_keys[key];
 }
 
+bool InputManager::isKeyJustPressed(int key) const {
+    // Not tracked per-frame for keys yet; placeholder
+    if (key < 0 || key >= 256) return false;
+    return m_keys[key];
+}
+
 bool InputManager::isMouseButtonPressed(int button) const {
     if (button < 0 || button >= 3) return false;
     return m_mouseButtons[button];
+}
+
+bool InputManager::isMouseButtonJustPressed(int button) const {
+    if (button < 0 || button >= 3) return false;
+    // True only on the frame the button transitioned from released → pressed
+    return m_mouseButtons[button] && !m_mouseButtonsPrev[button];
 }
 
 void InputManager::getMousePosition(int& x, int& y) const {
@@ -48,6 +64,11 @@ void InputManager::processMouseMove(int x, int y) {
 void InputManager::processMouseRaw(int dx, int dy) {
     m_mouseDeltaX += dx;
     m_mouseDeltaY += dy;
+}
+
+void InputManager::processMouseWheel(float delta) {
+    // Windows sends 120 units per notch; normalize to ticks
+    m_mouseWheelDelta += delta / 120.0f;
 }
 
 } // namespace core

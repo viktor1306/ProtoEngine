@@ -101,29 +101,92 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
 }
 
 // ---------------------------------------------------------------------------
-// markDirty
+// worldToChunk — convert world voxel coord to chunk + local coord
+// Handles negative coords correctly: wx=-1 → cx=-1, lx=31
+// ---------------------------------------------------------------------------
+static void worldToChunk(int wx, int CHUNK_SZ, int& cx, int& lx) {
+    // floor division (works for negative numbers)
+    cx = (wx >= 0) ? (wx / CHUNK_SZ) : ((wx - CHUNK_SZ + 1) / CHUNK_SZ);
+    lx = wx - cx * CHUNK_SZ;
+}
+
+// ---------------------------------------------------------------------------
+// getVoxel — read a voxel by world integer coords
+// ---------------------------------------------------------------------------
+VoxelData ChunkManager::getVoxel(int wx, int wy, int wz) const {
+    int cx, lx, cy, ly, cz, lz;
+    worldToChunk(wx, CHUNK_SIZE, cx, lx);
+    worldToChunk(wy, CHUNK_SIZE, cy, ly);
+    worldToChunk(wz, CHUNK_SIZE, cz, lz);
+
+    auto it = m_chunks.find({cx, cy, cz});
+    if (it == m_chunks.end()) return VOXEL_AIR;
+    return it->second->getVoxel(lx, ly, lz);
+}
+
+// ---------------------------------------------------------------------------
+// setVoxel — write a voxel by world integer coords + dirty neighbours
+// ---------------------------------------------------------------------------
+void ChunkManager::setVoxel(int wx, int wy, int wz, VoxelData v) {
+    int cx, lx, cy, ly, cz, lz;
+    worldToChunk(wx, CHUNK_SIZE, cx, lx);
+    worldToChunk(wy, CHUNK_SIZE, cy, ly);
+    worldToChunk(wz, CHUNK_SIZE, cz, lz);
+
+    auto it = m_chunks.find({cx, cy, cz});
+    if (it == m_chunks.end()) return; // outside loaded world
+
+    it->second->setVoxel(lx, ly, lz, v);
+
+    // Always dirty the owning chunk
+    markDirty(cx, cy, cz);
+
+    // Dirty boundary neighbours if the voxel is on a chunk edge
+    // This ensures adjacent chunks re-mesh their exposed faces correctly.
+    if (lx == 0)              markDirty(cx - 1, cy, cz);
+    if (lx == CHUNK_SIZE - 1) markDirty(cx + 1, cy, cz);
+    if (ly == 0)              markDirty(cx, cy - 1, cz);
+    if (ly == CHUNK_SIZE - 1) markDirty(cx, cy + 1, cz);
+    if (lz == 0)              markDirty(cx, cy, cz - 1);
+    if (lz == CHUNK_SIZE - 1) markDirty(cx, cy, cz + 1);
+}
+
+// ---------------------------------------------------------------------------
+// markDirty — only inserts into the dedup set; does NOT submit to MeshWorker.
+// Call flushDirty() after all setVoxel calls to batch-submit unique chunks.
 // ---------------------------------------------------------------------------
 void ChunkManager::markDirty(int cx, int cy, int cz) {
-    auto it = m_chunks.find({cx, cy, cz});
-    if (it == m_chunks.end()) return;
-    it->second->markDirty();
+    // Only mark chunks that actually exist
+    if (m_chunks.find({cx, cy, cz}) == m_chunks.end()) return;
+    m_dirtyPending.insert({cx, cy, cz});
+}
 
-    // Re-submit for async meshing
-    std::array<const Chunk*, 6> neighbors = {
-        getNeighbour(cx + 1, cy,     cz    ),
-        getNeighbour(cx - 1, cy,     cz    ),
-        getNeighbour(cx,     cy + 1, cz    ),
-        getNeighbour(cx,     cy - 1, cz    ),
-        getNeighbour(cx,     cy,     cz + 1),
-        getNeighbour(cx,     cy,     cz - 1),
-    };
-    MeshTask task;
-    task.chunk     = it->second.get();
-    task.neighbors = neighbors;
-    task.cx        = cx;
-    task.cy        = cy;
-    task.cz        = cz;
-    m_meshWorker.submit(std::move(task));
+// ---------------------------------------------------------------------------
+// flushDirty — submit all pending dirty chunks to MeshWorker (deduplicated).
+// ---------------------------------------------------------------------------
+void ChunkManager::flushDirty() {
+    for (const auto& key : m_dirtyPending) {
+        auto it = m_chunks.find(key);
+        if (it == m_chunks.end()) continue;
+        it->second->markDirty();
+
+        std::array<const Chunk*, 6> neighbors = {
+            getNeighbour(key.x + 1, key.y,     key.z    ),
+            getNeighbour(key.x - 1, key.y,     key.z    ),
+            getNeighbour(key.x,     key.y + 1, key.z    ),
+            getNeighbour(key.x,     key.y - 1, key.z    ),
+            getNeighbour(key.x,     key.y,     key.z + 1),
+            getNeighbour(key.x,     key.y,     key.z - 1),
+        };
+        MeshTask task;
+        task.chunk     = it->second.get();
+        task.neighbors = neighbors;
+        task.cx        = key.x;
+        task.cy        = key.y;
+        task.cz        = key.z;
+        m_meshWorker.submit(std::move(task));
+    }
+    m_dirtyPending.clear();
 }
 
 // ---------------------------------------------------------------------------

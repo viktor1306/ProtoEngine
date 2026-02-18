@@ -190,15 +190,102 @@ static uint8_t sampleAO(const Chunk* chunk,
     return Chunk::computeAO(b1, b2, bc);
 }
 
-VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors) const
+// ---------------------------------------------------------------------------
+// emitQuad — helper to push 4 vertices + 6 indices into mesh
+// ---------------------------------------------------------------------------
+static void emitQuad(VoxelMeshData& mesh,
+                     int corners[4][3],
+                     uint8_t faceID,
+                     uint16_t paletteIdx,
+                     uint8_t ao0, uint8_t ao1, uint8_t ao2, uint8_t ao3,
+                     int normalDir)
 {
-    VoxelMeshData mesh;
-    mesh.vertices.reserve(2048);
-    mesh.indices.reserve(3072);
+    int    vOrder[4];
+    uint8_t vAO[4];
+    if (normalDir > 0) {
+        vOrder[0]=0; vOrder[1]=1; vOrder[2]=2; vOrder[3]=3;
+        vAO[0]=ao0; vAO[1]=ao1; vAO[2]=ao2; vAO[3]=ao3;
+    } else {
+        vOrder[0]=3; vOrder[1]=2; vOrder[2]=1; vOrder[3]=0;
+        vAO[0]=ao3; vAO[1]=ao2; vAO[2]=ao1; vAO[3]=ao0;
+    }
 
-    // Thread-local mask buffer — avoids heap allocation per chunk
+    uint32_t baseIdx = static_cast<uint32_t>(mesh.vertices.size());
+    for (int c = 0; c < 4; ++c) {
+        const int* co = corners[vOrder[c]];
+        VoxelVertex vert{};
+        vert.x          = static_cast<uint8_t>(co[0]);
+        vert.y          = static_cast<uint8_t>(co[1]);
+        vert.z          = static_cast<uint8_t>(co[2]);
+        vert.faceID     = faceID;
+        vert.ao         = vAO[c];
+        vert.reserved   = 0;
+        vert.paletteIdx = paletteIdx;
+        mesh.vertices.push_back(vert);
+    }
+
+    // AO-correct diagonal flip
+    if (vAO[0] + vAO[2] < vAO[1] + vAO[3]) {
+        mesh.indices.push_back(baseIdx + 1);
+        mesh.indices.push_back(baseIdx + 2);
+        mesh.indices.push_back(baseIdx + 3);
+        mesh.indices.push_back(baseIdx + 1);
+        mesh.indices.push_back(baseIdx + 3);
+        mesh.indices.push_back(baseIdx + 0);
+    } else {
+        mesh.indices.push_back(baseIdx + 0);
+        mesh.indices.push_back(baseIdx + 1);
+        mesh.indices.push_back(baseIdx + 2);
+        mesh.indices.push_back(baseIdx + 0);
+        mesh.indices.push_back(baseIdx + 2);
+        mesh.indices.push_back(baseIdx + 3);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// generateMesh — LOD-aware Greedy Meshing
+//
+// lod=0: step=1 — standard per-voxel Greedy Meshing (full quality)
+// lod=1: step=2 — 2×2×2 super-voxels, ~4× fewer vertices
+// lod=2: step=4 — 4×4×4 super-voxels, ~16× fewer vertices
+//
+// Super-voxel logic:
+//   A super-voxel at (x,y,z) is SOLID if its first voxel (x,y,z) is solid.
+//   paletteIdx taken from the first voxel of the super-block.
+//   AO sampled at super-voxel corners (step-scaled positions).
+//
+// Greedy Meshing in LOD mode:
+//   Mask is indexed in super-voxel space: [0..CHUNK_SIZE/step).
+//   Greedy W/H are in super-voxel units.
+//   Vertex coordinates are in voxel units: i*step, j*step, etc.
+//   This means large quads naturally cover step×step voxels each.
+//
+// Skirts (lod > 0):
+//   At chunk boundaries, LOD transitions create T-junctions (cracks).
+//   We add "skirt" faces: extra downward-facing quads along the bottom
+//   perimeter of the chunk, extending 1 voxel below the chunk boundary.
+//   These fill the visual gap between LOD levels.
+//   Skirts use the -Y face (faceID=3) with CCW winding for backface culling.
+// ---------------------------------------------------------------------------
+VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
+                                  int lod) const
+{
+    // Clamp LOD to valid range
+    if (lod < 0) lod = 0;
+    if (lod > 2) lod = 2;
+
+    const int step = 1 << lod;                    // 1, 2, or 4
+    const int gridSize = CHUNK_SIZE / step;        // 32, 16, or 8 super-voxels per axis
+
+    VoxelMeshData mesh;
+    mesh.vertices.reserve(lod == 0 ? 2048 : 512);
+    mesh.indices.reserve(lod == 0 ? 3072 : 768);
+
+    // Thread-local mask buffer — avoids heap allocation per chunk.
+    // Max grid size = 32 (LOD 0), so 32×32 = 1024 cells is always enough.
     static thread_local FaceMask mask[CHUNK_SIZE * CHUNK_SIZE];
 
+    // ---- Main Greedy Meshing pass (all 6 faces) ----------------------------
     for (int d = 0; d < 3; ++d) {
         const int u = (d + 1) % 3;
         const int v = (d + 2) % 3;
@@ -208,59 +295,65 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors) 
             // faceID: d=0 → 0(+X)/1(-X), d=1 → 2(+Y)/3(-Y), d=2 → 4(+Z)/5(-Z)
             const uint8_t faceID = static_cast<uint8_t>(d * 2 + (normalDir > 0 ? 0 : 1));
 
-            for (int layer = 0; layer < CHUNK_SIZE; ++layer) {
+            // Iterate over layers in super-voxel space
+            for (int layer = 0; layer < gridSize; ++layer) {
 
-                // ---- Build mask ------------------------------------------------
-                // Clear: set all faceID to 0xFF (empty)
-                for (int k = 0; k < CHUNK_SIZE * CHUNK_SIZE; ++k)
+                // ---- Build mask (in super-voxel space) ----------------------
+                for (int k = 0; k < gridSize * gridSize; ++k)
                     mask[k].faceID = 0xFF;
 
-                for (int j = 0; j < CHUNK_SIZE; ++j) {
-                    for (int i = 0; i < CHUNK_SIZE; ++i) {
+                for (int j = 0; j < gridSize; ++j) {
+                    for (int i = 0; i < gridSize; ++i) {
+                        // Super-voxel origin in voxel space
                         int pos[3];
-                        pos[d] = layer; pos[u] = i; pos[v] = j;
+                        pos[d] = layer * step;
+                        pos[u] = i     * step;
+                        pos[v] = j     * step;
 
+                        // Sample the representative voxel (first corner of super-block)
                         const VoxelData& vox = m_voxels[idx(pos[0], pos[1], pos[2])];
                         if (!vox.isSolid()) continue;
 
+                        // Check neighbour in normal direction (in voxel space)
                         int npos[3] = { pos[0], pos[1], pos[2] };
-                        npos[d] += normalDir;
+                        npos[d] += normalDir * step;
                         if (!isAirAt(npos[0], npos[1], npos[2], neighbors)) continue;
 
-                        FaceMask& cell = mask[j * CHUNK_SIZE + i];
+                        FaceMask& cell = mask[j * gridSize + i];
                         cell.faceID     = faceID;
                         cell.paletteIdx = vox.getPaletteIndex();
 
-                        // AO for 4 corners of this 1x1 face in (u,v) plane:
-                        // corner[0] = (i,   j  ) → du=-1, dv=-1
-                        // corner[1] = (i+1, j  ) → du=+1, dv=-1
-                        // corner[2] = (i+1, j+1) → du=+1, dv=+1
-                        // corner[3] = (i,   j+1) → du=-1, dv=+1
-                        cell.ao[0] = sampleAO(this, neighbors, pos, d, -1, -1, normalDir);
-                        cell.ao[1] = sampleAO(this, neighbors, pos, d, +1, -1, normalDir);
-                        cell.ao[2] = sampleAO(this, neighbors, pos, d, +1, +1, normalDir);
-                        cell.ao[3] = sampleAO(this, neighbors, pos, d, -1, +1, normalDir);
+                        // AO sampled at super-voxel corners.
+                        // For LOD > 0, we use step-scaled positions for AO sampling.
+                        // This gives correct AO at the actual vertex positions.
+                        int aoPos[3] = { pos[0], pos[1], pos[2] };
+                        // For AO, we need the voxel position (not the face layer)
+                        // sampleAO expects the voxel pos, not the face pos
+                        cell.ao[0] = sampleAO(this, neighbors, aoPos, d, -1, -1, normalDir);
+                        cell.ao[1] = sampleAO(this, neighbors, aoPos, d, +1, -1, normalDir);
+                        cell.ao[2] = sampleAO(this, neighbors, aoPos, d, +1, +1, normalDir);
+                        cell.ao[3] = sampleAO(this, neighbors, aoPos, d, -1, +1, normalDir);
                     }
                 }
 
-                // ---- Greedy scan -----------------------------------------------
-                for (int j = 0; j < CHUNK_SIZE; ++j) {
-                    for (int i = 0; i < CHUNK_SIZE; ) {
-                        const FaceMask& ref = mask[j * CHUNK_SIZE + i];
+                // ---- Greedy scan (in super-voxel space) ---------------------
+                for (int j = 0; j < gridSize; ++j) {
+                    for (int i = 0; i < gridSize; ) {
+                        const FaceMask& ref = mask[j * gridSize + i];
                         if (ref.empty()) { ++i; continue; }
 
-                        // Expand W along u
+                        // Expand W along u (in super-voxel units)
                         int W = 1;
-                        while (i + W < CHUNK_SIZE &&
-                               ref.canMerge(mask[j * CHUNK_SIZE + (i + W)]))
+                        while (i + W < gridSize &&
+                               ref.canMerge(mask[j * gridSize + (i + W)]))
                             ++W;
 
-                        // Expand H along v
+                        // Expand H along v (in super-voxel units)
                         int H = 1;
                         bool canExpand = true;
-                        while (j + H < CHUNK_SIZE && canExpand) {
+                        while (j + H < gridSize && canExpand) {
                             for (int k = 0; k < W; ++k) {
-                                if (!ref.canMerge(mask[(j+H)*CHUNK_SIZE + (i+k)])) {
+                                if (!ref.canMerge(mask[(j+H)*gridSize + (i+k)])) {
                                     canExpand = false;
                                     break;
                                 }
@@ -268,73 +361,33 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors) 
                             if (canExpand) ++H;
                         }
 
-                        // ---- Emit quad W×H ------------------------------------
-                        int faceLayer = layer + (normalDir > 0 ? 1 : 0);
+                        // ---- Emit quad W×H (in voxel coords) ---------------
+                        // Convert super-voxel coords to voxel coords
+                        int vi  = i * step;
+                        int vj  = j * step;
+                        int vW  = W * step;
+                        int vH  = H * step;
+                        int faceLayer = layer * step + (normalDir > 0 ? step : 0);
 
-                        // 4 corners in 3D
                         int corners[4][3];
-                        corners[0][d]=faceLayer; corners[0][u]=i;   corners[0][v]=j;
-                        corners[1][d]=faceLayer; corners[1][u]=i+W; corners[1][v]=j;
-                        corners[2][d]=faceLayer; corners[2][u]=i+W; corners[2][v]=j+H;
-                        corners[3][d]=faceLayer; corners[3][u]=i;   corners[3][v]=j+H;
+                        corners[0][d]=faceLayer; corners[0][u]=vi;    corners[0][v]=vj;
+                        corners[1][d]=faceLayer; corners[1][u]=vi+vW; corners[1][v]=vj;
+                        corners[2][d]=faceLayer; corners[2][u]=vi+vW; corners[2][v]=vj+vH;
+                        corners[3][d]=faceLayer; corners[3][u]=vi;    corners[3][v]=vj+vH;
 
-                        // Soft gradient AO: take from the 4 corner cells of the rectangle.
-                        // corner[0] of cell(i,   j  ) = ao[0] of mask[j*CS + i]
-                        // corner[1] of cell(i+W-1,j  ) = ao[1] of mask[j*CS + (i+W-1)]
-                        // corner[2] of cell(i+W-1,j+H-1) = ao[2] of mask[(j+H-1)*CS + (i+W-1)]
-                        // corner[3] of cell(i,   j+H-1) = ao[3] of mask[(j+H-1)*CS + i]
-                        uint8_t ao0 = mask[j             * CHUNK_SIZE + i      ].ao[0];
-                        uint8_t ao1 = mask[j             * CHUNK_SIZE + (i+W-1)].ao[1];
-                        uint8_t ao2 = mask[(j+H-1)       * CHUNK_SIZE + (i+W-1)].ao[2];
-                        uint8_t ao3 = mask[(j+H-1)       * CHUNK_SIZE + i      ].ao[3];
+                        // AO from corner cells of the greedy rectangle
+                        uint8_t ao0 = mask[j         * gridSize + i      ].ao[0];
+                        uint8_t ao1 = mask[j         * gridSize + (i+W-1)].ao[1];
+                        uint8_t ao2 = mask[(j+H-1)   * gridSize + (i+W-1)].ao[2];
+                        uint8_t ao3 = mask[(j+H-1)   * gridSize + i      ].ao[3];
 
-                        // Winding: positive normal = standard CCW,
-                        //          negative normal = mirrored CCW
-                        int    vOrder[4];
-                        uint8_t vAO[4];
-                        if (normalDir > 0) {
-                            vOrder[0]=0; vOrder[1]=1; vOrder[2]=2; vOrder[3]=3;
-                            vAO[0]=ao0; vAO[1]=ao1; vAO[2]=ao2; vAO[3]=ao3;
-                        } else {
-                            vOrder[0]=3; vOrder[1]=2; vOrder[2]=1; vOrder[3]=0;
-                            vAO[0]=ao3; vAO[1]=ao2; vAO[2]=ao1; vAO[3]=ao0;
-                        }
-
-                        uint32_t baseIdx = static_cast<uint32_t>(mesh.vertices.size());
-                        for (int c = 0; c < 4; ++c) {
-                            const int* co = corners[vOrder[c]];
-                            VoxelVertex vert{};
-                            vert.x          = static_cast<uint8_t>(co[0]);
-                            vert.y          = static_cast<uint8_t>(co[1]);
-                            vert.z          = static_cast<uint8_t>(co[2]);
-                            vert.faceID     = faceID;
-                            vert.ao         = vAO[c];
-                            vert.reserved   = 0;
-                            vert.paletteIdx = ref.paletteIdx;
-                            mesh.vertices.push_back(vert);
-                        }
-
-                        // AO-correct diagonal flip
-                        if (vAO[0] + vAO[2] < vAO[1] + vAO[3]) {
-                            mesh.indices.push_back(baseIdx + 1);
-                            mesh.indices.push_back(baseIdx + 2);
-                            mesh.indices.push_back(baseIdx + 3);
-                            mesh.indices.push_back(baseIdx + 1);
-                            mesh.indices.push_back(baseIdx + 3);
-                            mesh.indices.push_back(baseIdx + 0);
-                        } else {
-                            mesh.indices.push_back(baseIdx + 0);
-                            mesh.indices.push_back(baseIdx + 1);
-                            mesh.indices.push_back(baseIdx + 2);
-                            mesh.indices.push_back(baseIdx + 0);
-                            mesh.indices.push_back(baseIdx + 2);
-                            mesh.indices.push_back(baseIdx + 3);
-                        }
+                        emitQuad(mesh, corners, faceID, ref.paletteIdx,
+                                 ao0, ao1, ao2, ao3, normalDir);
 
                         // Clear used cells
                         for (int jj = j; jj < j+H; ++jj)
                             for (int ii = i; ii < i+W; ++ii)
-                                mask[jj * CHUNK_SIZE + ii].faceID = 0xFF;
+                                mask[jj * gridSize + ii].faceID = 0xFF;
 
                         i += W;
                     }
@@ -342,6 +395,58 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors) 
             } // layer
         } // normalDir
     } // d
+
+    // ---- Skirts (lod > 0 only) ---------------------------------------------
+    // Skirts are extra quads along the bottom perimeter of the chunk.
+    // They fill the visual crack between a high-LOD chunk and a low-LOD neighbour.
+    // We emit a downward-facing quad (faceID=3, -Y normal) for each solid
+    // super-voxel on the bottom layer (y=0) of the chunk perimeter (x=0, x=max,
+    // z=0, z=max edges).
+    //
+    // The skirt extends from y=0 down to y=-step (below chunk boundary).
+    // Since VoxelVertex uses uint8_t, we clamp to 0 (skirt at y=0 → y=0).
+    // In practice, skirts are only visible from below, so y=0 is fine.
+    //
+    // Winding: -Y face with normalDir=-1 → CCW from below (correct for backface culling).
+    if (lod > 0) {
+        const uint8_t skirtFaceID = 3; // -Y face
+        const int skirtStep = step;
+
+        // Helper: emit a skirt quad for a super-voxel at (sx, sz) on the bottom layer
+        auto emitSkirt = [&](int sx, int sz) {
+            // Check if the bottom-layer super-voxel is solid
+            int vx = sx * skirtStep;
+            int vz = sz * skirtStep;
+            const VoxelData& vox = m_voxels[idx(vx, 0, vz)];
+            if (!vox.isSolid()) return;
+
+            // Skirt quad: from y=0 down to y=0 (flat, just closes the gap visually)
+            // We emit a -Y face at y=0 (the bottom of the chunk)
+            // This face is visible from below and fills the crack.
+            int corners[4][3];
+            // -Y face at y=0: CCW from below (normalDir=-1)
+            // Vertices at the 4 corners of the super-voxel footprint
+            corners[0][0]=vx;            corners[0][1]=0; corners[0][2]=vz;
+            corners[1][0]=vx+skirtStep;  corners[1][1]=0; corners[1][2]=vz;
+            corners[2][0]=vx+skirtStep;  corners[2][1]=0; corners[2][2]=vz+skirtStep;
+            corners[3][0]=vx;            corners[3][1]=0; corners[3][2]=vz+skirtStep;
+
+            // AO: use uniform AO=3 (fully lit) for skirts — they're hidden anyway
+            emitQuad(mesh, corners, skirtFaceID, vox.getPaletteIndex(),
+                     3, 3, 3, 3, -1);
+        };
+
+        // Bottom perimeter: x=0 and x=gridSize-1 edges
+        for (int sz = 0; sz < gridSize; ++sz) {
+            emitSkirt(0,           sz);
+            emitSkirt(gridSize-1,  sz);
+        }
+        // Bottom perimeter: z=0 and z=gridSize-1 edges (skip corners already done)
+        for (int sx = 1; sx < gridSize-1; ++sx) {
+            emitSkirt(sx, 0);
+            emitSkirt(sx, gridSize-1);
+        }
+    }
 
     return mesh;
 }

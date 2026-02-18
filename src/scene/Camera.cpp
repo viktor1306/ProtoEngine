@@ -70,4 +70,68 @@ core::math::Mat4 Camera::getProjectionMatrix() const {
     return core::math::Mat4::perspective(core::math::toRadians(m_fov), m_aspect, m_zNear, m_zFar);
 }
 
+// ---------------------------------------------------------------------------
+// getRayFromMouse — screen-to-world ray (unproject)
+//
+// Steps:
+//   1. Convert pixel (mouseX, mouseY) → NDC [-1,+1]
+//      NDC.x = (2 * mx / w) - 1
+//      NDC.y = 1 - (2 * my / h)   ← Y flipped (screen top = NDC +1)
+//   2. Clip-space ray: vec4(ndcX, ndcY, -1, 1)  (pointing into screen)
+//   3. Unproject: multiply by inverse(proj * view)
+//   4. Perspective divide + normalize → world-space direction
+// ---------------------------------------------------------------------------
+core::math::Vec3 Camera::getRayFromMouse(int mouseX, int mouseY,
+                                          int screenW, int screenH) const
+{
+    if (screenW <= 0 || screenH <= 0) return m_front; // fallback
+
+    // Step 1: pixel → NDC
+    // Vulkan NDC: X in [-1,+1] left-to-right, Y in [-1,+1] top-to-bottom.
+    // Screen origin is top-left, so Y maps directly (no flip needed here).
+    // The projection matrix already handles the Vulkan Y-flip (data[1][1] = -1/tan).
+    // If we flip Y here AND the proj matrix flips Y, we get double-flip → wrong result.
+    float ndcX = (2.0f * static_cast<float>(mouseX) / static_cast<float>(screenW)) - 1.0f;
+    float ndcY = (2.0f * static_cast<float>(mouseY) / static_cast<float>(screenH)) - 1.0f;
+
+    // Step 2: clip-space ray (w=1 for direction, z=-1 = near plane)
+    // We use z=-1 so the ray points forward into the scene
+    core::math::Mat4 proj = getProjectionMatrix();
+    core::math::Mat4 view = getViewMatrix();
+    core::math::Mat4 viewProj = proj * view;
+    core::math::Mat4 invVP = core::math::Mat4::inverse(viewProj);
+
+    // Unproject two points: near (z=-1) and far (z=+1) in NDC
+    // Then direction = far - near, normalized
+    auto unproject = [&](float z) -> core::math::Vec3 {
+        // Homogeneous clip coords
+        float cx = ndcX;
+        float cy = ndcY;
+        float cz = z;
+        float cw = 1.0f;
+
+        // Multiply by inverse VP (data[col][row], column-major)
+        // result[row] = sum over col: invVP.data[col][row] * input[col]
+        const auto& d = invVP.data;
+        float wx = d[0][0]*cx + d[1][0]*cy + d[2][0]*cz + d[3][0]*cw;
+        float wy = d[0][1]*cx + d[1][1]*cy + d[2][1]*cz + d[3][1]*cw;
+        float wz = d[0][2]*cx + d[1][2]*cy + d[2][2]*cz + d[3][2]*cw;
+        float ww = d[0][3]*cx + d[1][3]*cy + d[2][3]*cz + d[3][3]*cw;
+
+        if (std::abs(ww) < 1e-7f) return m_front;
+        return { wx / ww, wy / ww, wz / ww };
+    };
+
+    core::math::Vec3 nearPt = unproject(-1.0f);
+    core::math::Vec3 farPt  = unproject( 1.0f);
+
+    core::math::Vec3 dir = {
+        farPt.x - nearPt.x,
+        farPt.y - nearPt.y,
+        farPt.z - nearPt.z
+    };
+
+    return core::math::Vec3::normalize(dir);
+}
+
 } // namespace scene

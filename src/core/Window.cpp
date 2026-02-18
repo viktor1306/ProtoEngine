@@ -114,6 +114,12 @@ void Window::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         case WM_RBUTTONUP:   input.processMouseButton(1, false); break;
         case WM_MBUTTONDOWN: input.processMouseButton(2, true); break;
         case WM_MBUTTONUP:   input.processMouseButton(2, false); break;
+        case WM_MOUSEWHEEL: {
+            // GET_WHEEL_DELTA_WPARAM returns signed short (positive = scroll up)
+            float delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam));
+            input.processMouseWheel(delta);
+            break;
+        }
         case WM_MOUSEMOVE: {
             int x = LOWORD(lParam);
             int y = HIWORD(lParam);

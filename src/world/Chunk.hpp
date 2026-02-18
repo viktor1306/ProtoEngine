@@ -37,7 +37,14 @@ public:
     // Pass nullptr for a neighbour to treat that boundary as AIR.
     // Coordinates in VoxelVertex are LOCAL (0-31) — chunk offset is applied
     // in the vertex shader via push constants (chunkOffset).
-    VoxelMeshData generateMesh(const std::array<const Chunk*, 6>& neighbors = {}) const;
+    //
+    // lod: Level of Detail (0=full, 1=half, 2=quarter resolution)
+    //   step = 1 << lod  (1, 2, or 4 voxels per super-voxel)
+    //   LOD 0: every voxel, full Greedy Meshing
+    //   LOD 1: 2×2×2 super-voxels, ~4× fewer vertices
+    //   LOD 2: 4×4×4 super-voxels, ~16× fewer vertices
+    VoxelMeshData generateMesh(const std::array<const Chunk*, 6>& neighbors = {},
+                               int lod = 0) const;
 
     // ---- State --------------------------------------------------------------
     bool isDirty()  const { return m_isDirty; }

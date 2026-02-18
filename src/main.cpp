@@ -24,6 +24,7 @@
 #include "world/World.hpp"
 #include "world/ChunkManager.hpp"
 #include "world/VoxelData.hpp"
+#include "world/Raycaster.hpp"
 #include "scene/Frustum.hpp"
 
 // ---------------------------------------------------------------------------
@@ -217,10 +218,17 @@ int main() {
         // Чанки: cx=-3..3, cz=-3..3 → world coords -48..48 (без bias)
         scene::Camera camera({0.0f, 80.0f, 80.0f}, 60.0f, renderer.getAspectRatio());
         camera.setPitch(-45.0f); // дивимось вниз на ландшафт
-        float cameraSpeed = 20.0f;
+        camera.adjustSpeed(20.0f / 5.0f); // set initial speed to 20 m/s (default is 5)
 
         // ---- Timer ---------------------------------------------------------
         core::Timer timer;
+
+        // ---- Interaction parameters ----------------------------------------
+        float reachDistance = 10.0f; // max raycast distance (m)
+        int   brushSize     = 1;     // brush cube side length (1 = single voxel)
+
+        // ---- Raycast state (persistent across frames for ImGui display) ----
+        world::RayResult lastRayHit{};
 
         // ---- Main Loop -----------------------------------------------------
         while (!window.shouldClose()) {
@@ -238,6 +246,18 @@ int main() {
             if (window.shouldClose()) break;
 
             camera.setAspectRatio(renderer.getAspectRatio());
+
+            // ---- Mouse wheel: adjust camera speed (×1.1 per tick) ----------
+            if (!ImGui::GetIO().WantCaptureMouse) {
+                float wheel = core::InputManager::get().getMouseWheelDelta();
+                if (wheel != 0.0f) {
+                    float factor = (wheel > 0.0f) ? 1.1f : (1.0f / 1.1f);
+                    int ticks = static_cast<int>(std::abs(wheel) + 0.5f);
+                    for (int i = 0; i < ticks; ++i)
+                        camera.adjustSpeed(factor);
+                }
+            }
+
             if (!ImGui::GetIO().WantCaptureMouse && !ImGui::GetIO().WantCaptureKeyboard)
                 camera.update(dt);
 
@@ -250,19 +270,88 @@ int main() {
             scene::Frustum frustum;
             frustum.extractPlanes(viewProjForFrustum);
 
+            // ---- Raycast from mouse cursor position (screen-to-world) ------
+            // Always use the actual mouse cursor position for picking.
+            // Camera look (RMB held) rotates the camera, which changes getFront(),
+            // but the raycast still uses the cursor — this is correct because
+            // when RMB is held the cursor is hidden and stays at center anyway.
+            {
+                int mx, my;
+                core::InputManager::get().getMousePosition(mx, my);
+                VkExtent2D ext = swapchain.getExtent();
+                int sw = static_cast<int>(ext.width);
+                int sh = static_cast<int>(ext.height);
+
+                // Always unproject mouse position — works correctly in both modes:
+                // - Free cursor: picks the voxel under the cursor
+                // - RMB look mode: cursor is at center → same as getFront()
+                core::math::Vec3 rayDir = camera.getRayFromMouse(mx, my, sw, sh);
+
+                lastRayHit = world::raycast(chunkManager,
+                                            camera.getPosition(),
+                                            rayDir,
+                                            reachDistance);
+            }
+
+            // ---- Block interaction (LMB / RMB) — only if ImGui not capturing
+            // Use ImGui::IsWindowHovered to avoid acting when cursor is over UI
+            bool imguiWantsMouse = ImGui::GetIO().WantCaptureMouse
+                                || ImGui::IsAnyItemActive()
+                                || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
+
+            if (!imguiWantsMouse) {
+                auto& input = core::InputManager::get();
+                int half = brushSize / 2;
+
+                // LMB — remove voxels in brush cube
+                if (input.isMouseButtonJustPressed(0) && lastRayHit.hit) {
+                    for (int bx = -half; bx <= half; ++bx)
+                    for (int by = -half; by <= half; ++by)
+                    for (int bz = -half; bz <= half; ++bz) {
+                        chunkManager.setVoxel(
+                            lastRayHit.voxelX + bx,
+                            lastRayHit.voxelY + by,
+                            lastRayHit.voxelZ + bz,
+                            world::VOXEL_AIR);
+                    }
+                    chunkManager.flushDirty(); // batch-submit all dirty chunks once
+                }
+
+                // MMB (Middle Mouse Button) or F key — place voxel on the hit face.
+                // RMB is used for camera look, so place is on MMB to avoid conflict.
+                // normalX/Y/Z is the inward normal (direction ray entered the face).
+                // To place OUTSIDE the hit voxel, we use +normal (opposite of inward).
+                bool placePressed = input.isMouseButtonJustPressed(2)  // MMB
+                                 || input.isKeyJustPressed('F');        // F key fallback
+                if (placePressed && lastRayHit.hit) {
+                    // +normal = outward face normal = adjacent empty voxel position
+                    int px = lastRayHit.voxelX + lastRayHit.normalX;
+                    int py = lastRayHit.voxelY + lastRayHit.normalY;
+                    int pz = lastRayHit.voxelZ + lastRayHit.normalZ;
+                    for (int bx = -half; bx <= half; ++bx)
+                    for (int by = -half; by <= half; ++by)
+                    for (int bz = -half; bz <= half; ++bz) {
+                        chunkManager.setVoxel(
+                            px + bx, py + by, pz + bz,
+                            world::VoxelData::make(3, 255, 0, world::VOXEL_FLAG_SOLID));
+                    }
+                    chunkManager.flushDirty();
+                }
+            }
+
             // ---- ImGui frame -----------------------------------------------
             imguiManager.beginFrame();
             {
                 auto pos = camera.getPosition();
                 ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Once);
-                ImGui::SetNextWindowSize(ImVec2(340, 280), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImVec2(340, 320), ImGuiCond_Once);
                 ImGui::Begin("Debug Tools");
 
                 ImGui::Text("FPS:  %.1f  (%.2f ms)", timer.getFPS(), timer.getDeltaTimeMs());
                 ImGui::Separator();
                 ImGui::Text("Camera: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
                 ImGui::Text("Yaw: %.1f  Pitch: %.1f", camera.getYaw(), camera.getPitch());
-                ImGui::SliderFloat("Speed", &cameraSpeed, 1.0f, 100.0f);
+                ImGui::Text("Speed:  %.1f m/s  (scroll wheel)", camera.getSpeed());
                 ImGui::Separator();
 
                 ImGui::Text("--- ChunkManager ---");
@@ -285,6 +374,26 @@ int main() {
                     chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
                 }
 
+                ImGui::Separator();
+                ImGui::Text("--- Interaction ---");
+                ImGui::SliderFloat("Reach (m)", &reachDistance, 2.0f, 50.0f);
+                ImGui::SliderInt("Brush Size", &brushSize, 1, 10);
+                ImGui::Text("Brush voxels: %d^3 = %d",
+                    brushSize, brushSize * brushSize * brushSize);
+
+                ImGui::Separator();
+                ImGui::Text("--- Raycaster ---");
+                if (lastRayHit.hit) {
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
+                        "Target: %d, %d, %d",
+                        lastRayHit.voxelX, lastRayHit.voxelY, lastRayHit.voxelZ);
+                    ImGui::Text("Normal: %+d, %+d, %+d",
+                        lastRayHit.normalX, lastRayHit.normalY, lastRayHit.normalZ);
+                    ImGui::Text("Dist:   %.2f m", lastRayHit.distance);
+                    ImGui::TextDisabled("LMB=remove  MMB/F=place  RMB=look");
+                } else {
+                    ImGui::TextDisabled("Target: none (max 10m)");
+                }
                 ImGui::Separator();
                 // Wireframe toggle button (toggles between fill and wireframe)
                 if (wireframe) {

@@ -151,6 +151,63 @@ struct Mat4 {
         }
         return res;
     }
+
+    // General 4×4 matrix inverse (Gauss-Jordan elimination).
+    // Returns identity if matrix is singular (det ≈ 0).
+    // data layout: data[col][row] (column-major, matches GLSL mat4).
+    static Mat4 inverse(const Mat4& src) {
+        // Work on a flat copy for clarity: a[row][col]
+        float a[4][4];
+        for (int c = 0; c < 4; ++c)
+            for (int r = 0; r < 4; ++r)
+                a[r][c] = src.data[c][r]; // transpose to row-major for elimination
+
+        float inv[4][4];
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                inv[r][c] = (r == c) ? 1.0f : 0.0f;
+
+        for (int col = 0; col < 4; ++col) {
+            // Find pivot
+            int pivot = col;
+            float maxVal = std::abs(a[col][col]);
+            for (int row = col + 1; row < 4; ++row) {
+                if (std::abs(a[row][col]) > maxVal) {
+                    maxVal = std::abs(a[row][col]);
+                    pivot = row;
+                }
+            }
+            // Swap rows
+            if (pivot != col) {
+                for (int k = 0; k < 4; ++k) {
+                    std::swap(a[col][k],   a[pivot][k]);
+                    std::swap(inv[col][k], inv[pivot][k]);
+                }
+            }
+            float diag = a[col][col];
+            if (std::abs(diag) < 1e-8f) return identity(); // singular
+            float invDiag = 1.0f / diag;
+            for (int k = 0; k < 4; ++k) {
+                a[col][k]   *= invDiag;
+                inv[col][k] *= invDiag;
+            }
+            for (int row = 0; row < 4; ++row) {
+                if (row == col) continue;
+                float factor = a[row][col];
+                for (int k = 0; k < 4; ++k) {
+                    a[row][k]   -= factor * a[col][k];
+                    inv[row][k] -= factor * inv[col][k];
+                }
+            }
+        }
+
+        // Convert back to column-major
+        Mat4 result;
+        for (int c = 0; c < 4; ++c)
+            for (int r = 0; r < 4; ++r)
+                result.data[c][r] = inv[r][c];
+        return result;
+    }
 };
 
 } // namespace math

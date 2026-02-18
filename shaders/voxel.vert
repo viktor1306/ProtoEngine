@@ -9,14 +9,19 @@
 // Chunk world position is passed via push constants (chunkOffset).
 // Block color is resolved from a hardcoded palette in the shader.
 // AO is decoded and applied as a soft darkening factor.
+//
+// NOTE: fragNormal and fragAO use 'flat' qualifier — no interpolation.
+//   This is correct for voxel rendering: all vertices of a greedy-merged
+//   quad share the same face normal and AO should not bleed across the quad.
+//   Without 'flat', large greedy quads show gradient artifacts (dark stripes).
 // ---------------------------------------------------------------------------
 
 layout(location = 0) in uvec4 inPosAndFace;   // x, y, z, faceID
 layout(location = 1) in uvec4 inAoAndPalette;  // ao, reserved, paletteIdx_lo, paletteIdx_hi
 
 layout(location = 0) out vec3  fragColor;
-layout(location = 1) out vec3  fragNormal;
-layout(location = 2) out float fragAO;
+layout(location = 1) flat out vec3  fragNormal;  // flat: no interpolation across triangle
+layout(location = 2) flat out float fragAO;      // flat: per-vertex AO, not interpolated
 layout(location = 3) out vec3  fragWorldPos;
 
 // ---------------------------------------------------------------------------
@@ -31,16 +36,6 @@ layout(push_constant) uniform PushConstants {
 
 // ---------------------------------------------------------------------------
 // Hardcoded block palette (indexed by paletteIdx 0-15)
-// Index 0 = AIR (should never be rendered)
-// Index 1 = Stone  (gray)
-// Index 2 = Dirt   (brown)
-// Index 3 = Grass  (green)
-// Index 4 = Sand   (yellow)
-// Index 5 = Water  (blue)
-// Index 6 = Wood   (dark brown)
-// Index 7 = Leaves (dark green)
-// Index 8 = Snow   (white)
-// Index 9 = Lava   (orange-red)
 // ---------------------------------------------------------------------------
 const vec3 k_palette[16] = vec3[16](
     vec3(0.0,  0.0,  0.0 ),  // 0  AIR (black — should not appear)
@@ -102,7 +97,7 @@ void main() {
     // Outputs
     gl_Position  = pc.viewProj * vec4(worldPos, 1.0);
     fragColor    = blockColor;
-    fragNormal   = k_normals[clamp(faceID, 0u, 5u)];
-    fragAO       = aoFactor;
+    fragNormal   = k_normals[clamp(faceID, 0u, 5u)];  // flat — provoking vertex value
+    fragAO       = aoFactor;                            // flat — no gradient across quad
     fragWorldPos = worldPos;
 }

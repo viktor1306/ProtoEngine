@@ -2,14 +2,18 @@
 
 // ---------------------------------------------------------------------------
 // Voxel Fragment Shader
-// Receives interpolated color, normal, AO factor and world position.
+// Receives color, normal, AO factor and world position from vertex shader.
 // Applies simple directional lighting + AO darkening.
 // No texture sampling — color comes from the palette (resolved in vertex shader).
+//
+// NOTE: fragNormal and fragAO are 'flat' — they must match the vertex shader
+//   declaration exactly. 'flat' means the provoking vertex value is used for
+//   the entire triangle, eliminating gradient artifacts on large greedy quads.
 // ---------------------------------------------------------------------------
 
 layout(location = 0) in vec3  fragColor;
-layout(location = 1) in vec3  fragNormal;
-layout(location = 2) in float fragAO;
+layout(location = 1) flat in vec3  fragNormal;   // flat: no interpolation
+layout(location = 2) flat in float fragAO;        // flat: no interpolation
 layout(location = 3) in vec3  fragWorldPos;
 
 layout(location = 0) out vec4 outColor;

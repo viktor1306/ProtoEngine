@@ -19,7 +19,8 @@ struct MeshTask {
     // Input
     const Chunk*                    chunk     = nullptr;
     std::array<const Chunk*, 6>     neighbors = {};
-    int cx = 0, cy = 0, cz = 0;
+    int cx  = 0, cy = 0, cz = 0;
+    int lod = 0;  // Level of Detail: 0=full, 1=half, 2=quarter resolution
 
     // Output (filled by worker)
     VoxelMeshData result;
@@ -113,8 +114,9 @@ private:
             }
 
             // Generate mesh (read-only access to chunk data)
+            // Pass lod so distant chunks use coarser meshing (faster + fewer verts)
             if (task.chunk) {
-                task.result = task.chunk->generateMesh(task.neighbors);
+                task.result = task.chunk->generateMesh(task.neighbors, task.lod);
             }
 
             // Push to done queue
