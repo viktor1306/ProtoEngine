@@ -99,21 +99,26 @@ public:
     void setVoxel(int wx, int wy, int wz, VoxelData v);
 
     // ---- LOD system ---------------------------------------------------------
-    // Update camera position and trigger LOD re-evaluation for all chunks.
-    // Call once per frame BEFORE rebuildDirtyChunks().
-    // Chunks whose LOD level changed are automatically marked dirty for re-meshing.
+    // Update camera position, re-evaluate LOD for all chunks, and flush dirty
+    // chunks to MeshWorker. Call once per frame BEFORE rebuildDirtyChunks().
+    // Only chunks whose LOD changed are re-meshed (hysteresis prevents flicker).
     void updateCamera(const core::math::Vec3& cameraPos);
 
     // Calculate LOD level for a chunk at grid position (cx, cy, cz).
+    // currentLOD: current LOD of the chunk (-1 = unknown). Used for hysteresis:
+    // the chunk must cross the threshold by m_lodHysteresis before switching.
     // Returns 0 (full detail), 1 (half), or 2 (quarter) based on distance.
-    int calculateLOD(int cx, int cy, int cz) const;
+    int calculateLOD(int cx, int cy, int cz, int currentLOD = -1) const;
 
     // LOD distance thresholds (in world units = blocks).
     // Chunks closer than lodDist0 → LOD 0 (full detail)
     // Chunks between lodDist0 and lodDist1 → LOD 1
     // Chunks farther than lodDist1 → LOD 2
-    float m_lodDist0 = 64.0f;   // LOD 0 → LOD 1 boundary
-    float m_lodDist1 = 128.0f;  // LOD 1 → LOD 2 boundary
+    float m_lodDist0      = 64.0f;   // LOD 0 → LOD 1 boundary
+    float m_lodDist1      = 128.0f;  // LOD 1 → LOD 2 boundary
+    // Hysteresis: chunk must move this many blocks past threshold before LOD changes.
+    // Prevents constant re-meshing when camera hovers near a boundary.
+    float m_lodHysteresis = 4.0f;
 
     // ---- Stats (for ImGui) --------------------------------------------------
     uint32_t getChunkCount()      const { return static_cast<uint32_t>(m_chunks.size()); }

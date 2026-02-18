@@ -53,7 +53,7 @@ private:
     float m_fov    = 60.0f;
     float m_aspect = 1.0f;
     float m_zNear  = 0.1f;
-    float m_zFar   = 1000.0f;
+    float m_zFar   = 10000.0f;
 
     float m_speed       = 5.0f;
     float m_sensitivity = 0.1f;

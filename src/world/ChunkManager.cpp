@@ -1,6 +1,7 @@
 #include "ChunkManager.hpp"
 #include <chrono>
 #include <iostream>
+#include <cmath>
 #include <vulkan/vulkan.h>
 
 namespace world {
@@ -15,6 +16,32 @@ ChunkManager::ChunkManager(gfx::GeometryManager& geometryManager,
 {
     std::cout << "[ChunkManager] MeshWorker threads: "
               << m_meshWorker.getThreadCount() << "\n" << std::flush;
+}
+
+// ---------------------------------------------------------------------------
+// submitMeshTask — enqueue one chunk meshing task with a specific LOD
+// ---------------------------------------------------------------------------
+void ChunkManager::submitMeshTask(const IVec3Key& key, int lod) {
+    auto it = m_chunks.find(key);
+    if (it == m_chunks.end()) return;
+
+    std::array<const Chunk*, 6> neighbors = {
+        getNeighbour(key.x + 1, key.y,     key.z    ),
+        getNeighbour(key.x - 1, key.y,     key.z    ),
+        getNeighbour(key.x,     key.y + 1, key.z    ),
+        getNeighbour(key.x,     key.y - 1, key.z    ),
+        getNeighbour(key.x,     key.y,     key.z + 1),
+        getNeighbour(key.x,     key.y,     key.z - 1),
+    };
+
+    MeshTask task;
+    task.chunk     = it->second.get();
+    task.neighbors = neighbors;
+    task.cx        = key.x;
+    task.cy        = key.y;
+    task.cz        = key.z;
+    task.lod       = lod;
+    m_meshWorker.submit(std::move(task));
 }
 
 // ---------------------------------------------------------------------------
@@ -50,6 +77,7 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
     m_chunks.clear();
     m_renderData.clear();
     m_pendingMeshData.clear(); // скидаємо CPU кеш при повній регенерації
+    m_chunkLOD.clear();
     m_totalVertices   = 0;
     m_totalIndices    = 0;
     m_visibleCount    = 0;
@@ -76,28 +104,113 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
               << " chunks (" << (2*radiusX+1) << "x" << (2*radiusZ+1) << " grid)."
               << " Bias=(" << m_worldBiasX << ",0," << m_worldBiasZ << ")\n" << std::flush;
 
-    // Submit all chunks for async meshing
+    // Submit all chunks for async meshing with initial LOD based on current camera
     for (auto& [key, chunk] : m_chunks) {
-        std::array<const Chunk*, 6> neighbors = {
-            getNeighbour(key.x + 1, key.y,     key.z    ),
-            getNeighbour(key.x - 1, key.y,     key.z    ),
-            getNeighbour(key.x,     key.y + 1, key.z    ),
-            getNeighbour(key.x,     key.y - 1, key.z    ),
-            getNeighbour(key.x,     key.y,     key.z + 1),
-            getNeighbour(key.x,     key.y,     key.z - 1),
-        };
-        MeshTask task;
-        task.chunk     = chunk.get();
-        task.neighbors = neighbors;
-        task.cx        = key.x;
-        task.cy        = key.y;
-        task.cz        = key.z;
-        m_meshWorker.submit(std::move(task));
+        int lod = calculateLOD(key.x, key.y, key.z);
+        m_chunkLOD[key] = lod;
+        submitMeshTask(key, lod);
     }
 
     std::cout << "[ChunkManager] Submitted " << count
               << " meshing tasks to " << m_meshWorker.getThreadCount()
               << " worker threads.\n" << std::flush;
+}
+
+// ---------------------------------------------------------------------------
+// calculateLOD — ring-based LOD selection by distance to camera
+//
+// Hysteresis logic:
+//   Switching to a HIGHER LOD (coarser, farther): dist must exceed threshold + hysteresis
+//   Switching to a LOWER  LOD (finer,  closer):   dist must be below  threshold - hysteresis
+//   This prevents constant re-meshing when camera hovers near a boundary.
+// ---------------------------------------------------------------------------
+int ChunkManager::calculateLOD(int cx, int cy, int cz, int currentLOD) const {
+    // Chunk center in world coords (no bias)
+    const float half = static_cast<float>(CHUNK_SIZE) * 0.5f;
+    float centerX = static_cast<float>(cx * CHUNK_SIZE) + half;
+    float centerY = static_cast<float>(cy * CHUNK_SIZE) + half;
+    float centerZ = static_cast<float>(cz * CHUNK_SIZE) + half;
+
+    float dx = centerX - m_cameraPos.x;
+    float dy = centerY - m_cameraPos.y;
+    float dz = centerZ - m_cameraPos.z;
+    float dist = std::sqrt(dx*dx + dy*dy + dz*dz);
+
+    float d0 = std::max(0.0f, m_lodDist0);
+    float d1 = std::max(d0,   m_lodDist1);
+    float hy = std::max(0.0f, m_lodHysteresis);
+
+    // Without hysteresis: simple threshold
+    if (currentLOD < 0) {
+        if (dist < d0) return 0;
+        if (dist < d1) return 1;
+        return 2;
+    }
+
+    // With hysteresis: apply epsilon based on direction of transition
+    // Switching UP (to coarser LOD): need to go further past threshold
+    // Switching DOWN (to finer LOD): need to come closer past threshold
+    switch (currentLOD) {
+        case 0:
+            // Currently LOD 0: switch to 1 only if dist > d0 + hy
+            if (dist > d0 + hy) return (dist > d1 + hy) ? 2 : 1;
+            return 0;
+        case 1:
+            // Currently LOD 1: switch to 0 if dist < d0 - hy, to 2 if dist > d1 + hy
+            if (dist < d0 - hy) return 0;
+            if (dist > d1 + hy) return 2;
+            return 1;
+        case 2:
+            // Currently LOD 2: switch to 1 only if dist < d1 - hy
+            if (dist < d1 - hy) return (dist < d0 - hy) ? 0 : 1;
+            return 2;
+        default:
+            // Unknown: use simple threshold
+            if (dist < d0) return 0;
+            if (dist < d1) return 1;
+            return 2;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// updateCamera — store camera position, mark chunks dirty on LOD changes,
+//               and immediately flush dirty chunks to MeshWorker.
+//
+// Must be called BEFORE rebuildDirtyChunks() each frame.
+// Hysteresis in calculateLOD() prevents flicker at LOD boundaries.
+// ---------------------------------------------------------------------------
+void ChunkManager::updateCamera(const core::math::Vec3& cameraPos) {
+    m_cameraPos = cameraPos;
+
+    for (const auto& [key, chunk] : m_chunks) {
+        auto it = m_chunkLOD.find(key);
+        int oldLOD = (it != m_chunkLOD.end()) ? it->second : -1;
+
+        // Pass currentLOD so hysteresis can prevent boundary flicker
+        int newLOD = calculateLOD(key.x, key.y, key.z, oldLOD);
+
+        if (newLOD != oldLOD) {
+            // Update LOD record BEFORE markDirty so flushDirty picks up the right LOD
+            m_chunkLOD[key] = newLOD;
+            markDirty(key.x, key.y, key.z);
+        }
+    }
+
+    // Immediately submit all newly-dirty chunks to MeshWorker.
+    // This ensures LOD transitions are processed without waiting for an
+    // explicit flushDirty() call from the caller.
+    flushDirty();
+}
+
+// ---------------------------------------------------------------------------
+// getLODCounts — how many chunks are currently assigned to each LOD
+// ---------------------------------------------------------------------------
+std::array<uint32_t, 3> ChunkManager::getLODCounts() const {
+    std::array<uint32_t, 3> out{0, 0, 0};
+    for (const auto& [key, lod] : m_chunkLOD) {
+        if (lod >= 0 && lod <= 2) out[static_cast<size_t>(lod)]++;
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,21 +283,10 @@ void ChunkManager::flushDirty() {
         if (it == m_chunks.end()) continue;
         it->second->markDirty();
 
-        std::array<const Chunk*, 6> neighbors = {
-            getNeighbour(key.x + 1, key.y,     key.z    ),
-            getNeighbour(key.x - 1, key.y,     key.z    ),
-            getNeighbour(key.x,     key.y + 1, key.z    ),
-            getNeighbour(key.x,     key.y - 1, key.z    ),
-            getNeighbour(key.x,     key.y,     key.z + 1),
-            getNeighbour(key.x,     key.y,     key.z - 1),
-        };
-        MeshTask task;
-        task.chunk     = it->second.get();
-        task.neighbors = neighbors;
-        task.cx        = key.x;
-        task.cy        = key.y;
-        task.cz        = key.z;
-        m_meshWorker.submit(std::move(task));
+        // Always submit with current desired LOD for this chunk
+        int lod = calculateLOD(key.x, key.y, key.z);
+        m_chunkLOD[key] = lod;
+        submitMeshTask(key, lod);
     }
     m_dirtyPending.clear();
 }
@@ -261,11 +363,24 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device) {
     // Merge new results into pending cache
     for (auto& task : done) {
         IVec3Key key{task.cx, task.cy, task.cz};
+
+        // If this task's LOD is stale (camera moved), discard it.
+        // Old GPU mesh stays active until a matching task finishes.
+        auto lodIt = m_chunkLOD.find(key);
+        int desiredLOD = (lodIt != m_chunkLOD.end()) ? lodIt->second : 0;
+        if (task.lod != desiredLOD) {
+            continue;
+        }
+
         if (!task.result.empty()) {
             m_pendingMeshData[key] = std::move(task.result);
-        } else {
+        } else if (task.lod == 0) {
+            // LOD 0 is full quality — if it's empty, the chunk genuinely has
+            // no visible faces (e.g. fully air). Safe to remove.
             m_pendingMeshData.erase(key);
         }
+        // LOD > 0 empty result: keep the old (higher quality) mesh in the cache.
+        // The coarser LOD approximation may miss faces that the full mesh captures.
         auto it = m_chunks.find(key);
         if (it != m_chunks.end()) it->second->markClean();
     }
@@ -319,7 +434,7 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device) {
 // ---------------------------------------------------------------------------
 // render — draw visible chunks with frustum culling
 // ---------------------------------------------------------------------------
-void ChunkManager::render(VkCommandBuffer cmd, const scene::Frustum& frustum) {
+void ChunkManager::render(VkCommandBuffer cmd, [[maybe_unused]] const scene::Frustum& frustum) {
     m_visibleCount    = 0;
     m_culledCount     = 0;
     m_visibleVertices = 0;
@@ -327,11 +442,8 @@ void ChunkManager::render(VkCommandBuffer cmd, const scene::Frustum& frustum) {
     for (auto& [key, rd] : m_renderData) {
         if (!rd.valid || !rd.mesh) continue;
 
-        // Frustum cull: skip chunks outside the view frustum
-        if (!frustum.isVisible(rd.aabb)) {
-            ++m_culledCount;
-            continue;
-        }
+        // Frustum culling вимкнено — рендеримо всі чанки
+        // (TODO: увімкнути після налаштування LOD дистанцій)
 
         rd.mesh->draw(cmd);
         ++m_visibleCount;

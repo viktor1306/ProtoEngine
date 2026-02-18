@@ -226,6 +226,7 @@ int main() {
         // ---- Interaction parameters ----------------------------------------
         float reachDistance = 10.0f; // max raycast distance (m)
         int   brushSize     = 1;     // brush cube side length (1 = single voxel)
+        bool  autoLOD       = true;  // автоматично перемешувати чанки при зміні LOD
 
         // ---- Raycast state (persistent across frames for ImGui display) ----
         world::RayResult lastRayHit{};
@@ -260,6 +261,13 @@ int main() {
 
             if (!ImGui::GetIO().WantCaptureMouse && !ImGui::GetIO().WantCaptureKeyboard)
                 camera.update(dt);
+
+            // ---- LOD update (must be BEFORE rebuildDirtyChunks) -------------
+            // updateCamera: оновлює m_cameraPos, порівнює LOD з гістерезисом,
+            // викликає markDirty + flushDirty для змінених чанків.
+            if (autoLOD) {
+                chunkManager.updateCamera(camera.getPosition());
+            }
 
             // ---- Collect async mesh results (non-blocking) -----------------
             chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
@@ -365,7 +373,29 @@ int main() {
                 ImGui::Text("Pending meshes: %d", chunkManager.getPendingMeshes());
 
                 ImGui::Separator();
-                if (ImGui::Button("Regenerate")) {
+                ImGui::Text("--- LOD System ---");
+                // Auto-LOD прапорець: вмикає/вимикає автоматичне перемешування
+                ImGui::Checkbox("Auto-LOD", &autoLOD);
+                ImGui::SameLine();
+                ImGui::TextDisabled("(re-mesh on camera move)");
+                if (!autoLOD) {
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Force update")) {
+                        chunkManager.updateCamera(camera.getPosition());
+                    }
+                }
+                ImGui::SliderFloat("LOD0→1 dist",  &chunkManager.m_lodDist0,      16.0f, 1024.0f, "%.0f blk");
+                ImGui::SliderFloat("LOD1→2 dist",  &chunkManager.m_lodDist1,      32.0f, 2048.0f, "%.0f blk");
+                ImGui::SliderFloat("Hysteresis",    &chunkManager.m_lodHysteresis,  0.0f,   64.0f, "%.1f blk");
+                {
+                    auto lodCounts = chunkManager.getLODCounts();
+                    ImGui::Text("LOD 0 (full):    %u chunks", lodCounts[0]);
+                    ImGui::Text("LOD 1 (half):    %u chunks", lodCounts[1]);
+                    ImGui::Text("LOD 2 (quarter): %u chunks", lodCounts[2]);
+                }
+
+                ImGui::Separator();
+                if (ImGui::Button("Rebuild World")) {
                     chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
                 }
                 ImGui::SameLine();

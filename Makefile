@@ -46,8 +46,12 @@ SHADER_BIN_DIR = $(BIN_DIR)/shaders
 SHADERS := $(wildcard $(SHADER_SRC_DIR)/*.vert) $(wildcard $(SHADER_SRC_DIR)/*.frag)
 SPV_SHADERS := $(SHADERS:$(SHADER_SRC_DIR)/%=$(SHADER_BIN_DIR)/%.spv)
 
+# Font assets (copy system Consolas font to bin/fonts/ for TextRenderer)
+FONT_SRC = C:/Windows/Fonts/consola.ttf
+FONT_DST = $(BIN_DIR)/fonts/consola.ttf
+
 # Targets
-all: $(TARGET) shaders
+all: $(TARGET) shaders fonts
 
 $(TARGET): $(OBJECTS)
 	@if not exist "$(BIN_DIR)" mkdir "$(BIN_DIR)"
@@ -63,8 +67,14 @@ $(SHADER_BIN_DIR)/%.spv: $(SHADER_SRC_DIR)/%
 	@if not exist "$(SHADER_BIN_DIR)" mkdir "$(SHADER_BIN_DIR)"
 	$(GLSLC) $< -o $@
 
+fonts: $(FONT_DST)
+
+$(FONT_DST):
+	@if not exist "$(BIN_DIR)\fonts" mkdir "$(BIN_DIR)\fonts"
+	@copy /Y "$(subst /,\,$(FONT_SRC))" "$(subst /,\,$(FONT_DST))" >nul
+
 clean:
 	@if exist "$(OBJ_DIR)" rmdir /s /q "$(OBJ_DIR)"
 	@if exist "$(BIN_DIR)" rmdir /s /q "$(BIN_DIR)"
 
-.PHONY: all clean shaders
+.PHONY: all clean shaders fonts
