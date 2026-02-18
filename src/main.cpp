@@ -198,6 +198,15 @@ int main() {
         voxelPipelineConfig.pushConstantRanges.push_back(voxelPCRange);
         gfx::Pipeline voxelPipeline(vulkanContext, voxelPipelineConfig);
 
+        // ---- Voxel Wireframe Pipeline (VK_POLYGON_MODE_LINE) ---------------
+        gfx::PipelineConfig voxelWireConfig = voxelPipelineConfig; // copy all settings
+        voxelWireConfig.polygonMode = VK_POLYGON_MODE_LINE;
+        voxelWireConfig.cullMode    = VK_CULL_MODE_NONE; // show all edges
+        gfx::Pipeline voxelWirePipeline(vulkanContext, voxelWireConfig);
+
+        // ---- Wireframe toggle state ----------------------------------------
+        bool wireframe = false;
+
         // ---- Camera --------------------------------------------------------
         // Камера над центром світу, дивиться вперед (+Z напрямок)
         // Чанки від (-48,0,-48) до (48,16,48) у world space
@@ -276,6 +285,20 @@ int main() {
                     chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
                 }
 
+                ImGui::Separator();
+                // Wireframe toggle button (toggles between fill and wireframe)
+                if (wireframe) {
+                    ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.8f, 0.4f, 0.1f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.5f, 0.2f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.6f, 0.3f, 0.0f, 1.0f));
+                    if (ImGui::Button("[W] Wireframe: ON ")) wireframe = false;
+                    ImGui::PopStyleColor(3);
+                } else {
+                    if (ImGui::Button("[W] Wireframe: OFF")) wireframe = true;
+                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("(fillModeNonSolid)");
+
                 ImGui::End();
             }
 
@@ -310,19 +333,20 @@ int main() {
 
                 // ---- Voxel World -------------------------------------------
                 if (chunkManager.hasMesh()) {
-                    voxelPipeline.bind(commandBuffer);
+                    // Select pipeline: wireframe or solid fill
+                    gfx::Pipeline& activePipeline = wireframe ? voxelWirePipeline : voxelPipeline;
+                    activePipeline.bind(commandBuffer);
 
                     core::math::Mat4 viewProj = camera.getProjectionMatrix() * camera.getViewMatrix();
 
                     VoxelPushConstants vpc{};
                     vpc.viewProj         = viewProj;
                     vpc.lightSpaceMatrix = lightSpaceMatrix;
-                    // chunkOffset = -bias: converts biased uint8 coords back to true world coords
                     vpc.chunkOffsetX     = chunkManager.getWorldOriginX();
                     vpc.chunkOffsetY     = chunkManager.getWorldOriginY();
                     vpc.chunkOffsetZ     = chunkManager.getWorldOriginZ();
                     vpc._pad             = 0.0f;
-                    vkCmdPushConstants(commandBuffer, voxelPipeline.getLayout(),
+                    vkCmdPushConstants(commandBuffer, activePipeline.getLayout(),
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0, sizeof(VoxelPushConstants), &vpc);
 

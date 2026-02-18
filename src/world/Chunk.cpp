@@ -1,11 +1,11 @@
 #include "Chunk.hpp"
-#include <cstdlib>  // rand
+#include <cstdlib>
+#include <cstring>
 
 namespace world {
 
 // ---------------------------------------------------------------------------
-// Heightmap noise — deterministic hash-based pseudo-noise
-// Returns height in [minH, minH + range)
+// Heightmap noise
 // ---------------------------------------------------------------------------
 static int hashNoise(int wx, int wz, int seed) {
     uint32_t h = static_cast<uint32_t>(wx * 1619 + wz * 31337 + seed * 1013904223);
@@ -15,40 +15,30 @@ static int hashNoise(int wx, int wz, int seed) {
 }
 
 static float smoothNoise(int wx, int wz, int seed, int scale) {
-    // Use floor division to handle negative coordinates correctly
     int gx = (wx >= 0) ? (wx / scale) : ((wx - scale + 1) / scale);
     int gz = (wz >= 0) ? (wz / scale) : ((wz - scale + 1) / scale);
-    // Fractional part always in [0, 1)
     float fx = static_cast<float>(wx - gx * scale) / static_cast<float>(scale);
     float fz = static_cast<float>(wz - gz * scale) / static_cast<float>(scale);
-    // Smoothstep
     fx = fx * fx * (3.0f - 2.0f * fx);
     fz = fz * fz * (3.0f - 2.0f * fz);
-
     float h00 = hashNoise(gx,     gz,     seed) / 65535.0f;
     float h10 = hashNoise(gx + 1, gz,     seed) / 65535.0f;
     float h01 = hashNoise(gx,     gz + 1, seed) / 65535.0f;
     float h11 = hashNoise(gx + 1, gz + 1, seed) / 65535.0f;
-
-    return h00 * (1-fx)*(1-fz) + h10 * fx*(1-fz) +
-           h01 * (1-fx)*fz     + h11 * fx*fz;
+    return h00*(1-fx)*(1-fz) + h10*fx*(1-fz) + h01*(1-fx)*fz + h11*fx*fz;
 }
 
 static int getTerrainHeight(int wx, int wz, int seed) {
     float n  = smoothNoise(wx, wz, seed,     8) * 0.5f;
     n       += smoothNoise(wx, wz, seed + 1, 4) * 0.3f;
     n       += smoothNoise(wx, wz, seed + 2, 2) * 0.2f;
-    return 4 + static_cast<int>(n * 20.0f); // height 4..24
+    return 4 + static_cast<int>(n * 20.0f);
 }
 
 // ---------------------------------------------------------------------------
 // Chunk
 // ---------------------------------------------------------------------------
-Chunk::Chunk(int cx, int cy, int cz)
-    : m_cx(cx), m_cy(cy), m_cz(cz)
-{
-    // Zero-init: all voxels = VOXEL_AIR (raw=0)
-}
+Chunk::Chunk(int cx, int cy, int cz) : m_cx(cx), m_cy(cy), m_cz(cz) {}
 
 void Chunk::setVoxel(int x, int y, int z, VoxelData v) {
     m_voxels[idx(x, y, z)] = v;
@@ -65,24 +55,20 @@ void Chunk::fill(VoxelData v) {
 }
 
 void Chunk::fillTerrain(int seed) {
-    // Palette indices: 1=stone, 2=dirt, 3=grass, 0=air
     const VoxelData stone = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);
     const VoxelData dirt  = VoxelData::make(2, 255, 0, VOXEL_FLAG_SOLID);
     const VoxelData grass = VoxelData::make(3, 255, 0, VOXEL_FLAG_SOLID);
-
     int worldBaseY = m_cy * CHUNK_SIZE;
-
     for (int z = 0; z < CHUNK_SIZE; ++z) {
         for (int x = 0; x < CHUNK_SIZE; ++x) {
             int wx = m_cx * CHUNK_SIZE + x;
             int wz = m_cz * CHUNK_SIZE + z;
             int terrainH = getTerrainHeight(wx, wz, seed);
-
             for (int y = 0; y < CHUNK_SIZE; ++y) {
                 int wy = worldBaseY + y;
                 VoxelData v = VOXEL_AIR;
-                if      (wy < terrainH - 3) v = stone;
-                else if (wy < terrainH - 1) v = dirt;
+                if      (wy < terrainH - 3)  v = stone;
+                else if (wy < terrainH - 1)  v = dirt;
                 else if (wy == terrainH - 1) v = grass;
                 m_voxels[idx(x, y, z)] = v;
             }
@@ -102,42 +88,27 @@ void Chunk::fillRandom(int seed) {
 }
 
 // ---------------------------------------------------------------------------
-// isAirAt — checks local or neighbour chunk
-// Face order: 0=+X, 1=-X, 2=+Y, 3=-Y, 4=+Z, 5=-Z
+// isAirAt
 // ---------------------------------------------------------------------------
 bool Chunk::isAirAt(int x, int y, int z,
                     const std::array<const Chunk*, 6>& neighbors) const
 {
-    // In-bounds: check local voxel
     if (x >= 0 && x < CHUNK_SIZE &&
         y >= 0 && y < CHUNK_SIZE &&
         z >= 0 && z < CHUNK_SIZE)
-    {
         return !m_voxels[idx(x, y, z)].isSolid();
-    }
 
-    // Out-of-bounds: AO samples can exit on multiple axes simultaneously.
-    // Clamp each coordinate to [0, CHUNK_SIZE-1] for cross-chunk AO queries.
-    // This is an approximation — for AO we just need "is there a solid block
-    // roughly in that direction", so clamping is acceptable.
-    int cx = (x < 0) ? 0 : (x >= CHUNK_SIZE ? CHUNK_SIZE - 1 : x);
-    int cy = (y < 0) ? 0 : (y >= CHUNK_SIZE ? CHUNK_SIZE - 1 : y);
-    int cz = (z < 0) ? 0 : (z >= CHUNK_SIZE ? CHUNK_SIZE - 1 : z);
-
-    // Determine primary out-of-bounds axis for neighbour lookup
-    // Priority: X > Y > Z (arbitrary but consistent)
     const Chunk* nb = nullptr;
-    int lx = cx, ly = cy, lz = cz;
+    int lx = x, ly = y, lz = z;
 
-    if (x >= CHUNK_SIZE)      { nb = neighbors[0]; lx = x - CHUNK_SIZE; if (lx >= CHUNK_SIZE) lx = CHUNK_SIZE-1; }
-    else if (x < 0)           { nb = neighbors[1]; lx = x + CHUNK_SIZE; if (lx < 0) lx = 0; }
-    else if (y >= CHUNK_SIZE) { nb = neighbors[2]; ly = y - CHUNK_SIZE; if (ly >= CHUNK_SIZE) ly = CHUNK_SIZE-1; }
-    else if (y < 0)           { nb = neighbors[3]; ly = y + CHUNK_SIZE; if (ly < 0) ly = 0; }
-    else if (z >= CHUNK_SIZE) { nb = neighbors[4]; lz = z - CHUNK_SIZE; if (lz >= CHUNK_SIZE) lz = CHUNK_SIZE-1; }
-    else if (z < 0)           { nb = neighbors[5]; lz = z + CHUNK_SIZE; if (lz < 0) lz = 0; }
+    if      (x >= CHUNK_SIZE) { nb = neighbors[0]; lx = x - CHUNK_SIZE; }
+    else if (x < 0)           { nb = neighbors[1]; lx = x + CHUNK_SIZE; }
+    else if (y >= CHUNK_SIZE) { nb = neighbors[2]; ly = y - CHUNK_SIZE; }
+    else if (y < 0)           { nb = neighbors[3]; ly = y + CHUNK_SIZE; }
+    else if (z >= CHUNK_SIZE) { nb = neighbors[4]; lz = z - CHUNK_SIZE; }
+    else if (z < 0)           { nb = neighbors[5]; lz = z + CHUNK_SIZE; }
 
-    if (!nb) return true; // no neighbour → treat as AIR
-    // Clamp local coords to valid range before indexing
+    if (!nb) return true;
     lx = (lx < 0) ? 0 : (lx >= CHUNK_SIZE ? CHUNK_SIZE-1 : lx);
     ly = (ly < 0) ? 0 : (ly >= CHUNK_SIZE ? CHUNK_SIZE-1 : ly);
     lz = (lz < 0) ? 0 : (lz >= CHUNK_SIZE ? CHUNK_SIZE-1 : lz);
@@ -145,191 +116,232 @@ bool Chunk::isAirAt(int x, int y, int z,
 }
 
 // ---------------------------------------------------------------------------
-// computeAO — vertex ambient occlusion (0=dark, 3=bright)
+// computeAO
 // ---------------------------------------------------------------------------
 uint8_t Chunk::computeAO(bool side1, bool side2, bool corner) {
     if (side1 && side2) return 0;
-    return static_cast<uint8_t>(3 - static_cast<int>(side1)
-                                   - static_cast<int>(side2)
-                                   - static_cast<int>(corner));
+    return static_cast<uint8_t>(3 - (int)side1 - (int)side2 - (int)corner);
 }
 
 // ---------------------------------------------------------------------------
-// generateMesh — Hidden Face Culling
+// generateMesh — Greedy Meshing with Soft Gradient AO
 //
-// For each solid voxel, check 6 neighbours.
-// If neighbour is AIR → emit a quad (4 VoxelVertex + 6 indices).
-// VoxelVertex coordinates are LOCAL (0-31) — shader adds chunkOffset.
+// Algorithm:
+//   For each axis d (0=X, 1=Y, 2=Z) and direction (normalDir = +1 / -1):
+//     For each layer along d:
+//       1. Build 2D mask: FaceMask[CHUNK_SIZE x CHUNK_SIZE]
+//          Each cell stores paletteIdx + faceID + ao[4] for that face.
+//       2. Greedy scan: find first non-empty cell (i,j).
+//          Expand W along u-axis: merge if paletteIdx+faceID match (ignore AO).
+//          Expand H along v-axis: entire row of W cells must match.
+//       3. Emit one quad W×H.
+//          AO for 4 corners taken from the actual corner cells of the rectangle
+//          (not from ref cell) — GPU interpolates smoothly across the large quad.
+//       4. Clear used cells.
 //
-// Face vertex layout (CCW winding, front face = counter-clockwise):
-//   v0---v3
-//   |  \ |
-//   v1---v2
-// Indices: 0,1,2, 0,2,3
+// Winding (CCW, Vulkan VK_FRONT_FACE_COUNTER_CLOCKWISE):
+//   Positive normal: c0(i,j), c1(i+W,j), c2(i+W,j+H), c3(i,j+H)
+//   Negative normal: c3(i,j+H), c2(i+W,j+H), c1(i+W,j), c0(i,j)  [mirrored]
 // ---------------------------------------------------------------------------
 
-// Per-face: 4 corner offsets (dx,dy,dz) relative to voxel origin
-// Order: v0, v1, v2, v3 — CCW winding when viewed from OUTSIDE (from the normal direction)
-// Vulkan: VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_CULL_MODE_BACK_BIT
-// Right-hand rule: cross(v1-v0, v2-v0) must point toward the face normal
-// Per-face: 4 corner offsets (dx,dy,dz) relative to voxel origin
-// Order: v0,v1,v2,v3 — CCW winding when viewed from OUTSIDE (from the normal direction)
-// Vulkan: VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_CULL_MODE_BACK_BIT
-// Verification: cross(v1-v0, v2-v0) must point in the face normal direction.
+// ---------------------------------------------------------------------------
+// FaceMask cell
+// ---------------------------------------------------------------------------
+struct FaceMask {
+    uint16_t paletteIdx = 0;
+    uint8_t  faceID     = 0xFF; // 0xFF = empty
+    uint8_t  ao[4]      = {};   // per-corner AO: [0]=(i,j) [1]=(i+1,j) [2]=(i+1,j+1) [3]=(i,j+1)
+
+    bool empty() const { return faceID == 0xFF; }
+
+    // Soft gradient: merge by paletteIdx+faceID only, ignore AO.
+    // AO will be interpolated by GPU across the merged quad.
+    bool canMerge(const FaceMask& o) const {
+        return !o.empty() && faceID == o.faceID && paletteIdx == o.paletteIdx;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// AO helper: compute AO for a vertex at the corner of a face.
 //
-// Coordinate system: X=right, Y=up, Z=toward viewer (right-handed)
-// When looking from outside along -N direction, CCW = left-hand turn v0→v1→v2
-// Verified with cross(v1-v0, v2-v0) = face normal for each face.
-static constexpr int8_t k_faceCorners[6][4][3] = {
-    // +X: cross((0,0,-1),(0,1,-1)) = (1,0,0) ✓
-    {{1,0,1},{1,0,0},{1,1,0},{1,1,1}},
-    // -X: cross((0,0,1),(0,1,1)) = (-1,0,0) ✓
-    {{0,0,0},{0,0,1},{0,1,1},{0,1,0}},
-    // +Y: v0=(1,1,0),v1=(0,1,0),v2=(0,1,1) → cross((-1,0,0),(-1,0,1))=(0,1,0) ✓
-    {{1,1,0},{0,1,0},{0,1,1},{1,1,1}},
-    // -Y: v0=(0,0,0),v1=(1,0,0),v2=(1,0,1) → cross((1,0,0),(1,0,1))=(0,-1,0) ✓
-    {{0,0,0},{1,0,0},{1,0,1},{0,0,1}},
-    // +Z: v0=(0,0,1),v1=(1,0,1),v2=(1,1,1) → cross((1,0,0),(1,1,0))=(0,0,1) ✓
-    {{0,0,1},{1,0,1},{1,1,1},{0,1,1}},
-    // -Z: v0=(1,0,0),v1=(0,0,0),v2=(0,1,0) → cross((-1,0,0),(-1,1,0))=(0,0,-1) ✓
-    {{1,0,0},{0,0,0},{0,1,0},{1,1,0}},
-};
+// d = normal axis (0=X,1=Y,2=Z), normalDir = +1 or -1
+// pos[3] = voxel position (x,y,z)
+// du, dv = corner offset in (u,v) plane: -1 or +1
+// ---------------------------------------------------------------------------
+static uint8_t sampleAO(const Chunk* chunk,
+                         const std::array<const Chunk*, 6>& neighbors,
+                         int pos[3], int d, int du, int dv, int normalDir)
+{
+    const int u = (d + 1) % 3;
+    const int v = (d + 2) % 3;
 
-// AO sample offsets for each face corner (side1, side2, corner)
-// Matches the new k_faceCorners order exactly.
-// For each corner vertex, we sample 2 edge-adjacent blocks + 1 diagonal block.
-// All offsets are relative to the voxel origin (not the vertex position).
-// AO sample offsets matching the new k_faceCorners exactly.
-// For each corner vertex, sample 2 edge-adjacent + 1 diagonal neighbour block.
-// Offsets are relative to the voxel origin.
-// Format: [face][corner][sample] = {dx, dy, dz}
-// sample[0]=side1, sample[1]=side2, sample[2]=corner
-static constexpr int8_t k_aoSamples[6][4][3][3] = {
-    // +X face: corners {(1,0,1),(1,0,0),(1,1,0),(1,1,1)}
-    {
-        {{1,-1,0},{1,0, 1},{1,-1, 1}}, // v0 (1,0,1): below + front
-        {{1,-1,0},{1,0,-1},{1,-1,-1}}, // v1 (1,0,0): below + back
-        {{1, 1,0},{1,0,-1},{1, 1,-1}}, // v2 (1,1,0): above + back
-        {{1, 1,0},{1,0, 1},{1, 1, 1}}, // v3 (1,1,1): above + front
-    },
-    // -X face: corners {(0,0,0),(0,0,1),(0,1,1),(0,1,0)}
-    {
-        {{-1,-1,0},{-1,0,-1},{-1,-1,-1}}, // v0 (0,0,0): below + back
-        {{-1,-1,0},{-1,0, 1},{-1,-1, 1}}, // v1 (0,0,1): below + front
-        {{-1, 1,0},{-1,0, 1},{-1, 1, 1}}, // v2 (0,1,1): above + front
-        {{-1, 1,0},{-1,0,-1},{-1, 1,-1}}, // v3 (0,1,0): above + back
-    },
-    // +Y face: corners {(1,1,0),(0,1,0),(0,1,1),(1,1,1)}
-    {
-        {{ 1,1,0},{0,1,-1},{ 1,1,-1}}, // v0 (1,1,0): right + back
-        {{-1,1,0},{0,1,-1},{-1,1,-1}}, // v1 (0,1,0): left + back
-        {{-1,1,0},{0,1, 1},{-1,1, 1}}, // v2 (0,1,1): left + front
-        {{ 1,1,0},{0,1, 1},{ 1,1, 1}}, // v3 (1,1,1): right + front
-    },
-    // -Y face: corners {(0,0,0),(1,0,0),(1,0,1),(0,0,1)}
-    {
-        {{-1,-1,0},{0,-1,-1},{-1,-1,-1}}, // v0 (0,0,0): left + back
-        {{ 1,-1,0},{0,-1,-1},{ 1,-1,-1}}, // v1 (1,0,0): right + back
-        {{ 1,-1,0},{0,-1, 1},{ 1,-1, 1}}, // v2 (1,0,1): right + front
-        {{-1,-1,0},{0,-1, 1},{-1,-1, 1}}, // v3 (0,0,1): left + front
-    },
-    // +Z face: corners {(0,0,1),(1,0,1),(1,1,1),(0,1,1)}
-    {
-        {{-1,0,1},{0,-1,1},{-1,-1,1}}, // v0 (0,0,1): left + below
-        {{ 1,0,1},{0,-1,1},{ 1,-1,1}}, // v1 (1,0,1): right + below
-        {{ 1,0,1},{0, 1,1},{ 1, 1,1}}, // v2 (1,1,1): right + above
-        {{-1,0,1},{0, 1,1},{-1, 1,1}}, // v3 (0,1,1): left + above
-    },
-    // -Z face: corners {(1,0,0),(0,0,0),(0,1,0),(1,1,0)}
-    {
-        {{ 1,0,-1},{0,-1,-1},{ 1,-1,-1}}, // v0 (1,0,0): right + below
-        {{-1,0,-1},{0,-1,-1},{-1,-1,-1}}, // v1 (0,0,0): left + below
-        {{-1,0,-1},{0, 1,-1},{-1, 1,-1}}, // v2 (0,1,0): left + above
-        {{ 1,0,-1},{0, 1,-1},{ 1, 1,-1}}, // v3 (1,1,0): right + above
-    },
-};
+    // Base: step into the face plane
+    int base[3] = { pos[0], pos[1], pos[2] };
+    base[d] += (normalDir > 0) ? 1 : -1;
 
-// Neighbour direction per faceID
-static constexpr int8_t k_faceDir[6][3] = {
-    { 1, 0, 0}, {-1, 0, 0},
-    { 0, 1, 0}, { 0,-1, 0},
-    { 0, 0, 1}, { 0, 0,-1},
-};
+    int s1[3] = { base[0], base[1], base[2] }; s1[u] += du;
+    int s2[3] = { base[0], base[1], base[2] }; s2[v] += dv;
+    int sc[3] = { base[0], base[1], base[2] }; sc[u] += du; sc[v] += dv;
+
+    bool b1 = !chunk->isAirAt(s1[0], s1[1], s1[2], neighbors);
+    bool b2 = !chunk->isAirAt(s2[0], s2[1], s2[2], neighbors);
+    bool bc = !chunk->isAirAt(sc[0], sc[1], sc[2], neighbors);
+
+    return Chunk::computeAO(b1, b2, bc);
+}
 
 VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors) const
 {
     VoxelMeshData mesh;
-    mesh.vertices.reserve(4096);
-    mesh.indices.reserve(6144);
+    mesh.vertices.reserve(2048);
+    mesh.indices.reserve(3072);
 
-    for (int z = 0; z < CHUNK_SIZE; ++z) {
-        for (int y = 0; y < CHUNK_SIZE; ++y) {
-            for (int x = 0; x < CHUNK_SIZE; ++x) {
-                const VoxelData& vox = m_voxels[idx(x, y, z)];
-                if (!vox.isSolid()) continue;
+    // Thread-local mask buffer — avoids heap allocation per chunk
+    static thread_local FaceMask mask[CHUNK_SIZE * CHUNK_SIZE];
 
-                uint16_t palIdx = vox.getPaletteIndex();
+    for (int d = 0; d < 3; ++d) {
+        const int u = (d + 1) % 3;
+        const int v = (d + 2) % 3;
 
-                for (int f = 0; f < 6; ++f) {
-                    int nx = x + k_faceDir[f][0];
-                    int ny = y + k_faceDir[f][1];
-                    int nz = z + k_faceDir[f][2];
+        for (int normalDir = 1; normalDir >= -1; normalDir -= 2) {
 
-                    if (!isAirAt(nx, ny, nz, neighbors)) continue;
+            // faceID: d=0 → 0(+X)/1(-X), d=1 → 2(+Y)/3(-Y), d=2 → 4(+Z)/5(-Z)
+            const uint8_t faceID = static_cast<uint8_t>(d * 2 + (normalDir > 0 ? 0 : 1));
 
-                    // Emit quad — 4 vertices
-                    uint32_t baseIdx = static_cast<uint32_t>(mesh.vertices.size());
+            for (int layer = 0; layer < CHUNK_SIZE; ++layer) {
 
-                    for (int c = 0; c < 4; ++c) {
-                        int vx = x + k_faceCorners[f][c][0];
-                        int vy = y + k_faceCorners[f][c][1];
-                        int vz = z + k_faceCorners[f][c][2];
+                // ---- Build mask ------------------------------------------------
+                // Clear: set all faceID to 0xFF (empty)
+                for (int k = 0; k < CHUNK_SIZE * CHUNK_SIZE; ++k)
+                    mask[k].faceID = 0xFF;
 
-                        // AO: sample 3 neighbours around this corner
-                        const auto& ao = k_aoSamples[f][c];
-                        bool s1 = !isAirAt(x + ao[0][0], y + ao[0][1], z + ao[0][2], neighbors);
-                        bool s2 = !isAirAt(x + ao[1][0], y + ao[1][1], z + ao[1][2], neighbors);
-                        bool cr = !isAirAt(x + ao[2][0], y + ao[2][1], z + ao[2][2], neighbors);
-                        uint8_t aoVal = computeAO(s1, s2, cr);
+                for (int j = 0; j < CHUNK_SIZE; ++j) {
+                    for (int i = 0; i < CHUNK_SIZE; ++i) {
+                        int pos[3];
+                        pos[d] = layer; pos[u] = i; pos[v] = j;
 
-                        VoxelVertex vert{};
-                        vert.x          = static_cast<uint8_t>(vx);
-                        vert.y          = static_cast<uint8_t>(vy);
-                        vert.z          = static_cast<uint8_t>(vz);
-                        vert.faceID     = static_cast<uint8_t>(f);
-                        vert.ao         = aoVal;
-                        vert.reserved   = 0;
-                        vert.paletteIdx = palIdx;
-                        mesh.vertices.push_back(vert);
-                    }
+                        const VoxelData& vox = m_voxels[idx(pos[0], pos[1], pos[2])];
+                        if (!vox.isSolid()) continue;
 
-                    // 2 triangles (CCW): 0,1,2 and 0,2,3
-                    // AO-correct flipping: if ao[0]+ao[2] < ao[1]+ao[3], flip diagonal
-                    uint8_t ao0 = mesh.vertices[baseIdx + 0].ao;
-                    uint8_t ao1 = mesh.vertices[baseIdx + 1].ao;
-                    uint8_t ao2 = mesh.vertices[baseIdx + 2].ao;
-                    uint8_t ao3 = mesh.vertices[baseIdx + 3].ao;
+                        int npos[3] = { pos[0], pos[1], pos[2] };
+                        npos[d] += normalDir;
+                        if (!isAirAt(npos[0], npos[1], npos[2], neighbors)) continue;
 
-                    if (ao0 + ao2 < ao1 + ao3) {
-                        // Flip diagonal for better AO interpolation
-                        mesh.indices.push_back(baseIdx + 1);
-                        mesh.indices.push_back(baseIdx + 2);
-                        mesh.indices.push_back(baseIdx + 3);
-                        mesh.indices.push_back(baseIdx + 1);
-                        mesh.indices.push_back(baseIdx + 3);
-                        mesh.indices.push_back(baseIdx + 0);
-                    } else {
-                        mesh.indices.push_back(baseIdx + 0);
-                        mesh.indices.push_back(baseIdx + 1);
-                        mesh.indices.push_back(baseIdx + 2);
-                        mesh.indices.push_back(baseIdx + 0);
-                        mesh.indices.push_back(baseIdx + 2);
-                        mesh.indices.push_back(baseIdx + 3);
+                        FaceMask& cell = mask[j * CHUNK_SIZE + i];
+                        cell.faceID     = faceID;
+                        cell.paletteIdx = vox.getPaletteIndex();
+
+                        // AO for 4 corners of this 1x1 face in (u,v) plane:
+                        // corner[0] = (i,   j  ) → du=-1, dv=-1
+                        // corner[1] = (i+1, j  ) → du=+1, dv=-1
+                        // corner[2] = (i+1, j+1) → du=+1, dv=+1
+                        // corner[3] = (i,   j+1) → du=-1, dv=+1
+                        cell.ao[0] = sampleAO(this, neighbors, pos, d, -1, -1, normalDir);
+                        cell.ao[1] = sampleAO(this, neighbors, pos, d, +1, -1, normalDir);
+                        cell.ao[2] = sampleAO(this, neighbors, pos, d, +1, +1, normalDir);
+                        cell.ao[3] = sampleAO(this, neighbors, pos, d, -1, +1, normalDir);
                     }
                 }
-            }
-        }
-    }
+
+                // ---- Greedy scan -----------------------------------------------
+                for (int j = 0; j < CHUNK_SIZE; ++j) {
+                    for (int i = 0; i < CHUNK_SIZE; ) {
+                        const FaceMask& ref = mask[j * CHUNK_SIZE + i];
+                        if (ref.empty()) { ++i; continue; }
+
+                        // Expand W along u
+                        int W = 1;
+                        while (i + W < CHUNK_SIZE &&
+                               ref.canMerge(mask[j * CHUNK_SIZE + (i + W)]))
+                            ++W;
+
+                        // Expand H along v
+                        int H = 1;
+                        bool canExpand = true;
+                        while (j + H < CHUNK_SIZE && canExpand) {
+                            for (int k = 0; k < W; ++k) {
+                                if (!ref.canMerge(mask[(j+H)*CHUNK_SIZE + (i+k)])) {
+                                    canExpand = false;
+                                    break;
+                                }
+                            }
+                            if (canExpand) ++H;
+                        }
+
+                        // ---- Emit quad W×H ------------------------------------
+                        int faceLayer = layer + (normalDir > 0 ? 1 : 0);
+
+                        // 4 corners in 3D
+                        int corners[4][3];
+                        corners[0][d]=faceLayer; corners[0][u]=i;   corners[0][v]=j;
+                        corners[1][d]=faceLayer; corners[1][u]=i+W; corners[1][v]=j;
+                        corners[2][d]=faceLayer; corners[2][u]=i+W; corners[2][v]=j+H;
+                        corners[3][d]=faceLayer; corners[3][u]=i;   corners[3][v]=j+H;
+
+                        // Soft gradient AO: take from the 4 corner cells of the rectangle.
+                        // corner[0] of cell(i,   j  ) = ao[0] of mask[j*CS + i]
+                        // corner[1] of cell(i+W-1,j  ) = ao[1] of mask[j*CS + (i+W-1)]
+                        // corner[2] of cell(i+W-1,j+H-1) = ao[2] of mask[(j+H-1)*CS + (i+W-1)]
+                        // corner[3] of cell(i,   j+H-1) = ao[3] of mask[(j+H-1)*CS + i]
+                        uint8_t ao0 = mask[j             * CHUNK_SIZE + i      ].ao[0];
+                        uint8_t ao1 = mask[j             * CHUNK_SIZE + (i+W-1)].ao[1];
+                        uint8_t ao2 = mask[(j+H-1)       * CHUNK_SIZE + (i+W-1)].ao[2];
+                        uint8_t ao3 = mask[(j+H-1)       * CHUNK_SIZE + i      ].ao[3];
+
+                        // Winding: positive normal = standard CCW,
+                        //          negative normal = mirrored CCW
+                        int    vOrder[4];
+                        uint8_t vAO[4];
+                        if (normalDir > 0) {
+                            vOrder[0]=0; vOrder[1]=1; vOrder[2]=2; vOrder[3]=3;
+                            vAO[0]=ao0; vAO[1]=ao1; vAO[2]=ao2; vAO[3]=ao3;
+                        } else {
+                            vOrder[0]=3; vOrder[1]=2; vOrder[2]=1; vOrder[3]=0;
+                            vAO[0]=ao3; vAO[1]=ao2; vAO[2]=ao1; vAO[3]=ao0;
+                        }
+
+                        uint32_t baseIdx = static_cast<uint32_t>(mesh.vertices.size());
+                        for (int c = 0; c < 4; ++c) {
+                            const int* co = corners[vOrder[c]];
+                            VoxelVertex vert{};
+                            vert.x          = static_cast<uint8_t>(co[0]);
+                            vert.y          = static_cast<uint8_t>(co[1]);
+                            vert.z          = static_cast<uint8_t>(co[2]);
+                            vert.faceID     = faceID;
+                            vert.ao         = vAO[c];
+                            vert.reserved   = 0;
+                            vert.paletteIdx = ref.paletteIdx;
+                            mesh.vertices.push_back(vert);
+                        }
+
+                        // AO-correct diagonal flip
+                        if (vAO[0] + vAO[2] < vAO[1] + vAO[3]) {
+                            mesh.indices.push_back(baseIdx + 1);
+                            mesh.indices.push_back(baseIdx + 2);
+                            mesh.indices.push_back(baseIdx + 3);
+                            mesh.indices.push_back(baseIdx + 1);
+                            mesh.indices.push_back(baseIdx + 3);
+                            mesh.indices.push_back(baseIdx + 0);
+                        } else {
+                            mesh.indices.push_back(baseIdx + 0);
+                            mesh.indices.push_back(baseIdx + 1);
+                            mesh.indices.push_back(baseIdx + 2);
+                            mesh.indices.push_back(baseIdx + 0);
+                            mesh.indices.push_back(baseIdx + 2);
+                            mesh.indices.push_back(baseIdx + 3);
+                        }
+
+                        // Clear used cells
+                        for (int jj = j; jj < j+H; ++jj)
+                            for (int ii = i; ii < i+W; ++ii)
+                                mask[jj * CHUNK_SIZE + ii].faceID = 0xFF;
+
+                        i += W;
+                    }
+                }
+            } // layer
+        } // normalDir
+    } // d
 
     return mesh;
 }

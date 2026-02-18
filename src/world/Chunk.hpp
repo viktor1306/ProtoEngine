@@ -54,6 +54,17 @@ public:
     float getWorldOffsetY() const { return static_cast<float>(m_cy * CHUNK_SIZE); }
     float getWorldOffsetZ() const { return static_cast<float>(m_cz * CHUNK_SIZE); }
 
+    // Returns true if the voxel at local (x,y,z) is non-solid (AIR).
+    // Out-of-bounds coords query the appropriate neighbour chunk.
+    // If neighbour is nullptr, treat as AIR (emit face at world boundary).
+    // Public: needed by sampleAO() free function in Chunk.cpp.
+    bool isAirAt(int x, int y, int z,
+                 const std::array<const Chunk*, 6>& neighbors) const;
+
+    // Compute simple AO value (0-3) for a face vertex.
+    // Public: needed by sampleAO() free function in Chunk.cpp.
+    static uint8_t computeAO(bool side1, bool side2, bool corner);
+
 private:
     VoxelData m_voxels[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE]{};
     int  m_cx, m_cy, m_cz;
@@ -62,16 +73,6 @@ private:
     static int idx(int x, int y, int z) {
         return x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE;
     }
-
-    // Returns true if the voxel at local (x,y,z) is non-solid (AIR).
-    // Out-of-bounds coords query the appropriate neighbour chunk.
-    // If neighbour is nullptr, treat as AIR (emit face at world boundary).
-    bool isAirAt(int x, int y, int z,
-                 const std::array<const Chunk*, 6>& neighbors) const;
-
-    // Compute simple AO value (0-3) for a face vertex.
-    // side1, side2: two edge-adjacent voxels; corner: diagonal voxel.
-    static uint8_t computeAO(bool side1, bool side2, bool corner);
 };
 
 } // namespace world
