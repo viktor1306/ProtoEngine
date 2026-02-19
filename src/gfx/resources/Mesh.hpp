@@ -21,6 +21,9 @@ public:
 
     void draw(VkCommandBuffer commandBuffer);
 
+    uint32_t getFirstIndex() const { return m_firstIndex; }
+    int32_t  getVertexOffset() const { return m_vertexOffset; }
+
 private:
     uint32_t m_indexCount;
     uint32_t m_firstIndex;

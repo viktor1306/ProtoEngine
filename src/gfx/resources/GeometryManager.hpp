@@ -7,8 +7,64 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string>
+#include <algorithm>
 
 namespace gfx {
+
+class BlockAllocator {
+public:
+    struct Block { VkDeviceSize offset; VkDeviceSize size; };
+    std::vector<Block> freeBlocks;
+    VkDeviceSize m_allocated_bytes = 0;
+
+    BlockAllocator() = default;
+    BlockAllocator(VkDeviceSize capacity) {
+        if (capacity > 0) freeBlocks.push_back({0, capacity});
+    }
+
+    VkDeviceSize allocate(VkDeviceSize size, VkDeviceSize alignment = 16) {
+        size = (size + alignment - 1) & ~(alignment - 1);
+        for (auto it = freeBlocks.begin(); it != freeBlocks.end(); ++it) {
+            if (it->size >= size) {
+                VkDeviceSize offset = it->offset;
+                if (it->size == size) {
+                    freeBlocks.erase(it);
+                } else {
+                    it->offset += size;
+                    it->size -= size;
+                }
+                m_allocated_bytes += size;
+                return offset;
+            }
+        }
+        return static_cast<VkDeviceSize>(-1);
+    }
+
+    void free(VkDeviceSize offset, VkDeviceSize size, VkDeviceSize alignment = 16) {
+        size = (size + alignment - 1) & ~(alignment - 1);
+        m_allocated_bytes -= size;
+        freeBlocks.push_back({offset, size});
+        std::sort(freeBlocks.begin(), freeBlocks.end(), [](const Block& a, const Block& b){
+            return a.offset < b.offset;
+        });
+        
+        for (size_t i = 0; i < freeBlocks.size() - 1; ) {
+            if (freeBlocks[i].offset + freeBlocks[i].size == freeBlocks[i+1].offset) {
+                freeBlocks[i].size += freeBlocks[i+1].size;
+                freeBlocks.erase(freeBlocks.begin() + i + 1);
+            } else {
+                ++i;
+            }
+        }
+    }
+    
+    void reset(VkDeviceSize capacity) {
+        freeBlocks.clear();
+        m_allocated_bytes = 0;
+        if (capacity > 0) freeBlocks.push_back({0, capacity});
+    }
+};
 
 class GeometryManager {
 public:
@@ -22,47 +78,62 @@ public:
     // Upload standard gfx::Vertex mesh (existing pipeline)
     Mesh* uploadMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 
-    // Upload arbitrary vertex type (e.g. world::VoxelVertex — 8 bytes)
-    // The vertex stride is sizeof(T); Mesh stores firstIndex and vertexOffset
-    // in terms of element count (not bytes), so the caller must bind the
-    // correct VkVertexInputBindingDescription for type T.
+    // Structure for batched uploads
+    struct UploadRequest {
+        VkDeviceSize vertexOffset;
+        VkDeviceSize indexOffset;
+        VkDeviceSize vertexBytes;
+        VkDeviceSize indexBytes;
+        const void*  vertexData;
+        const void*  indexData;
+    };
+
+    // Sub-allocate for arbitrary vertex type
     template<typename T>
-    Mesh* uploadMeshRaw(const std::vector<T>& vertices, const std::vector<uint32_t>& indices) {
-        VkDeviceSize vertexDataSize = vertices.size() * sizeof(T);
-        VkDeviceSize indexDataSize  = indices.size()  * sizeof(uint32_t);
+    Mesh* allocateMeshRaw(uint32_t vertexCount, uint32_t indexCount, UploadRequest& outRequest, const std::vector<T>& vertices, const std::vector<uint32_t>& indices) {
+        VkDeviceSize vertexDataSize = vertexCount * sizeof(T);
+        VkDeviceSize indexDataSize  = indexCount  * sizeof(uint32_t);
 
-        if (m_vertexOffset + vertexDataSize > VERTEX_BUFFER_SIZE)
-            throw std::runtime_error("GeometryManager: Vertex buffer full! (" + std::to_string(vertexDataSize) + " bytes needed)");
-        if (m_indexOffset + indexDataSize > INDEX_BUFFER_SIZE)
-            throw std::runtime_error("GeometryManager: Index buffer full! (" + std::to_string(indexDataSize) + " bytes needed)");
+        VkDeviceSize vOff = m_vertexAllocator.allocate(vertexDataSize);
+        VkDeviceSize iOff = m_indexAllocator.allocate(indexDataSize);
 
-        uploadRawData(vertices.data(), vertexDataSize, indices.data(), indexDataSize);
+        if (vOff == static_cast<VkDeviceSize>(-1) || iOff == static_cast<VkDeviceSize>(-1)) {
+            if (vOff != static_cast<VkDeviceSize>(-1)) m_vertexAllocator.free(vOff, vertexDataSize);
+            if (iOff != static_cast<VkDeviceSize>(-1)) m_indexAllocator.free(iOff, indexDataSize);
+            throw std::runtime_error("GeometryManager: Out of memory in sub-allocator!");
+        }
 
-        // firstIndex: index into the index buffer (in uint32_t units)
-        uint32_t firstIndex   = static_cast<uint32_t>(m_indexOffset  / sizeof(uint32_t));
-        // vertexOffset: byte offset into vertex buffer (passed to vkCmdDrawIndexed as vertexOffset)
-        // For non-standard vertex sizes we store the byte offset and the pipeline
-        // must use the correct stride. We cast to int32_t for Mesh compatibility.
-        int32_t  vertexOffset = static_cast<int32_t>(m_vertexOffset / sizeof(T));
+        outRequest = { vOff, iOff, vertexDataSize, indexDataSize, vertices.data(), indices.data() };
 
-        m_vertexOffset += vertexDataSize;
-        m_indexOffset  += indexDataSize;
+        uint32_t firstIndex   = static_cast<uint32_t>(iOff / sizeof(uint32_t));
+        int32_t  vertexOffset = static_cast<int32_t>(vOff / sizeof(T));
 
-        return new Mesh(static_cast<uint32_t>(indices.size()), firstIndex, vertexOffset);
+        return new Mesh(indexCount, firstIndex, vertexOffset);
     }
 
-    // Bind the global vertex + index buffers (works for any vertex type —
-    // the pipeline's VkVertexInputBindingDescription defines the stride).
+    void freeMesh(Mesh* mesh, VkDeviceSize vertexBytes, VkDeviceSize indexBytes) {
+        if (!mesh) return;
+        m_vertexAllocator.free(static_cast<VkDeviceSize>(mesh->getVertexOffset()) * (vertexBytes / std::max(1ull, (unsigned long long)vertexBytes)), vertexBytes); // We will compute properly in ChunkManager
+        delete mesh;
+    }
+
+    void freeMesh(int32_t vertexOffsetSteps, uint32_t firstIndex, VkDeviceSize vertexBytes, VkDeviceSize indexBytes, size_t vertexStride) {
+        m_vertexAllocator.free(static_cast<VkDeviceSize>(vertexOffsetSteps) * vertexStride, vertexBytes);
+        m_indexAllocator.free(static_cast<VkDeviceSize>(firstIndex) * sizeof(uint32_t), indexBytes);
+    }
+
+    // Execute multiple copies using a single staging buffer and memory barrier
+    void executeBatchUpload(const std::vector<UploadRequest>& requests);
+
+    // Bind the global vertex + index buffers
     void bind(VkCommandBuffer commandBuffer);
 
-    // Reset buffer offsets to 0 so the GPU buffers can be reused from scratch.
-    // All previously returned Mesh* pointers become invalid after this call.
-    // Caller must ensure GPU is idle (vkDeviceWaitIdle) before calling.
+    // Reset all sub-allocations
     void reset();
 
     // Query current usage
-    VkDeviceSize getVertexBytesUsed() const { return m_vertexOffset; }
-    VkDeviceSize getIndexBytesUsed()  const { return m_indexOffset; }
+    VkDeviceSize getVertexBytesUsed() const { return m_vertexAllocator.m_allocated_bytes; }
+    VkDeviceSize getIndexBytesUsed()  const { return m_indexAllocator.m_allocated_bytes; }
 
 private:
     VulkanContext& m_context;
@@ -70,8 +141,11 @@ private:
     std::unique_ptr<Buffer> m_globalVertexBuffer;
     std::unique_ptr<Buffer> m_globalIndexBuffer;
 
-    VkDeviceSize m_vertexOffset = 0;
-    VkDeviceSize m_indexOffset  = 0;
+    VkDeviceSize m_totalVertexCapacity = VERTEX_BUFFER_SIZE;
+    VkDeviceSize m_totalIndexCapacity  = INDEX_BUFFER_SIZE;
+
+    BlockAllocator m_vertexAllocator;
+    BlockAllocator m_indexAllocator;
 
     // Internal: stage and copy raw bytes to GPU buffers (no type knowledge)
     void uploadRawData(const void* vertexData, VkDeviceSize vertexBytes,

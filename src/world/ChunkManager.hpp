@@ -149,11 +149,6 @@ private:
     std::unordered_map<IVec3Key, std::unique_ptr<Chunk>,       IVec3Hash> m_chunks;
     std::unordered_map<IVec3Key, ChunkRenderData,              IVec3Hash> m_renderData;
 
-    // CPU-side mesh cache: зберігає останні VoxelMeshData для кожного чанку
-    // (без world bias — bias застосовується при upload).
-    // Потрібен для повного re-upload при GeometryManager::reset().
-    std::unordered_map<IVec3Key, VoxelMeshData,                IVec3Hash> m_pendingMeshData;
-
     // Stats
     uint32_t m_totalVertices   = 0;
     uint32_t m_totalIndices    = 0;

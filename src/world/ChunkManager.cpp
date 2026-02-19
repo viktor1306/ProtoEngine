@@ -76,7 +76,6 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
 
     m_chunks.clear();
     m_renderData.clear();
-    m_pendingMeshData.clear(); // скидаємо CPU кеш при повній регенерації
     m_chunkLOD.clear();
     m_totalVertices   = 0;
     m_totalIndices    = 0;
@@ -292,65 +291,17 @@ void ChunkManager::flushDirty() {
 }
 
 // ---------------------------------------------------------------------------
-// uploadChunkMesh — upload one chunk's mesh to GPU (partial update)
-// ---------------------------------------------------------------------------
-void ChunkManager::uploadChunkMesh(const IVec3Key& key,
-                                   VoxelMeshData& meshData,
-                                   [[maybe_unused]] VkDevice device)
-{
-    // Apply world bias to vertex coords
-    int worldOffX = key.x * CHUNK_SIZE + m_worldBiasX;
-    int worldOffY = key.y * CHUNK_SIZE + m_worldBiasY;
-    int worldOffZ = key.z * CHUNK_SIZE + m_worldBiasZ;
-
-    for (VoxelVertex& v : meshData.vertices) {
-        int wx = worldOffX + static_cast<int>(v.x);
-        int wy = worldOffY + static_cast<int>(v.y);
-        int wz = worldOffZ + static_cast<int>(v.z);
-        v.x = static_cast<uint8_t>(wx);
-        v.y = static_cast<uint8_t>(wy);
-        v.z = static_cast<uint8_t>(wz);
-    }
-
-    // Get or create render data for this chunk
-    auto& rd = m_renderData[key];
-
-    // Destroy old mesh (if any) — partial update: only this chunk
-    if (rd.valid) {
-        // Update stats: subtract old counts
-        m_totalVertices -= rd.vertexCount;
-        m_totalIndices  -= rd.indexCount;
-        rd.mesh.reset();
-        rd.valid = false;
-    }
-
-    if (meshData.empty()) return;
-
-    // Upload new mesh
-    rd.mesh.reset(m_geometryManager.uploadMeshRaw(meshData.vertices, meshData.indices));
-    rd.aabb        = buildAABB(key.x, key.y, key.z);
-    rd.vertexCount = static_cast<uint32_t>(meshData.vertices.size());
-    rd.indexCount  = static_cast<uint32_t>(meshData.indices.size());
-    rd.valid       = true;
-
-    m_totalVertices += rd.vertexCount;
-    m_totalIndices  += rd.indexCount;
-}
-
-// ---------------------------------------------------------------------------
 // rebuildDirtyChunks — collect async results and upload to GPU
 //
-// GeometryManager використовує лінійний аллокатор (без звільнення окремих
-// блоків). Тому при будь-якому оновленні ми:
-//   1. Збираємо готові меші з MeshWorker (non-blocking).
-//   2. Зберігаємо нові дані в m_pendingMeshData.
-//   3. Робимо GeometryManager::reset() — скидаємо весь буфер.
-//   4. Перезавантажуємо ВСІ валідні чанки (старі + нові).
+// Використовує GeometryManager Sub-allocation (FreeList) та Batch Upload:
+//   1. Збирає готові меші з MeshWorker (non-blocking).
+//   2. Звільняє стару пам'ять мешу, виділяє нову.
+//   3. Застосовує world bias прямо до локальних даних (які живуть до кінця функції).
+//   4. Передає масив requests у GeometryManager для одного копіювання і одного MemoryBarrier.
 //
-// Це гарантує що буфер ніколи не переповниться.
-// vkDeviceWaitIdle тільки якщо є що завантажувати.
+// Це гарантує мінімальне блокування відеокарти та CPU.
 // ---------------------------------------------------------------------------
-void ChunkManager::rebuildDirtyChunks(VkDevice device) {
+void ChunkManager::rebuildDirtyChunks([[maybe_unused]] VkDevice device) {
     auto t0 = std::chrono::high_resolution_clock::now();
 
     // Collect completed tasks (non-blocking)
@@ -360,66 +311,69 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device) {
     std::cout << "[ChunkManager] Uploading " << done.size()
               << " chunk meshes to GPU...\n" << std::flush;
 
-    // Merge new results into pending cache
+    std::vector<gfx::GeometryManager::UploadRequest> requests;
+    requests.reserve(done.size());
+
     for (auto& task : done) {
         IVec3Key key{task.cx, task.cy, task.cz};
 
         // If this task's LOD is stale (camera moved), discard it.
-        // Old GPU mesh stays active until a matching task finishes.
         auto lodIt = m_chunkLOD.find(key);
         int desiredLOD = (lodIt != m_chunkLOD.end()) ? lodIt->second : 0;
         if (task.lod != desiredLOD) {
             continue;
         }
 
-        if (!task.result.empty()) {
-            m_pendingMeshData[key] = std::move(task.result);
-        } else if (task.lod == 0) {
-            // LOD 0 is full quality — if it's empty, the chunk genuinely has
-            // no visible faces (e.g. fully air). Safe to remove.
-            m_pendingMeshData.erase(key);
+        auto& rd = m_renderData[key];
+
+        // Free old mesh allocation
+        if (rd.valid) {
+            m_totalVertices -= rd.vertexCount;
+            m_totalIndices  -= rd.indexCount;
+            m_geometryManager.freeMesh(rd.mesh->getVertexOffset(), rd.mesh->getFirstIndex(), 
+                rd.vertexCount * sizeof(VoxelVertex), rd.indexCount * sizeof(uint32_t), sizeof(VoxelVertex));
+            rd.mesh.reset();
+            rd.valid = false;
         }
-        // LOD > 0 empty result: keep the old (higher quality) mesh in the cache.
-        // The coarser LOD approximation may miss faces that the full mesh captures.
-        auto it = m_chunks.find(key);
-        if (it != m_chunks.end()) it->second->markClean();
-    }
 
-    // GPU idle — safe to reset and re-upload
-    vkDeviceWaitIdle(device);
+        if (task.result.empty()) {
+            if (task.lod == 0) {
+                // chunk has no mesh (e.g. fully solid or air inside)
+                auto it = m_chunks.find(key);
+                if (it != m_chunks.end()) it->second->markClean();
+            }
+            continue; // Nothing to upload
+        }
 
-    // Reset GeometryManager (linear allocator — full reset required)
-    m_geometryManager.reset();
-    m_renderData.clear();
-    m_totalVertices = 0;
-    m_totalIndices  = 0;
-
-    // Re-upload ALL cached chunk meshes
-    for (auto& [key, meshData] : m_pendingMeshData) {
-        if (meshData.empty()) continue;
-
-        // Apply world bias
+        // Apply world bias directly to task.result.vertices
         int worldOffX = key.x * CHUNK_SIZE + m_worldBiasX;
         int worldOffY = key.y * CHUNK_SIZE + m_worldBiasY;
         int worldOffZ = key.z * CHUNK_SIZE + m_worldBiasZ;
 
-        // Copy and apply bias (meshData is our cache — don't modify in-place)
-        std::vector<VoxelVertex> biasedVerts = meshData.vertices;
-        for (VoxelVertex& v : biasedVerts) {
+        for (VoxelVertex& v : task.result.vertices) {
             v.x = static_cast<uint8_t>(worldOffX + static_cast<int>(v.x));
             v.y = static_cast<uint8_t>(worldOffY + static_cast<int>(v.y));
             v.z = static_cast<uint8_t>(worldOffZ + static_cast<int>(v.z));
         }
 
-        auto& rd = m_renderData[key];
-        rd.mesh.reset(m_geometryManager.uploadMeshRaw(biasedVerts, meshData.indices));
-        rd.aabb        = buildAABB(key.x, key.y, key.z);
-        rd.vertexCount = static_cast<uint32_t>(biasedVerts.size());
-        rd.indexCount  = static_cast<uint32_t>(meshData.indices.size());
-        rd.valid       = true;
+        gfx::GeometryManager::UploadRequest req;
+        rd.mesh.reset(m_geometryManager.allocateMeshRaw(static_cast<uint32_t>(task.result.vertices.size()), static_cast<uint32_t>(task.result.indices.size()), req, task.result.vertices, task.result.indices));
+        rd.aabb = buildAABB(key.x, key.y, key.z);
+        rd.vertexCount = static_cast<uint32_t>(task.result.vertices.size());
+        rd.indexCount  = static_cast<uint32_t>(task.result.indices.size());
+        rd.valid = true;
 
         m_totalVertices += rd.vertexCount;
         m_totalIndices  += rd.indexCount;
+
+        requests.push_back(req);
+
+        auto it = m_chunks.find(key);
+        if (it != m_chunks.end()) it->second->markClean();
+    }
+
+    if (!requests.empty()) {
+        m_geometryManager.executeBatchUpload(requests);
     }
 
     auto t1 = std::chrono::high_resolution_clock::now();

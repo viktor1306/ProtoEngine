@@ -39,7 +39,9 @@ void World::rebuildMeshes() {
         }
 
         // Upload via template method (VoxelVertex — 8 bytes)
-        gfx::Mesh* raw = m_geometryManager.uploadMeshRaw(data.vertices, data.indices);
+        gfx::GeometryManager::UploadRequest req;
+        gfx::Mesh* raw = m_geometryManager.allocateMeshRaw(static_cast<uint32_t>(data.vertices.size()), static_cast<uint32_t>(data.indices.size()), req, data.vertices, data.indices);
+        m_geometryManager.executeBatchUpload({req});
         m_meshes.push_back(std::unique_ptr<gfx::Mesh>(raw));
 
         m_totalVertices += static_cast<uint32_t>(data.vertices.size());

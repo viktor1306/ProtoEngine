@@ -168,9 +168,12 @@ struct FaceMask {
 // pos[3] = voxel position (x,y,z)
 // du, dv = corner offset in (u,v) plane: -1 or +1
 // ---------------------------------------------------------------------------
-static uint8_t sampleAO(const Chunk* chunk,
-                         const std::array<const Chunk*, 6>& neighbors,
-                         int pos[3], int d, int du, int dv, int normalDir)
+static inline int cacheIdx(int x, int y, int z) {
+    return (x + 1) + (y + 1) * 34 + (z + 1) * 34 * 34;
+}
+
+static uint8_t sampleAO(const VoxelData* cache,
+                        int pos[3], int d, int du, int dv, int normalDir)
 {
     const int u = (d + 1) % 3;
     const int v = (d + 2) % 3;
@@ -183,9 +186,9 @@ static uint8_t sampleAO(const Chunk* chunk,
     int s2[3] = { base[0], base[1], base[2] }; s2[v] += dv;
     int sc[3] = { base[0], base[1], base[2] }; sc[u] += du; sc[v] += dv;
 
-    bool b1 = !chunk->isAirAt(s1[0], s1[1], s1[2], neighbors);
-    bool b2 = !chunk->isAirAt(s2[0], s2[1], s2[2], neighbors);
-    bool bc = !chunk->isAirAt(sc[0], sc[1], sc[2], neighbors);
+    bool b1 = cache[cacheIdx(s1[0], s1[1], s1[2])].isSolid();
+    bool b2 = cache[cacheIdx(s2[0], s2[1], s2[2])].isSolid();
+    bool bc = cache[cacheIdx(sc[0], sc[1], sc[2])].isSolid();
 
     return Chunk::computeAO(b1, b2, bc);
 }
@@ -281,9 +284,48 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
     mesh.vertices.reserve(lod == 0 ? 2048 : 512);
     mesh.indices.reserve(lod == 0 ? 3072 : 768);
 
-    // Thread-local mask buffer — avoids heap allocation per chunk.
-    // Max grid size = 32 (LOD 0), so 32×32 = 1024 cells is always enough.
+    // Thread-local buffers — avoids heap allocation per chunk.
     static thread_local FaceMask mask[CHUNK_SIZE * CHUNK_SIZE];
+    static thread_local VoxelData volumeCache[34 * 34 * 34];
+
+    // ---- Fill volumeCache (34x34x34) ---------------------------------------
+    std::fill_n(volumeCache, 34 * 34 * 34, VOXEL_AIR);
+
+    // 1. Copy chunk center
+    for (int z = 0; z < CHUNK_SIZE; ++z) {
+        for (int y = 0; y < CHUNK_SIZE; ++y) {
+            for (int x = 0; x < CHUNK_SIZE; ++x) {
+                volumeCache[cacheIdx(x, y, z)] = m_voxels[idx(x, y, z)];
+            }
+        }
+    }
+
+    // 2. Copy boundary layers clamped to 6 neighbors
+    for (int z = -1; z <= CHUNK_SIZE; ++z) {
+        for (int y = -1; y <= CHUNK_SIZE; ++y) {
+            for (int x = -1; x <= CHUNK_SIZE; ++x) {
+                if (x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE)
+                    continue; // Skip center
+
+                const Chunk* nb = nullptr;
+                int lx = x, ly = y, lz = z;
+
+                if      (x >= CHUNK_SIZE) { nb = neighbors[0]; lx = x - CHUNK_SIZE; }
+                else if (x < 0)           { nb = neighbors[1]; lx = x + CHUNK_SIZE; }
+                else if (y >= CHUNK_SIZE) { nb = neighbors[2]; ly = y - CHUNK_SIZE; }
+                else if (y < 0)           { nb = neighbors[3]; ly = y + CHUNK_SIZE; }
+                else if (z >= CHUNK_SIZE) { nb = neighbors[4]; lz = z - CHUNK_SIZE; }
+                else if (z < 0)           { nb = neighbors[5]; lz = z + CHUNK_SIZE; }
+
+                if (nb) {
+                    lx = (lx < 0) ? 0 : (lx >= CHUNK_SIZE ? CHUNK_SIZE - 1 : lx);
+                    ly = (ly < 0) ? 0 : (ly >= CHUNK_SIZE ? CHUNK_SIZE - 1 : ly);
+                    lz = (lz < 0) ? 0 : (lz >= CHUNK_SIZE ? CHUNK_SIZE - 1 : lz);
+                    volumeCache[cacheIdx(x, y, z)] = nb->getVoxel(lx, ly, lz);
+                }
+            }
+        }
+    }
 
     // ---- Main Greedy Meshing pass (all 6 faces) ----------------------------
     for (int d = 0; d < 3; ++d) {
@@ -317,7 +359,7 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
                         // Check neighbour in normal direction (in voxel space)
                         int npos[3] = { pos[0], pos[1], pos[2] };
                         npos[d] += normalDir * step;
-                        if (!isAirAt(npos[0], npos[1], npos[2], neighbors)) continue;
+                        if (volumeCache[cacheIdx(npos[0], npos[1], npos[2])].isSolid()) continue;
 
                         FaceMask& cell = mask[j * gridSize + i];
                         cell.faceID     = faceID;
@@ -329,10 +371,10 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
                         int aoPos[3] = { pos[0], pos[1], pos[2] };
                         // For AO, we need the voxel position (not the face layer)
                         // sampleAO expects the voxel pos, not the face pos
-                        cell.ao[0] = sampleAO(this, neighbors, aoPos, d, -1, -1, normalDir);
-                        cell.ao[1] = sampleAO(this, neighbors, aoPos, d, +1, -1, normalDir);
-                        cell.ao[2] = sampleAO(this, neighbors, aoPos, d, +1, +1, normalDir);
-                        cell.ao[3] = sampleAO(this, neighbors, aoPos, d, -1, +1, normalDir);
+                        cell.ao[0] = sampleAO(volumeCache, aoPos, d, -1, -1, normalDir);
+                        cell.ao[1] = sampleAO(volumeCache, aoPos, d, +1, -1, normalDir);
+                        cell.ao[2] = sampleAO(volumeCache, aoPos, d, +1, +1, normalDir);
+                        cell.ao[3] = sampleAO(volumeCache, aoPos, d, -1, +1, normalDir);
                     }
                 }
 

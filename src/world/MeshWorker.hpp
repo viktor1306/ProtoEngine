@@ -46,23 +46,19 @@ public:
         if (threadCount == 0)
             threadCount = std::max(1u, std::thread::hardware_concurrency());
         m_threadCount = threadCount;
-        m_shutdown.store(false, std::memory_order_relaxed);
 
         m_threads.reserve(threadCount);
         for (uint32_t i = 0; i < threadCount; ++i) {
-            m_threads.emplace_back([this] { workerLoop(); });
+            m_threads.emplace_back([this](std::stop_token st) { workerLoop(st); });
         }
     }
 
     ~MeshWorker() {
-        {
-            std::lock_guard<std::mutex> lk(m_queueMutex);
-            m_shutdown.store(true, std::memory_order_release);
+        for (auto& t : m_threads) {
+            t.request_stop();
         }
         m_cv.notify_all();
-        for (auto& t : m_threads) {
-            if (t.joinable()) t.join();
-        }
+        // std::jthread will automatically join upon destruction
     }
 
     // Submit a task for async processing.
@@ -99,15 +95,15 @@ public:
     int getActiveTasks() const { return m_activeTasks.load(std::memory_order_relaxed); }
 
 private:
-    void workerLoop() {
-        while (true) {
+    void workerLoop(std::stop_token st) {
+        while (!st.stop_requested()) {
             MeshTask task;
             {
                 std::unique_lock<std::mutex> lk(m_queueMutex);
-                m_cv.wait(lk, [this] {
-                    return !m_pending.empty() || m_shutdown.load(std::memory_order_acquire);
+                m_cv.wait(lk, [&] {
+                    return !m_pending.empty() || st.stop_requested();
                 });
-                if (m_shutdown.load(std::memory_order_acquire) && m_pending.empty())
+                if (st.stop_requested() && m_pending.empty())
                     return;
                 task = std::move(m_pending.front());
                 m_pending.pop();
@@ -146,9 +142,8 @@ private:
     std::vector<MeshTask>   m_done;
 
     std::atomic<int>        m_activeTasks{0};
-    std::atomic<bool>       m_shutdown{false};
 
-    std::vector<std::thread> m_threads;
+    std::vector<std::jthread> m_threads;
 };
 
 } // namespace world
