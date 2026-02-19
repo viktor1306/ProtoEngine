@@ -35,26 +35,11 @@ layout(push_constant) uniform PushConstants {
 } pc;
 
 // ---------------------------------------------------------------------------
-// Hardcoded block palette (indexed by paletteIdx 0-15)
+// Block palette UBO (indexed by paletteIdx 0-15)
 // ---------------------------------------------------------------------------
-const vec3 k_palette[16] = vec3[16](
-    vec3(0.0,  0.0,  0.0 ),  // 0  AIR (black — should not appear)
-    vec3(0.50, 0.50, 0.50),  // 1  Stone
-    vec3(0.55, 0.35, 0.18),  // 2  Dirt
-    vec3(0.30, 0.65, 0.20),  // 3  Grass
-    vec3(0.85, 0.80, 0.50),  // 4  Sand
-    vec3(0.20, 0.40, 0.80),  // 5  Water
-    vec3(0.40, 0.25, 0.10),  // 6  Wood
-    vec3(0.15, 0.45, 0.10),  // 7  Leaves
-    vec3(0.90, 0.92, 0.95),  // 8  Snow
-    vec3(0.90, 0.30, 0.05),  // 9  Lava
-    vec3(0.70, 0.70, 0.70),  // 10 Cobblestone
-    vec3(0.95, 0.90, 0.60),  // 11 Sandstone
-    vec3(0.60, 0.10, 0.10),  // 12 Brick
-    vec3(0.20, 0.20, 0.20),  // 13 Coal Ore
-    vec3(0.80, 0.70, 0.20),  // 14 Gold Ore
-    vec3(0.40, 0.60, 0.80)   // 15 Diamond Ore
-);
+layout(set = 1, binding = 2) uniform PaletteBuffer {
+    vec4 colors[16];
+} palette;
 
 // ---------------------------------------------------------------------------
 // Face normals table (indexed by faceID 0-5)
@@ -88,8 +73,8 @@ void main() {
     uint palHi      = inAoAndPalette.w;
     uint paletteIdx = (palLo | (palHi << 8u)) & 0xFu; // clamp to 0-15
 
-    // Fetch block color from hardcoded palette
-    vec3 blockColor = k_palette[paletteIdx];
+    // Fetch block color from UBO palette
+    vec3 blockColor = palette.colors[paletteIdx].rgb;
 
     // Apply AO darkening
     float aoFactor = k_aoFactors[clamp(ao, 0u, 3u)];

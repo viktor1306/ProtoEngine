@@ -49,7 +49,7 @@ public:
             return a.offset < b.offset;
         });
         
-        for (size_t i = 0; i < freeBlocks.size() - 1; ) {
+        for (size_t i = 0; i + 1 < freeBlocks.size(); ) {
             if (freeBlocks[i].offset + freeBlocks[i].size == freeBlocks[i+1].offset) {
                 freeBlocks[i].size += freeBlocks[i+1].size;
                 freeBlocks.erase(freeBlocks.begin() + i + 1);
@@ -111,9 +111,9 @@ public:
         return new Mesh(indexCount, firstIndex, vertexOffset);
     }
 
-    void freeMesh(Mesh* mesh, VkDeviceSize vertexBytes, VkDeviceSize indexBytes) {
+    void freeMesh(Mesh* mesh, VkDeviceSize vertexBytes, [[maybe_unused]] VkDeviceSize indexBytes) {
         if (!mesh) return;
-        m_vertexAllocator.free(static_cast<VkDeviceSize>(mesh->getVertexOffset()) * (vertexBytes / std::max(1ull, (unsigned long long)vertexBytes)), vertexBytes); // We will compute properly in ChunkManager
+        // In ChunkRenderer, we rely on freeMesh(int32_t, uint32_t, ...)
         delete mesh;
     }
 

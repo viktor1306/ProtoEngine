@@ -18,6 +18,10 @@ BindlessSystem::~BindlessSystem() {
             m_objectBuffers[i]->unmap();
             delete m_objectBuffers[i];
         }
+        if (m_paletteBuffers[i]) {
+            m_paletteBuffers[i]->unmap();
+            delete m_paletteBuffers[i];
+        }
     }
     vkDestroyDescriptorPool(m_context.getDevice(), m_descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(m_context.getDevice(), m_descriptorSetLayout, nullptr);
@@ -32,15 +36,24 @@ void BindlessSystem::createObjectBuffers() {
             VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
         m_objectBuffers[i]->map(&m_objectBuffersMapped[i]);
+
+        m_paletteBuffers[i] = new Buffer(
+            m_context, sizeof(PaletteUBO),
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VMA_MEMORY_USAGE_AUTO,
+            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+        m_paletteBuffers[i]->map(&m_paletteBuffersMapped[i]);
     }
 }
 
 void BindlessSystem::createDescriptorPool() {
-    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    std::array<VkDescriptorPoolSize, 3> poolSizes{};
     poolSizes[0].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[0].descriptorCount = MAX_BINDLESS_RESOURCES * MAX_FRAMES;
     poolSizes[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[1].descriptorCount = MAX_FRAMES;
+    poolSizes[2].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[2].descriptorCount = MAX_FRAMES;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -54,19 +67,26 @@ void BindlessSystem::createDescriptorPool() {
 }
 
 void BindlessSystem::createDescriptorSetLayout() {
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings{};
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings{};
     bindings[0].binding         = 0;
     bindings[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     bindings[0].descriptorCount = MAX_BINDLESS_RESOURCES;
     bindings[0].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+    
     bindings[1].binding         = 1;
     bindings[1].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bindings[1].descriptorCount = 1;
     bindings[1].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    std::array<VkDescriptorBindingFlags, 2> bindingFlags{};
+    bindings[2].binding         = 2;
+    bindings[2].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[2].descriptorCount = 1;
+    bindings[2].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorBindingFlags, 3> bindingFlags{};
     bindingFlags[0] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
     bindingFlags[1] = 0;
+    bindingFlags[2] = 0;
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
     bindingFlagsInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -103,14 +123,28 @@ void BindlessSystem::createDescriptorSets() {
         bufferInfo.offset = 0;
         bufferInfo.range  = VK_WHOLE_SIZE;
 
-        VkWriteDescriptorSet write{};
-        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet          = m_descriptorSets[i];
-        write.dstBinding      = 1;
-        write.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        write.descriptorCount = 1;
-        write.pBufferInfo     = &bufferInfo;
-        vkUpdateDescriptorSets(m_context.getDevice(), 1, &write, 0, nullptr);
+        VkWriteDescriptorSet writes[2]{};
+
+        writes[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[0].dstSet          = m_descriptorSets[i];
+        writes[0].dstBinding      = 1;
+        writes[0].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[0].descriptorCount = 1;
+        writes[0].pBufferInfo     = &bufferInfo;
+
+        VkDescriptorBufferInfo paletteInfo{};
+        paletteInfo.buffer = m_paletteBuffers[i]->getBuffer();
+        paletteInfo.offset = 0;
+        paletteInfo.range  = sizeof(PaletteUBO);
+
+        writes[1].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[1].dstSet          = m_descriptorSets[i];
+        writes[1].dstBinding      = 2;
+        writes[1].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writes[1].descriptorCount = 1;
+        writes[1].pBufferInfo     = &paletteInfo;
+
+        vkUpdateDescriptorSets(m_context.getDevice(), 2, writes, 0, nullptr);
     }
 }
 
@@ -160,6 +194,12 @@ void BindlessSystem::updateObject(uint32_t frameIndex, uint32_t objectIndex, con
     ObjectDataSSBO* mappedArr = static_cast<ObjectDataSSBO*>(m_objectBuffersMapped[frameIndex]);
     mappedArr[objectIndex] = data;
     m_objectBuffers[frameIndex]->flush(objectIndex * sizeof(ObjectDataSSBO), sizeof(ObjectDataSSBO));
+}
+
+void BindlessSystem::updatePalette(uint32_t frameIndex, const PaletteUBO& palette) {
+    if (!m_paletteBuffersMapped[frameIndex]) return;
+    std::memcpy(m_paletteBuffersMapped[frameIndex], &palette, sizeof(PaletteUBO));
+    m_paletteBuffers[frameIndex]->flush(0, sizeof(PaletteUBO));
 }
 
 } // namespace gfx

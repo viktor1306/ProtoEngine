@@ -48,10 +48,10 @@ src/gfx/
 
 ### `GeometryManager`
 - **Monolithic Buffers**: Вся геометрія в одному Vertex/Index буфері (VMA, GPU_ONLY).
-- Розміри: Vertex 10 МБ, Index 2 МБ.
-- `uploadMesh()` — копіює через staging буфер з Sync2 бар'єрами.
+- Розміри: Vertex 50 МБ, Index 15 МБ.
+- **VRAM Defragmentation**: Використовує кастомний аллокатор вільних блоків (Free-list, Best-Fit алгоритм) для управління під-алокаціями всередині великого буфера. Динаміке завантаження та вивантаження чанків більше не фрагментує відеопам'ять.
 - `bind()` — одна прив'язка для всієї геометрії сцени.
-- Структура `Vertex`: Position(3) + Normal(3) + Color(3) + UV(2) = **48 байт**.
+- Структура `VoxelVertex`: стиснена до **8 байт** (X, Y, Z, Дані: Normal + AO + Palette).
 
 ---
 
@@ -72,10 +72,11 @@ src/gfx/
 ### `BindlessSystem`
 - Керує глобальними наборами дескрипторів.
 - **Set 0**: Shadow map sampler (для main pass).
-- **Set 1**: Bindless textures (`sampler2D textures[]`) + Object SSBO (`objects[]`).
+- **Set 1, Binding 0**: Bindless textures (`sampler2D textures[]`).
+- **Set 1, Binding 1**: Object SSBO (`objects[]`, Model Matrix + Texture ID).
+- **Set 1, Binding 2**: Palette UBO (`PaletteBuffer`, палітра з 16 кольорів блоків).
 - `registerTexture()` / `unregisterTexture()` — динамічна реєстрація.
-- `updateObject()` — оновлення Model Matrix та Texture ID per-frame.
-- Double buffering: окремі SSBO для кожного frame-in-flight.
+- Double buffering: окремі буфери для кожного frame-in-flight.
 
 ### `RenderPassProvider`
 - Інкапсулює `vkCmdBeginRendering` / `vkCmdEndRendering`.

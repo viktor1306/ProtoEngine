@@ -20,6 +20,10 @@ public:
         uint32_t padding[3];
     };
 
+    struct alignas(16) PaletteUBO {
+        core::math::Vec4 colors[16];
+    };
+
     BindlessSystem(VulkanContext& context);
     ~BindlessSystem();
 
@@ -32,6 +36,7 @@ public:
               uint32_t frameIndex, uint32_t set = 1);
 
     void updateObject(uint32_t frameIndex, uint32_t objectIndex, const ObjectDataSSBO& data);
+    void updatePalette(uint32_t frameIndex, const PaletteUBO& palette);
 
 private:
     void createDescriptorPool();
@@ -48,6 +53,9 @@ private:
     Buffer* m_objectBuffers[MAX_FRAMES]       = {};
     void*   m_objectBuffersMapped[MAX_FRAMES] = {};
     size_t  m_maxObjects = 10000;
+
+    Buffer* m_paletteBuffers[MAX_FRAMES]       = {};
+    void*   m_paletteBuffersMapped[MAX_FRAMES] = {};
 
     std::queue<uint32_t> m_freeIndices;
     uint32_t m_nextFreeIndex = 0;

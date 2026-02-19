@@ -3,7 +3,6 @@
 #include "core/Math.hpp"
 #include <array>
 #include <unordered_map>
-#include "world/ChunkManager.hpp" // For IVec3Key and IVec3Hash
 
 namespace world {
 

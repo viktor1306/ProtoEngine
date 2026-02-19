@@ -4,6 +4,11 @@
 
 ## Ключові Компоненти
 
+### `ImGuiManager` (`ImGuiManager.hpp/cpp`)
+- Інтеграція популярної бібліотеки Dear ImGui (через `imgui_impl_win32` та `imgui_impl_vulkan`).
+- Керує пулом дескрипторів ImGui та власним Render Pass (використовуючи `VK_KHR_dynamic_rendering`).
+- Забезпечує створення та обробку фреймів накладення (Overlays) для дебагу та налаштувань рушія в реальному часі.
+
 ### `TextRenderer` (`TextRenderer.hpp/cpp`)
 - Рендерить 2D текст поверх сцени (UI overlay).
 - Використовує **Signed Distance Fields (SDF)** для чіткого тексту при будь-якому масштабуванні.

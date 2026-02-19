@@ -231,6 +231,30 @@ int main() {
         // ---- Raycast state (persistent across frames for ImGui display) ----
         world::RayResult lastRayHit{};
 
+        // ---- FPS Cap and Smoothing -----------------------------------------
+        const double targetFrameTime = 1.0 / 4000.0;
+        float displayFPS = 0.0f;
+        float displayMs  = 0.0f;
+
+        // ---- Palette Data --------------------------------------------------
+        gfx::BindlessSystem::PaletteUBO paletteData{};
+        paletteData.colors[0]  = {0.0f,  0.0f,  0.0f,  1.f}; // 0  AIR
+        paletteData.colors[1]  = {0.50f, 0.50f, 0.50f, 1.f}; // 1  Stone
+        paletteData.colors[2]  = {0.55f, 0.35f, 0.18f, 1.f}; // 2  Dirt
+        paletteData.colors[3]  = {0.30f, 0.65f, 0.20f, 1.f}; // 3  Grass
+        paletteData.colors[4]  = {0.85f, 0.80f, 0.50f, 1.f}; // 4  Sand
+        paletteData.colors[5]  = {0.20f, 0.40f, 0.80f, 1.f}; // 5  Water
+        paletteData.colors[6]  = {0.40f, 0.25f, 0.10f, 1.f}; // 6  Wood
+        paletteData.colors[7]  = {0.15f, 0.45f, 0.10f, 1.f}; // 7  Leaves
+        paletteData.colors[8]  = {0.90f, 0.92f, 0.95f, 1.f}; // 8  Snow
+        paletteData.colors[9]  = {0.90f, 0.30f, 0.05f, 1.f}; // 9  Lava
+        paletteData.colors[10] = {0.70f, 0.70f, 0.70f, 1.f}; // 10 Cobblestone
+        paletteData.colors[11] = {0.95f, 0.90f, 0.60f, 1.f}; // 11 Sandstone
+        paletteData.colors[12] = {0.60f, 0.10f, 0.10f, 1.f}; // 12 Brick
+        paletteData.colors[13] = {0.20f, 0.20f, 0.20f, 1.f}; // 13 Coal Ore
+        paletteData.colors[14] = {0.80f, 0.70f, 0.20f, 1.f}; // 14 Gold Ore
+        paletteData.colors[15] = {0.40f, 0.60f, 0.80f, 1.f}; // 15 Diamond Ore
+
         // ---- Main Loop -----------------------------------------------------
         while (!window.shouldClose()) {
             timer.update();
@@ -355,7 +379,18 @@ int main() {
                 ImGui::SetNextWindowSize(ImVec2(340, 320), ImGuiCond_Once);
                 ImGui::Begin("Debug Tools");
 
-                ImGui::Text("FPS:  %.1f  (%.2f ms)", timer.getFPS(), timer.getDeltaTimeMs());
+                // Smooth FPS display (EWMA filter)
+                float currentMs = timer.getDeltaTimeMs();
+                float currentFPS = (currentMs > 0.0f) ? (1000.0f / currentMs) : 0.0f;
+                if (displayFPS == 0.0f) {
+                    displayFPS = currentFPS;
+                    displayMs = currentMs;
+                } else {
+                    displayFPS = displayFPS * 0.95f + currentFPS * 0.05f;
+                    displayMs  = displayMs  * 0.95f + currentMs  * 0.05f;
+                }
+
+                ImGui::Text("FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
                 ImGui::Separator();
                 ImGui::Text("Camera: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
                 ImGui::Text("Yaw: %.1f  Pitch: %.1f", camera.getYaw(), camera.getPitch());
@@ -384,9 +419,9 @@ int main() {
                         chunkManager.updateCamera(camera.getPosition());
                     }
                 }
-                ImGui::SliderFloat("LOD0→1 dist",  &chunkManager.m_lodDist0,      16.0f, 1024.0f, "%.0f blk");
-                ImGui::SliderFloat("LOD1→2 dist",  &chunkManager.m_lodDist1,      32.0f, 2048.0f, "%.0f blk");
-                ImGui::SliderFloat("Hysteresis",    &chunkManager.m_lodHysteresis,  0.0f,   64.0f, "%.1f blk");
+                ImGui::SliderFloat("LOD0→1 dist",  &chunkManager.getLodDist0(),      16.0f, 1024.0f, "%.0f blk");
+                ImGui::SliderFloat("LOD1→2 dist",  &chunkManager.getLodDist1(),      32.0f, 2048.0f, "%.0f blk");
+                ImGui::SliderFloat("Hysteresis",   &chunkManager.getLodHysteresis(),  0.0f,   64.0f, "%.1f blk");
                 {
                     auto lodCounts = chunkManager.getLODCounts();
                     ImGui::Text("LOD 0 (full):    %u chunks", lodCounts[0]);
@@ -458,6 +493,9 @@ int main() {
                 renderer.beginShadowPass(commandBuffer);
                 renderer.endShadowPass(commandBuffer);
 
+                // Update Palette UBO
+                bindlessSystem.updatePalette(currentFrame, paletteData);
+
                 // Main pass
                 renderer.beginMainPass(commandBuffer);
 
@@ -498,6 +536,13 @@ int main() {
 
                 renderer.endMainPass(commandBuffer);
                 renderer.endFrame(commandBuffer);
+            }
+
+            // ---- FPS Limit to 4000 -----------------------------------------
+            double elapsed = timer.getDeltaTime();
+            if (elapsed < targetFrameTime) {
+                double sleepTime = targetFrameTime - elapsed;
+                std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
             }
         }
 

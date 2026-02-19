@@ -11,16 +11,16 @@
 ```
 ProtoEngine/
 ├── src/
-│   ├── core/               Платформа: Window, InputManager, Math, ShaderHotReloader
+│   ├── core/               Платформа: Window, InputManager, Math, ShaderHotReloader, Timer
 │   ├── gfx/
 │   │   ├── core/           Vulkan ядро: VulkanContext, Swapchain
-│   │   ├── resources/      GPU ресурси: Buffer, Mesh, Texture, GeometryManager
-│   │   ├── rendering/      Рендеринг: Renderer, Pipeline, BindlessSystem,
-│   │   │                              RenderPassProvider, ImageUtils
+│   │   ├── resources/      GPU ресурси: Buffer, Mesh, Texture, GeometryManager (з дефрагментацією)
+│   │   ├── rendering/      Рендеринг: Renderer, Pipeline, BindlessSystem, RenderPassProvider
 │   │   ├── sync/           Синхронізація: CommandManager, SyncManager
 │   │   └── *.hpp           Forwarding headers (зворотна сумісність)
-│   ├── scene/              Сцена: Camera
-│   └── ui/                 UI: TextRenderer, FontSDF, BitmapFont
+│   ├── scene/              Сцена: Camera, Frustum
+│   ├── ui/                 UI: ImGuiManager, TextRenderer, FontSDF
+│   └── world/              Світ: Chunk, ChunkManager, ChunkStorage, LODController, Raycast
 ├── shaders/                GLSL шейдери (.vert, .frag)
 ├── bin/
 │   ├── shaders/            Скомпільовані SPIR-V шейдери
@@ -39,13 +39,14 @@ ProtoEngine/
 - **Buffer Device Address (BDA)**: GPU-вказівники для прямого доступу до буферів (підготовка до Ray Tracing).
 
 ### 2. Bindless Architecture
-- Доступ до текстур та буферів через глобальні масиви в шейдерах (`textures[]`, `objects[]`).
-- Знімає обмеження на кількість прив'язаних ресурсів.
+- Доступ до текстур, буферів об'єктів та палітр кольорів через глобальні масиви в шейдерах (`textures[]`, `PaletteBuffer`).
+- Знімає обмеження на кількість прив'язаних ресурсів (дозволяє малювати всю сцену за один виклик).
 - Об'єкти оновлюють свої дані в глобальному SSBO (Shader Storage Buffer Object).
 
-### 3. Управління Пам'яттю
+### 3. Управління Пам'яттю та Геометрія
 - **VMA (Vulkan Memory Allocator)**: Ефективне виділення пам'яті GPU для всіх ресурсів (буфери, текстури, shadow image).
-- **Monolithic Geometry**: Вся геометрія живе в одному масивному Vertex/Index буфері (`GeometryManager`), що мінімізує накладні витрати на прив'язку.
+- **Monolithic Geometry (GeometryManager)**: Вся геометрія живе в одному масивному Vertex/Index буфері з вбудованим механізмом **вільних блоків (Free-lists)** для дефрагментації пам'яті під час швидкого завантаження/вивантаження чанків.
+- **Multithreading**: Багатопотокова генерація чанків за допомогою C++20 `std::jthread`. Асинхронна побудова сіток та фонове оновлення буферів без заїкань (stuttering).
 
 ### 4. Підсистеми Синхронізації
 - **CommandManager**: RAII керування `VkCommandBuffer` per-frame.
@@ -55,11 +56,15 @@ ProtoEngine/
 - **RenderPassProvider**: Інкапсулює `vkCmdBeginRendering` для Shadow Pass та Main Pass.
 - **Shadow Mapping**: Напрямлене світло з PCF та Front-Face Culling. Shadow image через VMA.
 
-### 6. Інструменти Розробника
+### 6. Воксельний Світ та LOD
+- **Greedy Meshing**: Спеціальний алгоритм стиснення геометрії чанків, який зливає сусідні однакові грані у великі прямокутники, драматично зменшуючи кількість полігонів.
+- **Closed Chunk Meshes**: Універсальна відмова від між-чанкового culling. Кожен чанк ідеально ізольовано "закриває" власні межі, унеможливлюючи появу T-Junctions (дірок) при стикуванні різних LOD-рівнів (віддалених чанків з низькою деталізацією).
+- **Smooth LOD Transitions**: Перемішування чанків з нижчою роздільною здатністю (LOD 1, 2) на льоту, залежно від дистанції до камери.
+
+### 7. Інструменти Розробника
+- **Dear ImGui**: Повноцінне інтегроване UI для параметризації рушія (LOD відстані, статус пам'яті, багатопоточність).
 - **Shader Hot-Reloading**: Редагування шейдерів в реальному часі без перезапуску.
-- **Validation Layers**: Суворі шари валідації у Debug-збірці.
-- **SDF Text**: Високоякісний рендеринг тексту через Signed Distance Fields.
-- **Auto CWD**: Автоматичне встановлення робочої директорії на project root при запуску (незалежно від місця запуску exe).
+- **Auto CWD**: Автоматичне встановлення робочої директорії на project root при запуску.
 
 ---
 
