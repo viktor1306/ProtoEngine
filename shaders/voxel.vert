@@ -20,9 +20,10 @@ layout(location = 0) in uvec4 inPosAndFace;   // x, y, z, faceID
 layout(location = 1) in uvec4 inAoAndPalette;  // ao, reserved, paletteIdx_lo, paletteIdx_hi
 
 layout(location = 0) out vec3  fragColor;
-layout(location = 1) flat out vec3  fragNormal;  // flat: no interpolation across triangle
-layout(location = 2) flat out float fragAO;      // flat: per-vertex AO, not interpolated
+layout(location = 1) flat out vec3  fragNormal;
+layout(location = 2) flat out float fragAO;
 layout(location = 3) out vec3  fragWorldPos;
+layout(location = 4) out float fragFade;
 
 // ---------------------------------------------------------------------------
 // Push Constants (matches VoxelPushConstants in main.cpp — 144 bytes)
@@ -31,7 +32,7 @@ layout(push_constant) uniform PushConstants {
     mat4  viewProj;
     mat4  lightSpaceMatrix;
     vec3  chunkOffset;
-    float _pad;
+    float fadeProgress;
 } pc;
 
 // ---------------------------------------------------------------------------
@@ -85,4 +86,5 @@ void main() {
     fragNormal   = k_normals[clamp(faceID, 0u, 5u)];  // flat — provoking vertex value
     fragAO       = aoFactor;                            // flat — no gradient across quad
     fragWorldPos = worldPos;
+    fragFade     = pc.fadeProgress;
 }

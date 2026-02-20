@@ -25,8 +25,8 @@ public:
 
     void generateWorld(int radiusX, int radiusZ, int seed = 42);
 
-    void rebuildDirtyChunks(VkDevice device);
-    void render(VkCommandBuffer cmd, const scene::Frustum& frustum);
+    void rebuildDirtyChunks(VkDevice device, float currentTime);
+    void render(VkCommandBuffer cmd, VkPipelineLayout layout, const scene::Frustum& frustum, float currentTime);
 
     void markDirty(int cx, int cy, int cz);
     void flushDirty();
@@ -42,6 +42,9 @@ public:
     float& getLodDist1() { return m_lodCtrl.m_lodDist1; }
     float& getLodHysteresis() { return m_lodCtrl.m_lodHysteresis; }
 
+    int getRenderRadius() const { return m_renderRadius; }
+    void setRenderRadius(int r) { m_renderRadius = r; }
+
     uint32_t getChunkCount()      const { return static_cast<uint32_t>(m_storage.getChunks().size()); }
     uint32_t getTotalVertices()   const { return m_renderer.getTotalVertices(); }
     uint32_t getTotalIndices()    const { return m_renderer.getTotalIndices(); }
@@ -55,17 +58,14 @@ public:
 
     std::array<uint32_t, 3> getLODCounts() const { return m_renderer.getLODCounts(); }
 
-    // World bias access for shading
-    float getWorldOriginX() const { return -static_cast<float>(m_storage.getWorldBiasX()); }
-    float getWorldOriginY() const { return -static_cast<float>(m_storage.getWorldBiasY()); }
-    float getWorldOriginZ() const { return -static_cast<float>(m_storage.getWorldBiasZ()); }
-
     bool hasMesh() const { return m_renderer.hasMesh(); }
 
 private:
     ChunkStorage  m_storage;
     LODController m_lodCtrl;
     ChunkRenderer m_renderer;
+
+    int m_renderRadius = 16;
 };
 
 } // namespace world

@@ -39,15 +39,11 @@ struct PushConstants {
 // ---------------------------------------------------------------------------
 // Push constants for the voxel pipeline (matches voxel.vert layout)
 // ---------------------------------------------------------------------------
-struct VoxelPushConstants {
+struct VoxelGlobalPush {
     core::math::Mat4 viewProj;          // 64 bytes
-    core::math::Mat4 lightSpaceMatrix;  // 64 bytes (kept for future shadow pass)
-    float chunkOffsetX;                 // 16 bytes total (vec3 + pad)
-    float chunkOffsetY;
-    float chunkOffsetZ;
-    float _pad;
+    core::math::Mat4 lightSpaceMatrix;  // 64 bytes
 };
-static_assert(sizeof(VoxelPushConstants) == 144, "VoxelPushConstants size mismatch");
+static_assert(sizeof(VoxelGlobalPush) == 128, "VoxelGlobalPush size mismatch");
 
 int main() {
     // Set working directory to project root (parent of bin/)
@@ -96,11 +92,11 @@ int main() {
         // ---- Voxel World (ChunkManager) ------------------------------------
         // MeshWorker uses hardware_concurrency() threads by default
         world::ChunkManager chunkManager(geometryManager);
-        int worldRadius = 3; // 7×7 = 49 chunks
+        chunkManager.setRenderRadius(8); // 8 chunks radius by default
         int worldSeed   = 42;
-        chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
+        chunkManager.generateWorld(chunkManager.getRenderRadius(), chunkManager.getRenderRadius(), worldSeed);
         // Wait for all async meshing to complete before first frame
-        chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
+        chunkManager.rebuildDirtyChunks(vulkanContext.getDevice(), 0.0f);
         std::cout << "ChunkManager created: " << chunkManager.getChunkCount()
                   << " chunks, " << chunkManager.getWorkerThreads() << " worker threads.\n";
 
@@ -143,7 +139,7 @@ int main() {
         VkPushConstantRange voxelPCRange{};
         voxelPCRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         voxelPCRange.offset     = 0;
-        voxelPCRange.size       = sizeof(VoxelPushConstants);
+        voxelPCRange.size       = 144; // VoxelGlobalPush (128) + VoxelChunkPush (16)
 
         // ---- Main Pipeline (standard gfx::Vertex) --------------------------
         gfx::PipelineConfig mainPipelineConfig{};
@@ -227,6 +223,7 @@ int main() {
         float reachDistance = 10.0f; // max raycast distance (m)
         int   brushSize     = 1;     // brush cube side length (1 = single voxel)
         bool  autoLOD       = true;  // автоматично перемешувати чанки при зміні LOD
+        int   worldRadius   = 10;    // Бажаний розмір світу в радіусі чанків (10 = 21x21 чанків)
 
         // ---- Raycast state (persistent across frames for ImGui display) ----
         world::RayResult lastRayHit{};
@@ -259,6 +256,7 @@ int main() {
         while (!window.shouldClose()) {
             timer.update();
             float dt = timer.getDeltaTime();
+            float currentTime = static_cast<float>(timer.getTotalTime());
 
             core::InputManager::get().update();
             window.pollEvents();
@@ -294,7 +292,7 @@ int main() {
             }
 
             // ---- Collect async mesh results (non-blocking) -----------------
-            chunkManager.rebuildDirtyChunks(vulkanContext.getDevice());
+            chunkManager.rebuildDirtyChunks(vulkanContext.getDevice(), currentTime);
 
             // ---- Build frustum for this frame ------------------------------
             core::math::Mat4 viewProjForFrustum =
@@ -408,17 +406,7 @@ int main() {
                 ImGui::Text("Pending meshes: %d", chunkManager.getPendingMeshes());
 
                 ImGui::Separator();
-                ImGui::Text("--- LOD System ---");
-                // Auto-LOD прапорець: вмикає/вимикає автоматичне перемешування
-                ImGui::Checkbox("Auto-LOD", &autoLOD);
-                ImGui::SameLine();
-                ImGui::TextDisabled("(re-mesh on camera move)");
-                if (!autoLOD) {
-                    ImGui::SameLine();
-                    if (ImGui::SmallButton("Force update")) {
-                        chunkManager.updateCamera(camera.getPosition());
-                    }
-                }
+                ImGui::Text("--- LOD Settings ---");
                 ImGui::SliderFloat("LOD0→1 dist",  &chunkManager.getLodDist0(),      16.0f, 1024.0f, "%.0f blk");
                 ImGui::SliderFloat("LOD1→2 dist",  &chunkManager.getLodDist1(),      32.0f, 2048.0f, "%.0f blk");
                 ImGui::SliderFloat("Hysteresis",   &chunkManager.getLodHysteresis(),  0.0f,   64.0f, "%.1f blk");
@@ -430,6 +418,11 @@ int main() {
                 }
 
                 ImGui::Separator();
+                ImGui::Text("--- World Generation ---");
+                if (ImGui::InputInt("World Radius (Size)", &worldRadius)) {
+                    if (worldRadius < 1) worldRadius = 1;
+                    if (worldRadius > 64) worldRadius = 64; // Здоровий ліміт
+                }
                 if (ImGui::Button("Rebuild World")) {
                     chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
                 }
@@ -516,18 +509,14 @@ int main() {
 
                     core::math::Mat4 viewProj = camera.getProjectionMatrix() * camera.getViewMatrix();
 
-                    VoxelPushConstants vpc{};
+                    VoxelGlobalPush vpc{};
                     vpc.viewProj         = viewProj;
                     vpc.lightSpaceMatrix = lightSpaceMatrix;
-                    vpc.chunkOffsetX     = chunkManager.getWorldOriginX();
-                    vpc.chunkOffsetY     = chunkManager.getWorldOriginY();
-                    vpc.chunkOffsetZ     = chunkManager.getWorldOriginZ();
-                    vpc._pad             = 0.0f;
                     vkCmdPushConstants(commandBuffer, activePipeline.getLayout(),
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                        0, sizeof(VoxelPushConstants), &vpc);
+                        0, sizeof(VoxelGlobalPush), &vpc);
 
-                    chunkManager.render(commandBuffer, frustum);
+                    chunkManager.render(commandBuffer, activePipeline.getLayout(), frustum, currentTime);
                 }
 
                 // ---- ImGui -------------------------------------------------
@@ -539,6 +528,9 @@ int main() {
             }
 
             // ---- FPS Limit to 4000 -----------------------------------------
+            // We read deltaTime AGAIN to sleep the rest of the frame, but we don't 
+            // want to accumulate the time we sleep into timer.getDeltaTime() later, 
+            // wait, timer.getDeltaTime() in next frame will include sleep, which is fine!
             double elapsed = timer.getDeltaTime();
             if (elapsed < targetFrameTime) {
                 double sleepTime = targetFrameTime - elapsed;

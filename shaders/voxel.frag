@@ -15,6 +15,7 @@ layout(location = 0) in vec3  fragColor;
 layout(location = 1) flat in vec3  fragNormal;   // flat: no interpolation
 layout(location = 2) flat in float fragAO;        // flat: no interpolation
 layout(location = 3) in vec3  fragWorldPos;
+layout(location = 4) in float fragFade;
 
 layout(location = 0) out vec4 outColor;
 
@@ -23,10 +24,30 @@ layout(push_constant) uniform PushConstants {
     mat4  viewProj;
     mat4  lightSpaceMatrix;
     vec3  chunkOffset;
-    float _pad;
+    float fadeProgress;
 } pc;
 
+const float bayer4[16] = float[](
+    0.0/16.0,  8.0/16.0,  2.0/16.0, 10.0/16.0,
+   12.0/16.0,  4.0/16.0, 14.0/16.0,  6.0/16.0,
+    3.0/16.0, 11.0/16.0,  1.0/16.0,  9.0/16.0,
+   15.0/16.0,  7.0/16.0, 13.0/16.0,  5.0/16.0
+);
+
 void main() {
+    // 1. Dither Fading (Crossfade/Anti-popping)
+    // discard pixels if the fadeProgress is less than the threshold from the Bayer matrix
+    /*
+    if (fragFade < 1.0) {
+        uint x = uint(gl_FragCoord.x) % 4u;
+        uint y = uint(gl_FragCoord.y) % 4u;
+        float threshold = bayer4[y * 4u + x];
+        if (fragFade < threshold) {
+            discard;
+        }
+    }
+    */
+
     // Simple directional light (sun)
     vec3  lightDir = normalize(vec3(0.6, 1.0, 0.4));
     vec3  norm     = normalize(fragNormal);
