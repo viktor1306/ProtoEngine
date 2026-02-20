@@ -5,8 +5,15 @@
 #include <vector>
 #include <array>
 #include <cstdint>
+#include <atomic>
 
 namespace world {
+
+enum class ChunkState : uint8_t {
+    UNGENERATED = 0,
+    GENERATING  = 1,
+    READY       = 2
+};
 
 constexpr int CHUNK_SIZE = 32;
 
@@ -55,6 +62,9 @@ public:
     int getCX() const { return m_cx; }
     int getCY() const { return m_cy; }
     int getCZ() const { return m_cz; }
+
+    // State for progressive generation
+    std::atomic<ChunkState> m_state{ChunkState::READY};
 
     // World-space offset of this chunk's (0,0,0) corner (in block units)
     float getWorldOffsetX() const { return static_cast<float>(m_cx * CHUNK_SIZE); }

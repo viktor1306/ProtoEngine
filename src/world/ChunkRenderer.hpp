@@ -19,6 +19,7 @@ struct ChunkRenderData {
     uint32_t indexCount  = 0;
     scene::AABB aabb;
     bool valid = false;
+    float fadeStartTime = 0.0f;
 };
 
 class ChunkRenderer {
@@ -28,12 +29,13 @@ public:
     // Queue updates
     void markDirty(int cx, int cy, int cz);
     void flushDirty();
+    void submitGenerateTaskHigh(Chunk* chunk, int seed);
     
     // Process async tasks and upload to GPU
-    void rebuildDirtyChunks(VkDevice device);
+    void rebuildDirtyChunks(VkDevice device, float currentTime);
     
     // Draw
-    void render(VkCommandBuffer cmd, const scene::Frustum& frustum);
+    void render(VkCommandBuffer cmd, VkPipelineLayout layout, const scene::Frustum& frustum, float currentTime);
 
     // LOD
     void setLOD(const IVec3Key& key, int lod);
@@ -52,9 +54,10 @@ public:
     int      getPendingMeshes() const { return m_meshWorker.getActiveTasks(); }
 
     void clear();
+    void removeChunk(const IVec3Key& key);
 
 private:
-    void submitMeshTask(const IVec3Key& key, int lod);
+
     scene::AABB buildAABB(int cx, int cy, int cz) const;
 
     gfx::GeometryManager& m_geometryManager;

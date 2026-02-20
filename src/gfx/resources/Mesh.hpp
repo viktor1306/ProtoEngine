@@ -16,18 +16,20 @@ struct Vertex {
 
 class Mesh {
 public:
-    Mesh(uint32_t indexCount, uint32_t firstIndex, int32_t vertexOffset);
+    Mesh(uint32_t indexCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t bufferIndex = 0);
     ~Mesh() = default;
 
     void draw(VkCommandBuffer commandBuffer);
 
     uint32_t getFirstIndex() const { return m_firstIndex; }
     int32_t  getVertexOffset() const { return m_vertexOffset; }
+    uint32_t getBufferIndex() const { return m_bufferIndex; }
 
 private:
     uint32_t m_indexCount;
     uint32_t m_firstIndex;
     int32_t  m_vertexOffset;
+    uint32_t m_bufferIndex;
 };
 
 } // namespace gfx

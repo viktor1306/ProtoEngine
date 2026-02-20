@@ -1,25 +1,36 @@
 #include "GeometryManager.hpp"
 #include <stdexcept>
 #include <iostream>
+#include <unordered_set>
 
 namespace gfx {
 
 GeometryManager::~GeometryManager() = default;
 
 GeometryManager::GeometryManager(VulkanContext& context) : m_context(context) {
-    m_globalVertexBuffer = std::make_unique<Buffer>(context, m_totalVertexCapacity,
+    allocateNewPool();
+}
+
+uint32_t GeometryManager::allocateNewPool() {
+    auto pool = std::make_unique<BufferPool>();
+    
+    pool->vertexBuffer = std::make_unique<Buffer>(m_context, m_totalVertexCapacity,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VMA_MEMORY_USAGE_GPU_ONLY);
-    m_globalIndexBuffer = std::make_unique<Buffer>(context, m_totalIndexCapacity,
+    pool->indexBuffer = std::make_unique<Buffer>(m_context, m_totalIndexCapacity,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VMA_MEMORY_USAGE_GPU_ONLY);
 
-    m_vertexAllocator.reset(m_totalVertexCapacity);
-    m_indexAllocator.reset(m_totalIndexCapacity);
+    pool->vertexAllocator.reset(m_totalVertexCapacity);
+    pool->indexAllocator.reset(m_totalIndexCapacity);
 
-    std::cout << "[GeometryManager] Allocated: "
+    m_pools.push_back(std::move(pool));
+    
+    std::cout << "[GeometryManager] Allocated new buffer pool [" << (m_pools.size() - 1) << "]: "
               << (m_totalVertexCapacity / 1024 / 1024) << " MB vertex + "
-              << (m_totalIndexCapacity  / 1024 / 1024) << " MB index buffers with FreeList allocator.\n";
+              << (m_totalIndexCapacity  / 1024 / 1024) << " MB index buffers.\n";
+              
+    return static_cast<uint32_t>(m_pools.size() - 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -45,23 +56,25 @@ void GeometryManager::executeBatchUpload(const std::vector<UploadRequest>& reque
     uint8_t* iMapped = nullptr;
     if (totalIndexBytes > 0) indexStaging.map((void**)&iMapped);
 
-    std::vector<VkBufferCopy> vCopies;
-    std::vector<VkBufferCopy> iCopies;
-    vCopies.reserve(requests.size());
-    iCopies.reserve(requests.size());
-
     VkDeviceSize vStagingOffset = 0;
     VkDeviceSize iStagingOffset = 0;
 
+    VkCommandBuffer cmd = m_context.beginSingleTimeCommands();
+    
+    std::unordered_set<uint32_t> dirtyPools;
+
     for (const auto& req : requests) {
+        dirtyPools.insert(req.bufferIndex);
         if (req.vertexBytes > 0) {
             std::memcpy(vMapped + vStagingOffset, req.vertexData, req.vertexBytes);
-            vCopies.push_back({vStagingOffset, req.vertexOffset, req.vertexBytes});
+            VkBufferCopy copy = {vStagingOffset, req.vertexOffset, req.vertexBytes};
+            vkCmdCopyBuffer(cmd, vertexStaging.getBuffer(), m_pools[req.bufferIndex]->vertexBuffer->getBuffer(), 1, &copy);
             vStagingOffset += req.vertexBytes;
         }
         if (req.indexBytes > 0) {
             std::memcpy(iMapped + iStagingOffset, req.indexData, req.indexBytes);
-            iCopies.push_back({iStagingOffset, req.indexOffset, req.indexBytes});
+            VkBufferCopy copy = {iStagingOffset, req.indexOffset, req.indexBytes};
+            vkCmdCopyBuffer(cmd, indexStaging.getBuffer(), m_pools[req.bufferIndex]->indexBuffer->getBuffer(), 1, &copy);
             iStagingOffset += req.indexBytes;
         }
     }
@@ -69,17 +82,8 @@ void GeometryManager::executeBatchUpload(const std::vector<UploadRequest>& reque
     if (totalVertexBytes > 0) vertexStaging.unmap();
     if (totalIndexBytes > 0) indexStaging.unmap();
 
-    VkCommandBuffer cmd = m_context.beginSingleTimeCommands();
-
-    if (!vCopies.empty()) {
-        vkCmdCopyBuffer(cmd, vertexStaging.getBuffer(), m_globalVertexBuffer->getBuffer(), static_cast<uint32_t>(vCopies.size()), vCopies.data());
-    }
-    if (!iCopies.empty()) {
-        vkCmdCopyBuffer(cmd, indexStaging.getBuffer(), m_globalIndexBuffer->getBuffer(), static_cast<uint32_t>(iCopies.size()), iCopies.data());
-    }
-
     std::vector<VkBufferMemoryBarrier2> barriers;
-    if (!vCopies.empty()) {
+    for (uint32_t poolIdx : dirtyPools) {
         VkBufferMemoryBarrier2 vb = {};
         vb.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
         vb.srcStageMask  = VK_PIPELINE_STAGE_2_COPY_BIT;
@@ -88,12 +92,11 @@ void GeometryManager::executeBatchUpload(const std::vector<UploadRequest>& reque
         vb.dstAccessMask = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
         vb.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         vb.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        vb.buffer = m_globalVertexBuffer->getBuffer();
+        vb.buffer = m_pools[poolIdx]->vertexBuffer->getBuffer();
         vb.offset = 0;
         vb.size   = VK_WHOLE_SIZE;
         barriers.push_back(vb);
-    }
-    if (!iCopies.empty()) {
+
         VkBufferMemoryBarrier2 ib = {};
         ib.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
         ib.srcStageMask  = VK_PIPELINE_STAGE_2_COPY_BIT;
@@ -102,7 +105,7 @@ void GeometryManager::executeBatchUpload(const std::vector<UploadRequest>& reque
         ib.dstAccessMask = VK_ACCESS_2_INDEX_READ_BIT;
         ib.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         ib.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        ib.buffer = m_globalIndexBuffer->getBuffer();
+        ib.buffer = m_pools[poolIdx]->indexBuffer->getBuffer();
         ib.offset = 0;
         ib.size   = VK_WHOLE_SIZE;
         barriers.push_back(ib);
@@ -136,18 +139,34 @@ Mesh* GeometryManager::uploadMesh(const std::vector<Vertex>& vertices,
 // reset — rewind offsets (GPU must be idle before calling)
 // ---------------------------------------------------------------------------
 void GeometryManager::reset() {
-    m_vertexAllocator.reset(m_totalVertexCapacity);
-    m_indexAllocator.reset(m_totalIndexCapacity);
+    std::lock_guard<std::mutex> lock(m_poolMutex);
+    for (auto& pool : m_pools) {
+        pool->vertexAllocator.reset(m_totalVertexCapacity);
+        pool->indexAllocator.reset(m_totalIndexCapacity);
+    }
 }
 
 // ---------------------------------------------------------------------------
-// bind — bind global vertex + index buffers for any vertex type
+// bindPool — bind specific vertex + index buffers for any vertex type
 // ---------------------------------------------------------------------------
-void GeometryManager::bind(VkCommandBuffer commandBuffer) {
-    VkBuffer     vbufs[]   = {m_globalVertexBuffer->getBuffer()};
+void GeometryManager::bindPool(VkCommandBuffer commandBuffer, uint32_t poolIndex) {
+    if (poolIndex >= m_pools.size()) return;
+    VkBuffer     vbufs[]   = {m_pools[poolIndex]->vertexBuffer->getBuffer()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vbufs, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, m_globalIndexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(commandBuffer, m_pools[poolIndex]->indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+}
+
+VkDeviceSize GeometryManager::getVertexBytesUsed() const {
+    VkDeviceSize total = 0;
+    for (const auto& pool : m_pools) total += pool->vertexAllocator.m_allocated_bytes;
+    return total;
+}
+
+VkDeviceSize GeometryManager::getIndexBytesUsed() const {
+    VkDeviceSize total = 0;
+    for (const auto& pool : m_pools) total += pool->indexAllocator.m_allocated_bytes;
+    return total;
 }
 
 } // namespace gfx

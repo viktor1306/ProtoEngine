@@ -59,10 +59,17 @@ const vec3 k_normals[6] = vec3[6](
 const float k_aoFactors[4] = float[4](0.4, 0.6, 0.8, 1.0);
 
 void main() {
-    // Unpack position
-    float lx     = float(inPosAndFace.x);
-    float ly     = float(inPosAndFace.y);
-    float lz     = float(inPosAndFace.z);
+    // Unpack position with negative wrap-around support for LOD skirts
+    int ix = int(inPosAndFace.x);
+    if (ix > 127) ix -= 256;
+    int iy = int(inPosAndFace.y);
+    if (iy > 127) iy -= 256;
+    int iz = int(inPosAndFace.z);
+    if (iz > 127) iz -= 256;
+
+    float lx     = float(ix);
+    float ly     = float(iy);
+    float lz     = float(iz);
     uint  faceID = inPosAndFace.w;
 
     // World position = chunk offset + local position

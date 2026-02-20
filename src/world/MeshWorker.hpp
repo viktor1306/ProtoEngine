@@ -16,11 +16,15 @@ namespace world {
 // MeshTask — one unit of work for the thread pool
 // ---------------------------------------------------------------------------
 struct MeshTask {
+    enum class Type { MESH, GENERATE };
+    Type type = Type::MESH;
+
     // Input
-    const Chunk*                    chunk     = nullptr;
+    Chunk*                          chunk     = nullptr; // non-const for generation
     std::array<const Chunk*, 6>     neighbors = {};
     int cx  = 0, cy = 0, cz = 0;
     int lod = 0;  // Level of Detail: 0=full, 1=half, 2=quarter resolution
+    int seed = 0; // Used purely for GENERATE tasks
 
     // Output (filled by worker)
     VoxelMeshData result;
@@ -42,7 +46,10 @@ struct MeshTask {
 // ---------------------------------------------------------------------------
 class MeshWorker {
 public:
-    explicit MeshWorker(uint32_t threadCount = 0) {
+    static constexpr size_t RING_SIZE = 65536;
+    static constexpr size_t RING_MASK = RING_SIZE - 1;
+
+    explicit MeshWorker(uint32_t threadCount = 0) : m_ringHigh(RING_SIZE), m_ringLow(RING_SIZE) {
         if (threadCount == 0)
             threadCount = std::max(1u, std::thread::hardware_concurrency());
         m_threadCount = threadCount;
@@ -61,27 +68,49 @@ public:
         // std::jthread will automatically join upon destruction
     }
 
-    // Submit a task for async processing.
-    // Must be called from the main thread.
-    void submit(MeshTask task) {
-        {
-            std::lock_guard<std::mutex> lk(m_queueMutex);
-            m_pending.push(std::move(task));
-            m_activeTasks.fetch_add(1, std::memory_order_relaxed);
+    // Submit a batch of high priority tasks lock-free
+    void submitBatchHigh(std::vector<MeshTask>& batch) {
+        if (batch.empty()) return;
+
+        m_activeTasks.fetch_add(batch.size(), std::memory_order_relaxed);
+        size_t t = m_tailHigh.load(std::memory_order_relaxed);
+
+        for (auto& task : batch) {
+            while (t - m_headHigh.load(std::memory_order_acquire) >= RING_SIZE) {
+                std::this_thread::yield();
+            }
+            m_ringHigh[t & RING_MASK] = std::move(task);
+            t++;
+            m_tailHigh.store(t, std::memory_order_release);
         }
-        m_cv.notify_one();
+        m_cv.notify_all();
     }
 
-    // Block until all submitted tasks are complete.
+    // Submit a batch of low priority tasks lock-free
+    void submitBatchLow(std::vector<MeshTask>& batch) {
+        if (batch.empty()) return;
+
+        m_activeTasks.fetch_add(batch.size(), std::memory_order_relaxed);
+        size_t t = m_tailLow.load(std::memory_order_relaxed);
+
+        for (auto& task : batch) {
+            while (t - m_headLow.load(std::memory_order_acquire) >= RING_SIZE) {
+                std::this_thread::yield();
+            }
+            m_ringLow[t & RING_MASK] = std::move(task);
+            t++;
+            m_tailLow.store(t, std::memory_order_release);
+        }
+        m_cv.notify_all();
+    }
+
     void waitAll() {
-        std::unique_lock<std::mutex> lk(m_doneMutex);
+        std::unique_lock<std::mutex> lk(m_doneWaitMutex);
         m_doneCv.wait(lk, [this] {
             return m_activeTasks.load(std::memory_order_acquire) == 0;
         });
     }
 
-    // Collect all completed tasks (call after waitAll or periodically).
-    // Returns completed tasks and clears the internal done list.
     std::vector<MeshTask> collect() {
         std::lock_guard<std::mutex> lk(m_doneMutex);
         std::vector<MeshTask> out = std::move(m_done);
@@ -90,59 +119,95 @@ public:
     }
 
     uint32_t getThreadCount() const { return m_threadCount; }
-
-    // Number of tasks still in flight (pending + processing)
     int getActiveTasks() const { return m_activeTasks.load(std::memory_order_relaxed); }
 
 private:
     void workerLoop(std::stop_token st) {
         while (!st.stop_requested()) {
             MeshTask task;
-            {
-                std::unique_lock<std::mutex> lk(m_queueMutex);
+            bool gotTask = false;
+
+            // 1. Try High Priority Ring
+            size_t hH = m_headHigh.load(std::memory_order_relaxed);
+            size_t tH = m_tailHigh.load(std::memory_order_acquire);
+            while (hH < tH) {
+                if (m_headHigh.compare_exchange_weak(hH, hH + 1, std::memory_order_acq_rel)) {
+                    task = std::move(m_ringHigh[hH & RING_MASK]);
+                    gotTask = true;
+                    break;
+                }
+                tH = m_tailHigh.load(std::memory_order_acquire);
+            }
+
+            // 2. Try Low Priority Ring
+            if (!gotTask) {
+                size_t hL = m_headLow.load(std::memory_order_relaxed);
+                size_t tL = m_tailLow.load(std::memory_order_acquire);
+                while (hL < tL) {
+                    if (m_headLow.compare_exchange_weak(hL, hL + 1, std::memory_order_acq_rel)) {
+                        task = std::move(m_ringLow[hL & RING_MASK]);
+                        gotTask = true;
+                        break;
+                    }
+                    tL = m_tailLow.load(std::memory_order_acquire);
+                }
+            }
+
+            if (gotTask) {
+                if (task.chunk) {
+                    if (task.type == MeshTask::Type::GENERATE) {
+                        task.chunk->fillTerrain(task.seed);
+                        task.chunk->m_state.store(ChunkState::READY, std::memory_order_release);
+                    } else if (task.type == MeshTask::Type::MESH) {
+                        task.result = task.chunk->generateMesh(task.neighbors, task.lod);
+                    }
+                }
+
+                // Append to done
+                {
+                    std::lock_guard<std::mutex> lk(m_doneMutex);
+                    m_done.push_back(std::move(task));
+                }
+
+                int remaining = m_activeTasks.fetch_sub(1, std::memory_order_acq_rel) - 1;
+                if (remaining == 0) {
+                    m_doneCv.notify_all();
+                }
+            } else {
+                std::unique_lock<std::mutex> lk(m_sleepMutex);
                 m_cv.wait(lk, [&] {
-                    return !m_pending.empty() || st.stop_requested();
+                    return m_headHigh.load(std::memory_order_relaxed) < m_tailHigh.load(std::memory_order_relaxed) ||
+                           m_headLow.load(std::memory_order_relaxed)  < m_tailLow.load(std::memory_order_relaxed)  ||
+                           st.stop_requested();
                 });
-                if (st.stop_requested() && m_pending.empty())
-                    return;
-                task = std::move(m_pending.front());
-                m_pending.pop();
-            }
-
-            // Generate mesh (read-only access to chunk data)
-            // Pass lod so distant chunks use coarser meshing (faster + fewer verts)
-            if (task.chunk) {
-                task.result = task.chunk->generateMesh(task.neighbors, task.lod);
-            }
-
-            // Push to done queue
-            {
-                std::lock_guard<std::mutex> lk(m_doneMutex);
-                m_done.push_back(std::move(task));
-            }
-
-            // Decrement active count and notify waitAll()
-            int remaining = m_activeTasks.fetch_sub(1, std::memory_order_acq_rel) - 1;
-            if (remaining == 0) {
-                m_doneCv.notify_all();
             }
         }
     }
 
     uint32_t m_threadCount = 1;
 
-    // Task queue (pending work)
-    std::mutex              m_queueMutex;
+    // Lock-Free SPMC Ring Buffer HIGH
+    std::vector<MeshTask> m_ringHigh;
+    std::atomic<size_t> m_headHigh{0};
+    std::atomic<size_t> m_tailHigh{0};
+
+    // Lock-Free SPMC Ring Buffer LOW
+    std::vector<MeshTask> m_ringLow;
+    std::atomic<size_t> m_headLow{0};
+    std::atomic<size_t> m_tailLow{0};
+
+    // Sleep mechanisms
+    std::mutex m_sleepMutex;
     std::condition_variable m_cv;
-    std::queue<MeshTask>    m_pending;
 
     // Done queue (completed work)
-    std::mutex              m_doneMutex;
+    std::mutex m_doneMutex;
+    std::vector<MeshTask> m_done;
+
+    std::mutex m_doneWaitMutex;
     std::condition_variable m_doneCv;
-    std::vector<MeshTask>   m_done;
 
-    std::atomic<int>        m_activeTasks{0};
-
+    std::atomic<int> m_activeTasks{0};
     std::vector<std::jthread> m_threads;
 };
 

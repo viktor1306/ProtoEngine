@@ -492,8 +492,7 @@ int main() {
                 // Main pass
                 renderer.beginMainPass(commandBuffer);
 
-                // Bind geometry buffers (shared by all pipelines)
-                geometryManager.bind(commandBuffer);
+                // Geometry buffers are now bound per-chunk dynamically
 
                 // Bind descriptor sets (set 0 + set 1)
                 VkDescriptorSet descriptorSet = renderer.getDescriptorSet();
