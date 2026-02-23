@@ -17,10 +17,24 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
 
     auto& chunks = m_storage.getChunks();
 
+    // Only immediately mesh chunks within the initial view radius.
+    // Distant chunks have voxel data but no mesh yet — the streaming
+    // system (updateCamera) will schedule them as the player approaches.
+    // This prevents OOM when generating large worlds (e.g. radius 64).
+    const float meshRadius = std::min(m_lodCtrl.m_lodDist1,
+                                      static_cast<float>(radiusX * CHUNK_SIZE));
+
     for (size_t i = 0; i < chunks.size(); ++i) {
         const auto& chunkPtr = chunks[i];
         if (!chunkPtr) continue;
         IVec3Key key{chunkPtr->getCX(), chunkPtr->getCY(), chunkPtr->getCZ()};
+
+        float cx_center = key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+        float cz_center = key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+        float distSq = cx_center * cx_center + cz_center * cz_center;
+
+        if (distSq > meshRadius * meshRadius) continue; // let streaming handle it
+
         int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
         m_renderer.setLOD(key, lod);
         m_renderer.markDirty(key.x, key.y, key.z);
@@ -71,63 +85,162 @@ void ChunkManager::setVoxel(int wx, int wy, int wz, VoxelData v) {
     if (lz == CHUNK_SIZE - 1) m_renderer.markDirty(cx, cy, cz + 1);
 }
 
-void ChunkManager::updateCamera(const core::math::Vec3& cameraPos) {
+void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::Frustum& frustum) {
     m_lodCtrl.setCameraPosition(cameraPos);
 
-    static core::math::Vec3 lastCameraPos = core::math::Vec3(999999.0f, 999999.0f, 999999.0f);
-    float dx = cameraPos.x - lastCameraPos.x;
-    float dy = cameraPos.y - lastCameraPos.y;
-    float dz = cameraPos.z - lastCameraPos.z;
-    if (std::sqrt(dx*dx + dy*dy + dz*dz) > 1.0f) {
-        lastCameraPos = cameraPos;
+    // --- STREAMING IN ---
+    // Zone 1 (sphere): grid loop within m_unloadRadius — always load nearest columns
+    {
+        int playerWX = static_cast<int>(std::floor(cameraPos.x));
+        int playerWZ = static_cast<int>(std::floor(cameraPos.z));
+        int px = (playerWX >= 0) ? (playerWX / CHUNK_SIZE) : ((playerWX - CHUNK_SIZE + 1) / CHUNK_SIZE);
+        int pz = (playerWZ >= 0) ? (playerWZ / CHUNK_SIZE) : ((playerWZ - CHUNK_SIZE + 1) / CHUNK_SIZE);
 
-        int dirtyCount = 0;
-        // 1. Update LODs for existing chunks
+        const float sphereRadiusSq = m_unloadRadius * m_unloadRadius;
+        int radius = static_cast<int>(std::ceil(m_unloadRadius / CHUNK_SIZE)) + 1;
+
+        for (int cz = pz - radius; cz <= pz + radius; ++cz) {
+            for (int cx = px - radius; cx <= px + radius; ++cx) {
+                float cx_center = cx * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+                float cz_center = cz * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+                float dx_chunk = cameraPos.x - cx_center;
+                float dz_chunk = cameraPos.z - cz_center;
+                float distSq = dx_chunk * dx_chunk + dz_chunk * dz_chunk;
+
+                if (distSq <= sphereRadiusSq) {
+                    auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz, 42);
+                    for (int cy = minCY; cy <= maxCY; ++cy)
+                        m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer);
+                }
+            }
+        }
+    }
+
+    // Zone 2 (frustum): existing chunks with voxel data that need meshing.
+    // createChunkIfMissing is a no-op for already-existing chunks, so we
+    // use markDirty directly to schedule meshing for chunks inside the frustum.
+    {
+        const float sphereRadiusSq   = m_unloadRadius * m_unloadRadius;
+        const float frustumMaxDistSq = m_frustumRadius * m_frustumRadius;
+
         for (const auto& chunkPtr : m_storage.getChunks()) {
             if (!chunkPtr) continue;
             IVec3Key key{chunkPtr->getCX(), chunkPtr->getCY(), chunkPtr->getCZ()};
+
+            float cx_center = key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            float cz_center = key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            float dx_chunk  = cameraPos.x - cx_center;
+            float dz_chunk  = cameraPos.z - cz_center;
+            float distSq    = dx_chunk * dx_chunk + dz_chunk * dz_chunk;
+
+            if (distSq <= sphereRadiusSq) continue;   // already in sphere (Zone 1)
+            if (distSq >  frustumMaxDistSq) continue;  // too far
+
+            float wy = static_cast<float>(key.y * CHUNK_SIZE);
+            scene::AABB aabb{
+                {cx_center - CHUNK_SIZE / 2.0f, wy,              cz_center - CHUNK_SIZE / 2.0f},
+                {cx_center + CHUNK_SIZE / 2.0f, wy + CHUNK_SIZE, cz_center + CHUNK_SIZE / 2.0f}
+            };
+            if (frustum.isVisible(aabb)) {
+                // Mark dirty so ChunkRenderer schedules mesh building for this chunk.
+                // This triggers meshing for chunks that already have voxel data but no mesh.
+                m_renderer.markDirty(key.x, key.y, key.z);
+            }
+        }
+    }
+
+
+    // --- STREAMING OUT + LOD UPDATE + FRUSTUM LOADING: one unified pass ---
+    //
+    // 3-tier architecture:
+    //   tier 1: distSq <=  sphereR²            → keep voxels + GPU mesh
+    //   tier 2: distSq <= frustumR² AND frustum → keep voxels + GPU mesh
+    //   tier 3: distSq <= frustumR² NOT frustum → keep voxels, FREE GPU mesh
+    //   tier 4: distSq >  frustumR²             → free voxels + GPU mesh
+    //
+    // Key insight: tier 3 keeps voxel data in storage so that when the camera
+    // turns back (chunk re-enters frustum), Zone 2 can find and re-mesh it.
+    {
+        const float unloadRadiusSq   = m_unloadRadius * m_unloadRadius;
+        const float frustumMaxDistSq = m_frustumRadius * m_frustumRadius;
+
+        std::vector<IVec3Key> chunksToFullyRemove;  // voxels + GPU
+        std::vector<IVec3Key> chunksMeshOnly;        // GPU mesh only (keep voxels)
+
+        for (const auto& chunkPtr : m_storage.getChunks()) {
+            if (!chunkPtr) continue;
+            IVec3Key key{chunkPtr->getCX(), chunkPtr->getCY(), chunkPtr->getCZ()};
+
+            float cx_center = key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            float cz_center = key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            float dx_chunk  = cameraPos.x - cx_center;
+            float dz_chunk  = cameraPos.z - cz_center;
+            float distSq    = dx_chunk * dx_chunk + dz_chunk * dz_chunk;
+
+            if (distSq > frustumMaxDistSq) {
+                // Tier 4: too far — remove everything
+                chunksToFullyRemove.push_back(key);
+                continue;
+            }
+
+            // Compute AABB for frustum check (to be used by tier 2 & 3)
+            float wy = static_cast<float>(key.y * CHUNK_SIZE);
+            scene::AABB aabb{
+                {cx_center - CHUNK_SIZE / 2.0f, wy,              cz_center - CHUNK_SIZE / 2.0f},
+                {cx_center + CHUNK_SIZE / 2.0f, wy + CHUNK_SIZE, cz_center + CHUNK_SIZE / 2.0f}
+            };
+
+            bool inSphere  = (distSq <= unloadRadiusSq);
+            bool inFrustum = frustum.isVisible(aabb);
+
+            if (!inSphere && !inFrustum) {
+                // Tier 3: beyond sphere and not in view — free GPU mesh, keep voxels
+                // When camera turns back, chunk is still in m_storage.getChunks()
+                // → the LOD update below will re-mesh it next frame.
+                chunksMeshOnly.push_back(key);
+                continue;
+            }
+
+            // Tier 1 or 2: keep chunk — update LOD / schedule meshing
             int oldLOD = m_renderer.getLOD(key);
             int newLOD = m_lodCtrl.calculateLOD(key.x, key.y, key.z, oldLOD);
-
             if (newLOD != oldLOD) {
                 m_renderer.setLOD(key, newLOD);
                 m_renderer.markDirty(key.x, key.y, key.z);
-                dirtyCount++;
+            } else if (oldLOD < 0) {
+                // Voxels exist but no GPU mesh — assign LOD and mesh
+                int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
+                m_renderer.setLOD(key, lod);
+                m_renderer.markDirty(key.x, key.y, key.z);
             }
         }
-        // if (dirtyCount > 0) {
-        //     std::cout << "[ChunkManager] Camera Moved > 1.0f. Iterated chunks, marked " << dirtyCount << " chunks dirty." << std::endl;
-        // }
 
-        // 2. Demand-Driven Boost (Vertical Streaming)
+        for (const auto& key : chunksToFullyRemove) {
+            m_renderer.removeChunk(key);
+            m_storage.removeChunk(key.x, key.y, key.z);
+        }
+        for (const auto& key : chunksMeshOnly) {
+            m_renderer.removeChunk(key);  // free GPU only, voxels stay
+        }
+
+
+        // Vertical Streaming Boost
         int playerWX = static_cast<int>(std::floor(cameraPos.x));
         int playerWY = static_cast<int>(std::floor(cameraPos.y));
         int playerWZ = static_cast<int>(std::floor(cameraPos.z));
-
         int px = (playerWX >= 0) ? (playerWX / CHUNK_SIZE) : ((playerWX - CHUNK_SIZE + 1) / CHUNK_SIZE);
         int pz = (playerWZ >= 0) ? (playerWZ / CHUNK_SIZE) : ((playerWZ - CHUNK_SIZE + 1) / CHUNK_SIZE);
         int py = (playerWY >= 0) ? (playerWY / CHUNK_SIZE) : ((playerWY - CHUNK_SIZE + 1) / CHUNK_SIZE);
-        
-        int localY = playerWY - py * CHUNK_SIZE;
 
-        // Якщо ми близько до нижньої межі чанка (наприклад, менше 12 блоків)
+        int localY = playerWY - py * CHUNK_SIZE;
         if (localY < 12) {
             int targetCY = py - 1;
             Chunk* underChunk = m_storage.getChunk(px, targetCY, pz);
-            
-            // Якщо чанк взагалі не існує (навіть не виділений), для простоти поки відкладемо його сторення до ChunkStorage.
-            // Але якщо він є і ще UNGENERATED (або ми можемо попросити ChunkRenderer пропустити подію):
             if (underChunk && underChunk->m_state.load(std::memory_order_acquire) == ChunkState::UNGENERATED) {
-                // Переводимо в GENERATING щоб не сабмітити мільйон тасок
                 ChunkState expected = ChunkState::UNGENERATED;
-                if (underChunk->m_state.compare_exchange_strong(expected, ChunkState::GENERATING, std::memory_order_acq_rel)) {
-                    // Відправляємо Lock-Free Boost (GENERATE -> High)
-                    m_renderer.submitGenerateTaskHigh(underChunk, 42); // Seed = 42 for now
-                }
+                if (underChunk->m_state.compare_exchange_strong(expected, ChunkState::GENERATING, std::memory_order_acq_rel))
+                    m_renderer.submitGenerateTaskHigh(underChunk, 42);
             } else if (!underChunk) {
-                // Якщо його ще немає в grid'і – виділяємо пам'ять і відправляємо (тільки для CY >= m_minY)
-                // Потребує модифікації m_storage для безпечного додавання.
-                // Щоб уникнути переписування ChunkStorage під лок-фрі додавання, ми можемо додати `createChunkIfMissing` метод.
                 m_storage.createChunkIfMissing(px, targetCY, pz, 42, m_renderer);
             }
         }

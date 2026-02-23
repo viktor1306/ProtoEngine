@@ -11,11 +11,6 @@ namespace world {
 
 // ---------------------------------------------------------------------------
 // ChunkManager (Facade)
-//
-// Delegates the heavy lifting to three core modules:
-// - ChunkStorage: data & generation
-// - LODController: camera distance & level of detail mathematically
-// - ChunkRenderer: Async meshing + Vulkan rendering & updating
 // ---------------------------------------------------------------------------
 class ChunkManager {
 public:
@@ -34,7 +29,7 @@ public:
     VoxelData getVoxel(int wx, int wy, int wz) const;
     void setVoxel(int wx, int wy, int wz, VoxelData v);
 
-    void updateCamera(const core::math::Vec3& cameraPos);
+    void updateCamera(const core::math::Vec3& cameraPos, const scene::Frustum& frustum);
     int calculateLOD(int cx, int cy, int cz, int currentLOD = -1) const;
 
     // Expose LOD configuration directly from LODController
@@ -42,8 +37,10 @@ public:
     float& getLodDist1() { return m_lodCtrl.m_lodDist1; }
     float& getLodHysteresis() { return m_lodCtrl.m_lodHysteresis; }
 
-    int getRenderRadius() const { return m_renderRadius; }
-    void setRenderRadius(int r) { m_renderRadius = r; }
+    int  getRenderRadius()  const { return m_renderRadius; }
+    void setRenderRadius(int r)   { m_renderRadius = r; }
+    float& getUnloadRadius()      { return m_unloadRadius; }
+    float& getFrustumRadius()     { return m_frustumRadius; }
 
     uint32_t getChunkCount()      const { return static_cast<uint32_t>(m_storage.getChunks().size()); }
     uint32_t getTotalVertices()   const { return m_renderer.getTotalVertices(); }
@@ -65,7 +62,9 @@ private:
     LODController m_lodCtrl;
     ChunkRenderer m_renderer;
 
-    int m_renderRadius = 16;
+    int   m_renderRadius  = 16;
+    float m_unloadRadius  = 512.0f;  // sphere: load+unload distance (blocks)
+    float m_frustumRadius = 1024.0f; // frustum: camera view loading distance (blocks)
 };
 
 } // namespace world

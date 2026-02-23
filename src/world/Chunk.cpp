@@ -384,22 +384,6 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
                         corners[2][d]=faceLayer; corners[2][u]=vi+vW; corners[2][v]=vj+vH;
                         corners[3][d]=faceLayer; corners[3][u]=vi;    corners[3][v]=vj+vH;
                         
-                        // Skirts logic for LOD > 0 to hide seams
-                        if (lod > 0) {
-                            if (d == 0 || d == 2) {
-                                bool isBoundary = ((layer == 0 && normalDir == -1) || (layer == gridSize - 1 && normalDir == 1));
-                                if (isBoundary) {
-                                    int drop = step * 2;
-                                    // Identify bottom vertices (which have the smallest Y)
-                                    int minY = std::min({corners[0][1], corners[1][1], corners[2][1], corners[3][1]});
-                                    for (int c = 0; c < 4; ++c) {
-                                        if (corners[c][1] == minY) {
-                                            corners[c][1] -= drop;
-                                        }
-                                    }
-                                }
-                            }
-                        }
                         
                         emitQuad(mesh, corners, faceID, p, ao0, ao1, ao2, ao3, normalDir);
                         

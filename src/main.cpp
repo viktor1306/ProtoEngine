@@ -11,6 +11,7 @@
 #include "gfx/rendering/Renderer.hpp"
 #include "gfx/rendering/Pipeline.hpp"
 #include "gfx/rendering/BindlessSystem.hpp"
+#include "gfx/rendering/DebugRenderer.hpp"
 #include "gfx/resources/GeometryManager.hpp"
 #include "gfx/resources/Texture.hpp"
 #include "gfx/resources/Mesh.hpp"
@@ -213,8 +214,21 @@ int main() {
         // Камера над центром, дивиться вниз під кутом 45°
         // Чанки: cx=-3..3, cz=-3..3 → world coords -48..48 (без bias)
         scene::Camera camera({0.0f, 80.0f, 80.0f}, 60.0f, renderer.getAspectRatio());
-        camera.setPitch(-45.0f); // дивимось вниз на ландшафт
-        camera.adjustSpeed(20.0f / 5.0f); // set initial speed to 20 m/s (default is 5)
+        camera.setPitch(-45.0f);
+        camera.adjustSpeed(20.0f / 5.0f);
+
+        // ---- Debug Camera (orbits around world for frustum debugging) -------
+        scene::Camera debugCamera({0.0f, 200.0f, 300.0f}, 60.0f, renderer.getAspectRatio());
+        debugCamera.setPitch(-30.0f);
+        debugCamera.adjustSpeed(20.0f / 5.0f);
+        bool debugCameraMode    = false; // false = normal camera
+        bool controlMainInDebug = false; // when true: WASD controls main camera while in debug view
+
+        // ---- Debug Renderer (lines: frustum, camera marker) -----------------
+        gfx::DebugRenderer debugRenderer(vulkanContext, nullptr,
+            swapchain.getImageFormat(), swapchain.getDepthFormat(),
+            "bin/shaders/debug.vert.spv",
+            "bin/shaders/debug.frag.spv");
 
         // ---- Timer ---------------------------------------------------------
         core::Timer timer;
@@ -269,36 +283,49 @@ int main() {
             if (window.shouldClose()) break;
 
             camera.setAspectRatio(renderer.getAspectRatio());
+            debugCamera.setAspectRatio(renderer.getAspectRatio());
 
-            // ---- Mouse wheel: adjust camera speed (×1.1 per tick) ----------
+            scene::Camera& activeCamera = debugCameraMode ? debugCamera : camera;
+
+            // ---- Mouse wheel: adjust active camera speed --------------------
             if (!ImGui::GetIO().WantCaptureMouse) {
                 float wheel = core::InputManager::get().getMouseWheelDelta();
                 if (wheel != 0.0f) {
                     float factor = (wheel > 0.0f) ? 1.1f : (1.0f / 1.1f);
                     int ticks = static_cast<int>(std::abs(wheel) + 0.5f);
                     for (int i = 0; i < ticks; ++i)
-                        camera.adjustSpeed(factor);
+                        activeCamera.adjustSpeed(factor);
                 }
             }
 
-            if (!ImGui::GetIO().WantCaptureMouse && !ImGui::GetIO().WantCaptureKeyboard)
-                camera.update(dt);
+            if (!ImGui::GetIO().WantCaptureMouse && !ImGui::GetIO().WantCaptureKeyboard) {
+                // In debug mode: controlMainInDebug determines which camera moves
+                scene::Camera& moveTarget = (debugCameraMode && controlMainInDebug)
+                    ? camera : activeCamera;
+                moveTarget.update(dt);
+            }
 
-            // ---- LOD update (must be BEFORE rebuildDirtyChunks) -------------
-            // updateCamera: оновлює m_cameraPos, порівнює LOD з гістерезисом,
-            // викликає markDirty + flushDirty для змінених чанків.
+            // ---- Build frustum of the MAIN camera (for streaming/LOD) -------
+            // This always uses the main camera regardless of debug mode.
+            core::math::Mat4 mainViewProj =
+                camera.getProjectionMatrix() * camera.getViewMatrix();
+            scene::Frustum mainFrustum;
+            mainFrustum.extractPlanes(mainViewProj);
+
+            // ---- Frustum used for RENDERING (i.e. culling visible chunks) ----
+            core::math::Mat4 renderViewProj = debugCameraMode
+                ? (debugCamera.getProjectionMatrix() * debugCamera.getViewMatrix())
+                : mainViewProj;
+            scene::Frustum frustum;
+            frustum.extractPlanes(renderViewProj);
+
+            // ---- LOD update always uses MAIN camera -------------------------
             if (autoLOD) {
-                chunkManager.updateCamera(camera.getPosition());
+                chunkManager.updateCamera(camera.getPosition(), mainFrustum);
             }
 
             // ---- Collect async mesh results (non-blocking) -----------------
             chunkManager.rebuildDirtyChunks(vulkanContext.getDevice(), currentTime);
-
-            // ---- Build frustum for this frame ------------------------------
-            core::math::Mat4 viewProjForFrustum =
-                camera.getProjectionMatrix() * camera.getViewMatrix();
-            scene::Frustum frustum;
-            frustum.extractPlanes(viewProjForFrustum);
 
             // ---- Raycast from mouse cursor position (screen-to-world) ------
             // Always use the actual mouse cursor position for picking.
@@ -390,6 +417,30 @@ int main() {
 
                 ImGui::Text("FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
                 ImGui::Separator();
+
+                // ---- Debug Camera Toggle ------------------------------------
+                if (debugCameraMode) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f,0.3f,0.1f,1.0f));
+                    if (ImGui::Button("[ EXIT Debug Camera ]"))
+                        debugCameraMode = false;
+                    ImGui::PopStyleColor();
+                    auto dbgPos = debugCamera.getPosition();
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("Debug @ %.0f,%.0f,%.0f", dbgPos.x, dbgPos.y, dbgPos.z);
+                    // Sub-toggle: control main camera while in debug view
+                    ImGui::Checkbox("Control Main Camera (WASD)", &controlMainInDebug);
+                    if (controlMainInDebug)
+                        ImGui::TextColored(ImVec4(1,0.8f,0,1), ">> Moving MAIN camera (yellow frustum)");
+                    else
+                        ImGui::TextDisabled("Moving debug camera");
+                } else {
+                    if (ImGui::Button("Enter Debug Camera"))
+                        debugCameraMode = true;
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("(view frustum from outside)");
+                }
+
+                ImGui::Separator();
                 ImGui::Text("Camera: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
                 ImGui::Text("Yaw: %.1f  Pitch: %.1f", camera.getYaw(), camera.getPitch());
                 ImGui::Text("Speed:  %.1f m/s  (scroll wheel)", camera.getSpeed());
@@ -410,6 +461,8 @@ int main() {
                 ImGui::SliderFloat("LOD0→1 dist",  &chunkManager.getLodDist0(),      16.0f, 1024.0f, "%.0f blk");
                 ImGui::SliderFloat("LOD1→2 dist",  &chunkManager.getLodDist1(),      32.0f, 2048.0f, "%.0f blk");
                 ImGui::SliderFloat("Hysteresis",   &chunkManager.getLodHysteresis(),  0.0f,   64.0f, "%.1f blk");
+                ImGui::SliderFloat("Sphere Radius",     &chunkManager.getUnloadRadius(),  64.0f, 4096.0f, "%.0f blk");
+                ImGui::SliderFloat("Camera View Dist",  &chunkManager.getFrustumRadius(), 64.0f, 8192.0f, "%.0f blk");
                 {
                     auto lodCounts = chunkManager.getLODCounts();
                     ImGui::Text("LOD 0 (full):    %u chunks", lodCounts[0]);
@@ -506,16 +559,26 @@ int main() {
                     gfx::Pipeline& activePipeline = wireframe ? voxelWirePipeline : voxelPipeline;
                     activePipeline.bind(commandBuffer);
 
-                    core::math::Mat4 viewProj = camera.getProjectionMatrix() * camera.getViewMatrix();
-
                     VoxelGlobalPush vpc{};
-                    vpc.viewProj         = viewProj;
+                    vpc.viewProj         = renderViewProj;
                     vpc.lightSpaceMatrix = lightSpaceMatrix;
                     vkCmdPushConstants(commandBuffer, activePipeline.getLayout(),
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0, sizeof(VoxelGlobalPush), &vpc);
 
                     chunkManager.render(commandBuffer, activePipeline.getLayout(), frustum, currentTime);
+                }
+
+                // ---- Debug Geometry (frustum + camera marker) ---------------
+                if (debugCameraMode) {
+                    debugRenderer.begin();
+
+                    // Invert main camera VP to get world-space frustum corners
+                    core::math::Mat4 invMain = core::math::Mat4::inverse(mainViewProj);
+                    debugRenderer.addFrustum(invMain, {1.0f, 1.0f, 0.0f}); // yellow
+                    debugRenderer.addCameraMarker(invMain, {1.0f, 0.5f, 0.0f}); // orange
+
+                    debugRenderer.draw(commandBuffer, renderViewProj);
                 }
 
                 // ---- ImGui -------------------------------------------------

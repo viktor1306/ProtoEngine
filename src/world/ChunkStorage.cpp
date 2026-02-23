@@ -146,10 +146,11 @@ void ChunkStorage::removeChunk(int cx, int cy, int cz) {
     if (idx != static_cast<size_t>(-1) && m_chunkGrid[idx]) {
         Chunk* target = m_chunkGrid[idx];
         m_chunkGrid[idx] = nullptr;
-        // Remove from active chunks
-        for (auto it = m_activeChunks.begin(); it != m_activeChunks.end(); ++it) {
-            if (it->get() == target) {
-                m_activeChunks.erase(it);
+        // Remove from active chunks efficiently in O(1)
+        for (size_t i = 0; i < m_activeChunks.size(); ++i) {
+            if (m_activeChunks[i].get() == target) {
+                std::swap(m_activeChunks[i], m_activeChunks.back());
+                m_activeChunks.pop_back();
                 break;
             }
         }
@@ -195,19 +196,58 @@ void ChunkStorage::createChunkIfMissing(int cx, int cy, int cz, int seed, ChunkR
     if (idx == static_cast<size_t>(-1)) return; // Out of bounds
     
     if (!m_chunkGrid[idx]) {
-        // Create new empty chunk (UNGENERATED state by default)
         auto chunk = std::make_unique<Chunk>(cx, cy, cz);
+        // Синхронно генеруємо терейн прямо тут (main-thread, але швидко).
+        // Потім відправляємо на побудову меша у фоні.
+        chunk->fillTerrain(seed);
+        chunk->m_state.store(ChunkState::READY, std::memory_order_release);
         
-        ChunkState expected = ChunkState::UNGENERATED;
-        if (chunk->m_state.compare_exchange_strong(expected, ChunkState::GENERATING, std::memory_order_acq_rel)) {
-            m_chunkGrid[idx] = chunk.get();
-            renderer.submitGenerateTaskHigh(chunk.get(), seed);
-            
-            // Note: In a fully concurrent environment adding to a vector is NOT thread-safe without locks, 
-            // but updateCamera is typically called in the main thread (game loop).
-            m_activeChunks.push_back(std::move(chunk));
-        }
+        Chunk* rawPtr = chunk.get();
+        m_chunkGrid[idx] = rawPtr;
+        m_activeChunks.push_back(std::move(chunk));
+        
+        // Позначаємо як dirty — в наступному flushDirty побудується меш
+        renderer.markDirty(cx, cy, cz);
     }
+}
+
+std::pair<int, int> ChunkStorage::getSurfaceBounds(int cx, int cz, int seed) const {
+    FastNoiseLite noise;
+    noise.SetSeed(seed);
+    noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    noise.SetFractalOctaves(3);
+    noise.SetFrequency(0.03f);
+
+    int worldBaseX = cx * CHUNK_SIZE;
+    int worldBaseZ = cz * CHUNK_SIZE;
+
+    int minHeight = 999999;
+    int maxHeight = -999999;
+
+    float nx[5] = { static_cast<float>(worldBaseX), static_cast<float>(worldBaseX + CHUNK_SIZE - 1), 
+                    static_cast<float>(worldBaseX), static_cast<float>(worldBaseX + CHUNK_SIZE - 1),
+                    static_cast<float>(worldBaseX + CHUNK_SIZE / 2) };
+    float nz[5] = { static_cast<float>(worldBaseZ), static_cast<float>(worldBaseZ), 
+                    static_cast<float>(worldBaseZ + CHUNK_SIZE - 1), static_cast<float>(worldBaseZ + CHUNK_SIZE - 1),
+                    static_cast<float>(worldBaseZ + CHUNK_SIZE / 2) };
+    
+    for (int i = 0; i < 5; ++i) {
+        float n = noise.GetNoise(nx[i], nz[i]);
+        int h = 14 + static_cast<int>(n * 10.0f);
+        if (h - 2 < minHeight) minHeight = h - 2;
+        if (h + 2 > maxHeight) maxHeight = h + 2;
+    }
+
+    int minCY = std::floor(static_cast<float>(minHeight) / CHUNK_SIZE);
+    int maxCY = std::floor(static_cast<float>(maxHeight) / CHUNK_SIZE);
+    
+    return {std::max(minCY, m_minY), std::min(maxCY, m_maxY)};
+}
+
+int ChunkStorage::getSurfaceMidY(int cx, int cz) const {
+    auto [minCY, maxCY] = getSurfaceBounds(cx, cz, 42);
+    return (minCY + maxCY) / 2;
 }
 
 } // namespace world

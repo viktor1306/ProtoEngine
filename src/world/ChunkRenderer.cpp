@@ -166,6 +166,12 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     std::unordered_map<IVec3Key, MeshTask, IVec3Hash> latestTasks;
     for (auto& task : done) {
         IVec3Key key{task.cx, task.cy, task.cz};
+
+        if (task.type == MeshTask::Type::GENERATE) {
+            latestTasks[key] = std::move(task);
+            continue;
+        }
+
         auto lodIt = m_chunkLOD.find(key);
         int desiredLOD = (lodIt != m_chunkLOD.end()) ? lodIt->second : 0;
         if (task.lod == desiredLOD) {
@@ -182,10 +188,12 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
 
     for (auto& [key, task] : latestTasks) {
 
-        auto lodIt = m_chunkLOD.find(key);
-        int desiredLOD = (lodIt != m_chunkLOD.end()) ? lodIt->second : 0;
-        if (task.lod != desiredLOD) {
-            continue;
+        if (task.type != MeshTask::Type::GENERATE) {
+            auto lodIt = m_chunkLOD.find(key);
+            int desiredLOD = (lodIt != m_chunkLOD.end()) ? lodIt->second : 0;
+            if (task.lod != desiredLOD) {
+                continue;
+            }
         }
 
         auto& rd = m_renderData[key];

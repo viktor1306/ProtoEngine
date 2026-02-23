@@ -39,6 +39,9 @@ public:
     const Chunk* getChunk(int cx, int cy, int cz) const;
     Chunk*       getChunk(int cx, int cy, int cz);
 
+    std::pair<int, int> getSurfaceBounds(int cx, int cz, int seed = 42) const;
+    int                 getSurfaceMidY  (int cx, int cz) const;
+
     const std::vector<std::unique_ptr<Chunk>>& getChunks() const { return m_activeChunks; }
     std::vector<std::unique_ptr<Chunk>>&       getChunks()       { return m_activeChunks; }
 
@@ -58,4 +61,4 @@ private:
     }
 };
 
-} // namespace world
+}
