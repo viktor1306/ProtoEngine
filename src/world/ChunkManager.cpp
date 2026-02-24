@@ -89,44 +89,70 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
     m_lodCtrl.setCameraPosition(cameraPos);
 
     // --- PROGRESSIVE GENERATION: fill UNGENERATED underground chunks near camera ---
-    // generateWorld creates surface stubs only. This pass picks the closest
-    // UNGENERATED chunks (up to maxPerFrame) and starts async fillTerrain+mesh.
+    // generateWorld creates surface stubs only (Sparse Storage). This pass picks the closest
+    // missing/UNGENERATED chunks (up to maxPerFrame) and starts async fillTerrain.
     {
-        constexpr int maxPerFrame = 16;
-        struct Candidate { float distSq; Chunk* chunk; };
+        constexpr int maxPerFrame = 24;
+        struct Candidate { float distSq; int cx, cy, cz; };
         std::vector<Candidate> candidates;
-        candidates.reserve(64);
+        candidates.reserve(128);
 
         const float genRadiusSq = m_unloadRadius * m_unloadRadius;
+        int playerWX = static_cast<int>(std::floor(cameraPos.x));
+        int playerWZ = static_cast<int>(std::floor(cameraPos.z));
+        int px = (playerWX >= 0) ? (playerWX / CHUNK_SIZE) : ((playerWX - CHUNK_SIZE + 1) / CHUNK_SIZE);
+        int pz = (playerWZ >= 0) ? (playerWZ / CHUNK_SIZE) : ((playerWZ - CHUNK_SIZE + 1) / CHUNK_SIZE);
+        int radius = static_cast<int>(std::ceil(m_unloadRadius / CHUNK_SIZE));
 
-        for (const auto& chunkPtr : m_storage.getChunks()) {
-            if (!chunkPtr) continue;
-            if (chunkPtr->m_state.load(std::memory_order_acquire) != ChunkState::UNGENERATED) continue;
+        for (int cz = pz - radius; cz <= pz + radius; ++cz) {
+            for (int cx = px - radius; cx <= px + radius; ++cx) {
+                float cx_center = cx * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+                float cz_center = cz * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+                float dx = cameraPos.x - cx_center;
+                float dz = cameraPos.z - cz_center;
+                float distSq = dx * dx + dz * dz;
 
-            float cx_center = chunkPtr->getCX() * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
-            float cz_center = chunkPtr->getCZ() * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
-            float dx = cameraPos.x - cx_center;
-            float dz = cameraPos.z - cz_center;
-            float distSq = dx * dx + dz * dz;
+                if (distSq > genRadiusSq) continue;
 
-            if (distSq > genRadiusSq) continue;  // only generate within sphere
+                auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz, 42);
+                int worldMinY = m_storage.getMinY();
 
-            candidates.push_back({distSq, chunkPtr.get()});
+                // Check all underground layers for this column
+                for (int cy = maxCY - 1; cy >= worldMinY; --cy) {
+                    float cy_center = cy * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+                    float dy = cameraPos.y - cy_center;
+                    float distSq3D = distSq + dy * dy;
+
+                    Chunk* chunkPtr = m_storage.getChunk(cx, cy, cz);
+                    if (!chunkPtr || chunkPtr->m_state.load(std::memory_order_acquire) == ChunkState::UNGENERATED) {
+                        candidates.push_back({distSq3D, cx, cy, cz});
+                    }
+                }
+            }
         }
 
-        // Sort by distance — closest first
+        // Sort by 3D distance — closest to player first
         std::sort(candidates.begin(), candidates.end(),
                   [](const Candidate& a, const Candidate& b){ return a.distSq < b.distSq; });
 
         int submitted = 0;
         for (auto& c : candidates) {
             if (submitted >= maxPerFrame) break;
-            // CAS: only if still UNGENERATED (avoid double-submit)
-            ChunkState expected = ChunkState::UNGENERATED;
-            if (c.chunk->m_state.compare_exchange_strong(expected, ChunkState::GENERATING,
-                                                          std::memory_order_acq_rel)) {
-                m_renderer.submitGenerateTaskHigh(c.chunk, 42);
-                ++submitted;
+            
+            Chunk* chunk = m_storage.getChunk(c.cx, c.cy, c.cz);
+            if (!chunk) {
+                // Sparse allocation on the fly
+                m_storage.createChunkIfMissing(c.cx, c.cy, c.cz, 42, m_renderer, true);
+                chunk = m_storage.getChunk(c.cx, c.cy, c.cz);
+            }
+
+            if (chunk) {
+                ChunkState expected = ChunkState::UNGENERATED;
+                if (chunk->m_state.compare_exchange_strong(expected, ChunkState::GENERATING,
+                                                              std::memory_order_acq_rel)) {
+                    m_renderer.submitGenerateTaskHigh(chunk, 42);
+                    ++submitted;
+                }
             }
         }
     }

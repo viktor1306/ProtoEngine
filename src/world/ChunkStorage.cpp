@@ -75,37 +75,24 @@ void ChunkStorage::generateWorld(int radiusX, int radiusZ, int seed) {
     std::vector<SurfaceTask> surfaceTasks;
     surfaceTasks.reserve(m_width * m_depth);
 
-    // --- PHASE 2: Underground stubs (no fillTerrain, UNGENERATED) ---
-    struct UnderTask { int cx, cy, cz; size_t idx; };
-    std::vector<UnderTask> underTasks;
-
     for (int cz = -radiusZ; cz <= radiusZ; ++cz) {
         for (int cx = -radiusX; cx <= radiusX; ++cx) {
             int colIdx = (cz + radiusZ) * m_width + (cx + radiusX);
             int maxCY = columns[colIdx].maxCY;
 
-            // Generate chunks from the bottom of the world (m_minY) up to the surface (maxCY).
-            for (int cy = m_minY; cy <= maxCY; ++cy) {
-                size_t idx = getGridIndex(cx, cy, cz);
-                if (idx == static_cast<size_t>(-1)) continue;
-                if (cy == maxCY) {
-                    surfaceTasks.push_back({cx, cy, cz, idx});
-                } else {
-                    underTasks.push_back({cx, cy, cz, idx});
-                }
+            // Sparse Allocation: Only allocate the surface chunk!
+            // Underground chunks remain nullptr until ChunkManager specifically requests them asynchronously.
+            size_t idx = getGridIndex(cx, maxCY, cz);
+            if (idx != static_cast<size_t>(-1)) {
+                surfaceTasks.push_back({cx, maxCY, cz, idx});
             }
         }
     }
 
     int surfaceCount = static_cast<int>(surfaceTasks.size());
-    int underCount   = static_cast<int>(underTasks.size());
-    int totalCount   = surfaceCount + underCount;
-
-    m_activeChunks.resize(totalCount);
+    m_activeChunks.resize(surfaceCount);
 
     // --- PARALLEL ALLOCATION & GENERATION ---
-    // Memory allocation (std::make_unique) for 100k+ chunks is SLOW in a single thread.
-    // We must allocate ALL chunks (surface AND underground) in parallel to reach >1B voxels/sec.
     std::atomic<size_t> taskIdx{0};
     uint32_t numThreads = std::max(1u, std::thread::hardware_concurrency());
     
@@ -113,28 +100,18 @@ void ChunkStorage::generateWorld(int radiusX, int radiusZ, int seed) {
         std::vector<std::thread> threads;
         threads.reserve(numThreads);
         for (uint32_t t = 0; t < numThreads; ++t) {
-            threads.emplace_back([this, &surfaceTasks, &underTasks, &taskIdx, seed, surfaceCount, totalCount]() {
+            threads.emplace_back([this, &surfaceTasks, &taskIdx, seed, surfaceCount]() {
                 while (true) {
                     size_t i = taskIdx.fetch_add(1, std::memory_order_relaxed);
-                    if (i >= static_cast<size_t>(totalCount)) break;
+                    if (i >= static_cast<size_t>(surfaceCount)) break;
                     
-                    if (i < static_cast<size_t>(surfaceCount)) {
-                        // Phase 1: Surface Chunk (allocate + fillTerrain)
-                        const auto& task = surfaceTasks[i];
-                        auto chunk = std::make_unique<Chunk>(task.cx, task.cy, task.cz);
-                        chunk->fillTerrain(seed);
-                        chunk->m_state.store(ChunkState::READY, std::memory_order_release);
-                        m_chunkGrid[task.idx] = chunk.get();
-                        m_activeChunks[i] = std::move(chunk);
-                    } else {
-                        // Phase 2: Under Chunk (allocate only, UNGENERATED)
-                        size_t uIdx = i - surfaceCount;
-                        const auto& task = underTasks[uIdx];
-                        auto chunk = std::make_unique<Chunk>(task.cx, task.cy, task.cz);
-                        // Leave as UNGENERATED
-                        m_chunkGrid[task.idx] = chunk.get();
-                        m_activeChunks[i] = std::move(chunk);
-                    }
+                    // Phase 1: Surface Chunk (allocate + fillTerrain)
+                    const auto& task = surfaceTasks[i];
+                    auto chunk = std::make_unique<Chunk>(task.cx, task.cy, task.cz);
+                    chunk->fillTerrain(seed);
+                    chunk->m_state.store(ChunkState::READY, std::memory_order_release);
+                    m_chunkGrid[task.idx] = chunk.get();
+                    m_activeChunks[i] = std::move(chunk);
                 }
             });
         }
@@ -149,11 +126,10 @@ void ChunkStorage::generateWorld(int radiusX, int radiusZ, int seed) {
     float timeSec = timeMs / 1000.0f;
     float voxelsPerSec = (timeSec > 0.0f) ? (surfaceVoxels / timeSec) : 0.0f;
 
-    std::cout << "[ChunkStorage] Generated " << totalCount  << " chunks ("
-              << m_width << "x" << m_depth  << " grid).\n"
-              << "[ChunkStorage] Surface ready: " << surfaceCount << " chunks in "
+    std::cout << "[ChunkStorage] Generated " << surfaceCount  << " surface chunks ("
+              << m_width << "x" << m_depth  << " grid) in "
               << timeMs << " ms (" << (voxelsPerSec / 1000000.0f) << " Mvox/sec). "
-              << underCount << " underground chunks deferred.\n" << std::flush;
+              << "Underground chunks use Sparse Storage (deferred).\n" << std::flush;
 }
 
 void ChunkStorage::clear() {
