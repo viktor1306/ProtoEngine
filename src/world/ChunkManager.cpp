@@ -88,6 +88,49 @@ void ChunkManager::setVoxel(int wx, int wy, int wz, VoxelData v) {
 void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::Frustum& frustum) {
     m_lodCtrl.setCameraPosition(cameraPos);
 
+    // --- PROGRESSIVE GENERATION: fill UNGENERATED underground chunks near camera ---
+    // generateWorld creates surface stubs only. This pass picks the closest
+    // UNGENERATED chunks (up to maxPerFrame) and starts async fillTerrain+mesh.
+    {
+        constexpr int maxPerFrame = 16;
+        struct Candidate { float distSq; Chunk* chunk; };
+        std::vector<Candidate> candidates;
+        candidates.reserve(64);
+
+        const float genRadiusSq = m_unloadRadius * m_unloadRadius;
+
+        for (const auto& chunkPtr : m_storage.getChunks()) {
+            if (!chunkPtr) continue;
+            if (chunkPtr->m_state.load(std::memory_order_acquire) != ChunkState::UNGENERATED) continue;
+
+            float cx_center = chunkPtr->getCX() * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            float cz_center = chunkPtr->getCZ() * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            float dx = cameraPos.x - cx_center;
+            float dz = cameraPos.z - cz_center;
+            float distSq = dx * dx + dz * dz;
+
+            if (distSq > genRadiusSq) continue;  // only generate within sphere
+
+            candidates.push_back({distSq, chunkPtr.get()});
+        }
+
+        // Sort by distance — closest first
+        std::sort(candidates.begin(), candidates.end(),
+                  [](const Candidate& a, const Candidate& b){ return a.distSq < b.distSq; });
+
+        int submitted = 0;
+        for (auto& c : candidates) {
+            if (submitted >= maxPerFrame) break;
+            // CAS: only if still UNGENERATED (avoid double-submit)
+            ChunkState expected = ChunkState::UNGENERATED;
+            if (c.chunk->m_state.compare_exchange_strong(expected, ChunkState::GENERATING,
+                                                          std::memory_order_acq_rel)) {
+                m_renderer.submitGenerateTaskHigh(c.chunk, 42);
+                ++submitted;
+            }
+        }
+    }
+
     // --- STREAMING IN ---
     // Zone 1 (sphere): grid loop within m_unloadRadius — always load nearest columns
     {
@@ -111,40 +154,57 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                     auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz, 42);
                     for (int cy = minCY; cy <= maxCY; ++cy)
                         m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer);
+                    
+                    // Progressive underground allocation
+                    for (int cy = m_storage.getMinY(); cy < minCY; ++cy)
+                        m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer, true);
                 }
             }
         }
     }
 
-    // Zone 2 (frustum): existing chunks with voxel data that need meshing.
-    // createChunkIfMissing is a no-op for already-existing chunks, so we
-    // use markDirty directly to schedule meshing for chunks inside the frustum.
+    // Zone 2 (frustum): load chunks in camera view direction beyond sphere radius.
+    // IMPORTANT: iterate the world GRID BOUNDS (not getChunks()) so that chunks
+    // previously removed by Tier 4 (fully evicted) can be re-created when the
+    // user increases Camera View Dist or looks at that direction again.
     {
         const float sphereRadiusSq   = m_unloadRadius * m_unloadRadius;
         const float frustumMaxDistSq = m_frustumRadius * m_frustumRadius;
 
-        for (const auto& chunkPtr : m_storage.getChunks()) {
-            if (!chunkPtr) continue;
-            IVec3Key key{chunkPtr->getCX(), chunkPtr->getCY(), chunkPtr->getCZ()};
+        // Clamp iteration to world extents + frustum radius
+        int minCX = m_storage.getMinX();
+        int maxCX = m_storage.getMaxX();
+        int minCZ = m_storage.getMinZ();
+        int maxCZ = m_storage.getMaxZ();
 
-            float cx_center = key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
-            float cz_center = key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
-            float dx_chunk  = cameraPos.x - cx_center;
-            float dz_chunk  = cameraPos.z - cz_center;
-            float distSq    = dx_chunk * dx_chunk + dz_chunk * dz_chunk;
+        for (int cz = minCZ; cz <= maxCZ; ++cz) {
+            for (int cx = minCX; cx <= maxCX; ++cx) {
+                float cx_center = cx * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+                float cz_center = cz * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+                float dx = cameraPos.x - cx_center;
+                float dz = cameraPos.z - cz_center;
+                float distSq = dx * dx + dz * dz;
 
-            if (distSq <= sphereRadiusSq) continue;   // already in sphere (Zone 1)
-            if (distSq >  frustumMaxDistSq) continue;  // too far
+                if (distSq <= sphereRadiusSq) continue;  // Zone 1 handles this
+                if (distSq >  frustumMaxDistSq) continue; // beyond frustum range
 
-            float wy = static_cast<float>(key.y * CHUNK_SIZE);
-            scene::AABB aabb{
-                {cx_center - CHUNK_SIZE / 2.0f, wy,              cz_center - CHUNK_SIZE / 2.0f},
-                {cx_center + CHUNK_SIZE / 2.0f, wy + CHUNK_SIZE, cz_center + CHUNK_SIZE / 2.0f}
-            };
-            if (frustum.isVisible(aabb)) {
-                // Mark dirty so ChunkRenderer schedules mesh building for this chunk.
-                // This triggers meshing for chunks that already have voxel data but no mesh.
-                m_renderer.markDirty(key.x, key.y, key.z);
+                // Cheap frustum test using a column AABB at approximate surface height
+                // (any Y slice of the column that's in frustum is enough to trigger load)
+                float wy = static_cast<float>(m_storage.getSurfaceMidY(cx, cz) * CHUNK_SIZE);
+                scene::AABB aabb{
+                    {cx_center - CHUNK_SIZE / 2.0f, wy - CHUNK_SIZE,      cz_center - CHUNK_SIZE / 2.0f},
+                    {cx_center + CHUNK_SIZE / 2.0f, wy + CHUNK_SIZE * 2,  cz_center + CHUNK_SIZE / 2.0f}
+                };
+                if (!frustum.isVisible(aabb)) continue;
+
+                // Camera is looking at this column — ensure all Y layers are loaded & meshed
+                auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz, 42);
+                for (int cy = minCY; cy <= maxCY; ++cy)
+                    m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer);
+                
+                // Progressive underground allocation
+                for (int cy = m_storage.getMinY(); cy < minCY; ++cy)
+                    m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer, true);
             }
         }
     }

@@ -93,7 +93,7 @@ int main() {
         // ---- Voxel World (ChunkManager) ------------------------------------
         // MeshWorker uses hardware_concurrency() threads by default
         world::ChunkManager chunkManager(geometryManager);
-        chunkManager.setRenderRadius(8); // 8 chunks radius by default
+        chunkManager.setRenderRadius(64); // 64 chunks radius by default
         int worldSeed   = 42;
         chunkManager.generateWorld(chunkManager.getRenderRadius(), chunkManager.getRenderRadius(), worldSeed);
         // Wait for all async meshing to complete before first frame

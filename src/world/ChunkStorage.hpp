@@ -31,7 +31,7 @@ public:
     void clear();
     void removeChunk(int cx, int cy, int cz);
     
-    void createChunkIfMissing(int cx, int cy, int cz, int seed, ChunkRenderer& renderer);
+    void createChunkIfMissing(int cx, int cy, int cz, int seed, ChunkRenderer& renderer, bool async = false);
 
     VoxelData getVoxel(int wx, int wy, int wz) const;
     void      setVoxel(int wx, int wy, int wz, VoxelData v);
@@ -44,6 +44,14 @@ public:
 
     const std::vector<std::unique_ptr<Chunk>>& getChunks() const { return m_activeChunks; }
     std::vector<std::unique_ptr<Chunk>>&       getChunks()       { return m_activeChunks; }
+
+    // World grid bounds (in chunk coords)
+    int getMinX() const { return m_minX; }
+    int getMaxX() const { return m_maxX; }
+    int getMinY() const { return m_minY; }
+    int getMaxY() const { return m_maxY; }
+    int getMinZ() const { return m_minZ; }
+    int getMaxZ() const { return m_maxZ; }
 
 private:
     std::vector<std::unique_ptr<Chunk>> m_activeChunks;

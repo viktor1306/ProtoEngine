@@ -30,14 +30,12 @@ void ChunkStorage::generateWorld(int radiusX, int radiusZ, int seed) {
 
     size_t totalGridSize = static_cast<size_t>(m_width) * m_height * m_depth;
     m_chunkGrid.assign(totalGridSize, nullptr);
-    m_activeChunks.reserve(totalGridSize);
 
     auto t0 = std::chrono::high_resolution_clock::now();
     
-    // 1. Збираємо координати для генерації (швидко, без алокацій пам'яті чанків)
-    struct TaskData { int cx, cy, cz; size_t idx; };
-    std::vector<TaskData> tasks;
-    tasks.reserve(m_width * m_depth * 2);
+    // Collect surface columns first (cheap noise estimate per column)
+    struct ColumnData { int minCY, maxCY; };
+    std::vector<ColumnData> columns(m_width * m_depth);
 
     FastNoiseLite noise;
     noise.SetSeed(seed);
@@ -50,89 +48,112 @@ void ChunkStorage::generateWorld(int radiusX, int radiusZ, int seed) {
         for (int cx = -radiusX; cx <= radiusX; ++cx) {
             int worldBaseX = cx * CHUNK_SIZE;
             int worldBaseZ = cz * CHUNK_SIZE;
-
-            int minHeight = 999999;
-            int maxHeight = -999999;
-
-            // Оптимізація: генеруємо шум лише для кутів чанка + центру (швидка апроксимація)
-            float nx[5] = { static_cast<float>(worldBaseX), static_cast<float>(worldBaseX + CHUNK_SIZE - 1), 
-                            static_cast<float>(worldBaseX), static_cast<float>(worldBaseX + CHUNK_SIZE - 1),
-                            static_cast<float>(worldBaseX + CHUNK_SIZE / 2) };
-            float nz[5] = { static_cast<float>(worldBaseZ), static_cast<float>(worldBaseZ), 
-                            static_cast<float>(worldBaseZ + CHUNK_SIZE - 1), static_cast<float>(worldBaseZ + CHUNK_SIZE - 1),
-                            static_cast<float>(worldBaseZ + CHUNK_SIZE / 2) };
-            
+            int minH = 999999, maxH = -999999;
+            float nx[5] = { (float)worldBaseX, (float)(worldBaseX + CHUNK_SIZE - 1),
+                            (float)worldBaseX, (float)(worldBaseX + CHUNK_SIZE - 1),
+                            (float)(worldBaseX + CHUNK_SIZE / 2) };
+            float nz[5] = { (float)worldBaseZ, (float)worldBaseZ,
+                            (float)(worldBaseZ + CHUNK_SIZE - 1), (float)(worldBaseZ + CHUNK_SIZE - 1),
+                            (float)(worldBaseZ + CHUNK_SIZE / 2) };
             for (int i = 0; i < 5; ++i) {
                 float n = noise.GetNoise(nx[i], nz[i]);
                 int h = 14 + static_cast<int>(n * 10.0f);
-                // Додаємо запас +-2 блоки, бо між кутами можуть бути піки
-                if (h - 2 < minHeight) minHeight = h - 2;
-                if (h + 2 > maxHeight) maxHeight = h + 2;
+                if (h - 2 < minH) minH = h - 2;
+                if (h + 2 > maxH) maxH = h + 2;
             }
+            int colIdx = (cz + radiusZ) * m_width + (cx + radiusX);
+            columns[colIdx] = {
+                std::max((int)std::floor((float)minH / CHUNK_SIZE), m_minY),
+                std::min((int)std::floor((float)maxH / CHUNK_SIZE), m_maxY)
+            };
+        }
+    }
 
-            int minCY = std::floor(static_cast<float>(minHeight) / CHUNK_SIZE);
-            int maxCY = std::floor(static_cast<float>(maxHeight) / CHUNK_SIZE);
+    // --- PHASE 1: Surface chunks only (cy == maxCY per column) ---
+    // These get fillTerrain immediately — fast, ~1/8 of all chunks.
+    struct SurfaceTask { int cx, cy, cz; size_t idx; };
+    std::vector<SurfaceTask> surfaceTasks;
+    surfaceTasks.reserve(m_width * m_depth);
 
-            for (int cy = m_minY; cy <= m_maxY; ++cy) {
-                // Додаємо чанк, якщо він хоча б частково перетинає діапазон рельєфу (включаючи bedrock до minCY)
-                // Або якщо він нижче поверхні, він буде згенерований пізніше. Зараз нас цікавлять ТІЛЬКИ 
-                // чанки від minCY до maxCY включно, щоб ми бачили поверхню.
-                if (cy >= minCY && cy <= maxCY) {
-                    size_t idx = getGridIndex(cx, cy, cz);
-                    if (idx != static_cast<size_t>(-1)) {
-                        tasks.push_back({cx, cy, cz, idx});
-                    }
+    // --- PHASE 2: Underground stubs (no fillTerrain, UNGENERATED) ---
+    struct UnderTask { int cx, cy, cz; size_t idx; };
+    std::vector<UnderTask> underTasks;
+
+    for (int cz = -radiusZ; cz <= radiusZ; ++cz) {
+        for (int cx = -radiusX; cx <= radiusX; ++cx) {
+            int colIdx = (cz + radiusZ) * m_width + (cx + radiusX);
+            int maxCY = columns[colIdx].maxCY;
+
+            // Generate chunks from the bottom of the world (m_minY) up to the surface (maxCY).
+            for (int cy = m_minY; cy <= maxCY; ++cy) {
+                size_t idx = getGridIndex(cx, cy, cz);
+                if (idx == static_cast<size_t>(-1)) continue;
+                if (cy == maxCY) {
+                    surfaceTasks.push_back({cx, cy, cz, idx});
+                } else {
+                    underTasks.push_back({cx, cy, cz, idx});
                 }
             }
         }
     }
 
-    int count = static_cast<int>(tasks.size());
-    m_activeChunks.resize(count);
+    int surfaceCount = static_cast<int>(surfaceTasks.size());
+    int underCount   = static_cast<int>(underTasks.size());
+    int totalCount   = surfaceCount + underCount;
 
-    // 2. Паралельна генерація ТА ВИДІЛЕННЯ ПАМ'ЯТІ
-    std::atomic<size_t> currentTask{0};
+    m_activeChunks.resize(totalCount);
+
+    // --- PARALLEL ALLOCATION & GENERATION ---
+    // Memory allocation (std::make_unique) for 100k+ chunks is SLOW in a single thread.
+    // We must allocate ALL chunks (surface AND underground) in parallel to reach >1B voxels/sec.
+    std::atomic<size_t> taskIdx{0};
     uint32_t numThreads = std::max(1u, std::thread::hardware_concurrency());
-    std::vector<std::thread> threads;
-    threads.reserve(numThreads);
-
-    for (uint32_t i = 0; i < numThreads; ++i) {
-        threads.emplace_back([this, &tasks, &currentTask, seed, count]() {
-            while (true) {
-                size_t taskIdx = currentTask.fetch_add(1, std::memory_order_relaxed);
-                if (taskIdx >= static_cast<size_t>(count)) break;
-                
-                const auto& task = tasks[taskIdx];
-                
-                // Виділення пам'яті тепер теж паралельне! ОС ефективніше утилізує ресурси.
-                auto chunk = std::make_unique<Chunk>(task.cx, task.cy, task.cz);
-                chunk->fillTerrain(seed);
-                chunk->m_state.store(ChunkState::READY, std::memory_order_release);
-                
-                m_chunkGrid[task.idx] = chunk.get();
-                m_activeChunks[taskIdx] = std::move(chunk);
-            }
-        });
-    }
-
-    for (auto& t : threads) {
-        t.join();
+    
+    {
+        std::vector<std::thread> threads;
+        threads.reserve(numThreads);
+        for (uint32_t t = 0; t < numThreads; ++t) {
+            threads.emplace_back([this, &surfaceTasks, &underTasks, &taskIdx, seed, surfaceCount, totalCount]() {
+                while (true) {
+                    size_t i = taskIdx.fetch_add(1, std::memory_order_relaxed);
+                    if (i >= static_cast<size_t>(totalCount)) break;
+                    
+                    if (i < static_cast<size_t>(surfaceCount)) {
+                        // Phase 1: Surface Chunk (allocate + fillTerrain)
+                        const auto& task = surfaceTasks[i];
+                        auto chunk = std::make_unique<Chunk>(task.cx, task.cy, task.cz);
+                        chunk->fillTerrain(seed);
+                        chunk->m_state.store(ChunkState::READY, std::memory_order_release);
+                        m_chunkGrid[task.idx] = chunk.get();
+                        m_activeChunks[i] = std::move(chunk);
+                    } else {
+                        // Phase 2: Under Chunk (allocate only, UNGENERATED)
+                        size_t uIdx = i - surfaceCount;
+                        const auto& task = underTasks[uIdx];
+                        auto chunk = std::make_unique<Chunk>(task.cx, task.cy, task.cz);
+                        // Leave as UNGENERATED
+                        m_chunkGrid[task.idx] = chunk.get();
+                        m_activeChunks[i] = std::move(chunk);
+                    }
+                }
+            });
+        }
+        for (auto& t : threads) t.join();
     }
 
     auto t1 = std::chrono::high_resolution_clock::now();
     float timeMs = std::chrono::duration<float, std::milli>(t1 - t0).count();
-    
-    // Чанк має розмір 32x32x32 (CHUNK_SIZE^3)
-    uint64_t voxelsPerChunk = static_cast<uint64_t>(CHUNK_SIZE) * CHUNK_SIZE * CHUNK_SIZE;
-    uint64_t totalVoxels = static_cast<uint64_t>(count) * voxelsPerChunk;
-    float timeSec = timeMs / 1000.0f;
-    float voxelsPerSec = (timeSec > 0.0f) ? (totalVoxels / timeSec) : 0.0f;
 
-    std::cout << "[ChunkStorage] Generated " << count << " chunks (" 
-              << m_width << "x" << m_depth << " grid).\n"
-              << "[ChunkStorage] Space Volume: " << totalVoxels << " voxels (" << CHUNK_SIZE << "^3 per chunk) in " 
-              << timeMs << " ms (" << (voxelsPerSec / 1000000.0f) << " Million voxels/sec).\n" 
-              << std::flush;
+    uint64_t voxelsPerChunk = static_cast<uint64_t>(CHUNK_SIZE) * CHUNK_SIZE * CHUNK_SIZE;
+    uint64_t surfaceVoxels  = static_cast<uint64_t>(surfaceCount) * voxelsPerChunk;
+    float timeSec = timeMs / 1000.0f;
+    float voxelsPerSec = (timeSec > 0.0f) ? (surfaceVoxels / timeSec) : 0.0f;
+
+    std::cout << "[ChunkStorage] Generated " << totalCount  << " chunks ("
+              << m_width << "x" << m_depth  << " grid).\n"
+              << "[ChunkStorage] Surface ready: " << surfaceCount << " chunks in "
+              << timeMs << " ms (" << (voxelsPerSec / 1000000.0f) << " Mvox/sec). "
+              << underCount << " underground chunks deferred.\n" << std::flush;
 }
 
 void ChunkStorage::clear() {
@@ -191,23 +212,37 @@ Chunk* ChunkStorage::getChunk(int cx, int cy, int cz) {
     return m_chunkGrid[idx];
 }
 
-void ChunkStorage::createChunkIfMissing(int cx, int cy, int cz, int seed, ChunkRenderer& renderer) {
+void ChunkStorage::createChunkIfMissing(int cx, int cy, int cz, int seed, ChunkRenderer& renderer, bool async) {
     size_t idx = getGridIndex(cx, cy, cz);
     if (idx == static_cast<size_t>(-1)) return; // Out of bounds
     
+    // Mutex was removed from ChunkStorage previously, but if needed, thread-safety for single-thread updateCamera is guaranteed.
+    // ChunkManager::updateCamera is run on the main thread, so m_chunkGrid and m_activeChunks are safe.
     if (!m_chunkGrid[idx]) {
         auto chunk = std::make_unique<Chunk>(cx, cy, cz);
-        // Синхронно генеруємо терейн прямо тут (main-thread, але швидко).
-        // Потім відправляємо на побудову меша у фоні.
-        chunk->fillTerrain(seed);
-        chunk->m_state.store(ChunkState::READY, std::memory_order_release);
+        
+        if (!async) {
+            chunk->fillTerrain(seed);
+            chunk->m_state.store(ChunkState::READY, std::memory_order_release);
+        } else {
+            chunk->m_state.store(ChunkState::UNGENERATED, std::memory_order_release);
+        }
         
         Chunk* rawPtr = chunk.get();
         m_chunkGrid[idx] = rawPtr;
         m_activeChunks.push_back(std::move(chunk));
         
-        // Позначаємо як dirty — в наступному flushDirty побудується меш
-        renderer.markDirty(cx, cy, cz);
+        if (!async) {
+            renderer.markDirty(cx, cy, cz);
+        }
+    } else if (!async) {
+        // Якщо чанк вже існує, але він UNGENERATED, а ми просимо синхронний виклик
+        Chunk* chunk = m_chunkGrid[idx];
+        ChunkState expected = ChunkState::UNGENERATED;
+        if (chunk->m_state.compare_exchange_strong(expected, ChunkState::READY, std::memory_order_acq_rel)) {
+            chunk->fillTerrain(seed);
+            renderer.markDirty(cx, cy, cz);
+        }
     }
 }
 

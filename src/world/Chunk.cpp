@@ -266,10 +266,17 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
                 else if (z < 0)           { nb = neighbors[5]; lz = z + CHUNK_SIZE; }
 
                 if (nb) {
-                    lx = std::clamp(lx, 0, CHUNK_SIZE - 1);
-                    ly = std::clamp(ly, 0, CHUNK_SIZE - 1);
-                    lz = std::clamp(lz, 0, CHUNK_SIZE - 1);
-                    volumeCache[cacheIdx(x, y, z)] = nb->getVoxel(lx, ly, lz);
+                    if (nb->m_state.load(std::memory_order_acquire) == ChunkState::READY) {
+                        lx = std::clamp(lx, 0, CHUNK_SIZE - 1);
+                        ly = std::clamp(ly, 0, CHUNK_SIZE - 1);
+                        lz = std::clamp(lz, 0, CHUNK_SIZE - 1);
+                        volumeCache[cacheIdx(x, y, z)] = nb->getVoxel(lx, ly, lz);
+                    } else {
+                        // If neighbor is UNGENERATED/GENERATING, assume it's SOLID.
+                        // This prevents creating "walls" on the boundary before the
+                        // terrain below is actually loaded by progressive generation.
+                        volumeCache[cacheIdx(x, y, z)] = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);
+                    }
                 }
             }
         }
