@@ -14,6 +14,11 @@ static void worldToChunk(int wx, int CHUNK_SZ, int& cx, int& lx) {
     lx = wx - cx * CHUNK_SZ;
 }
 
+void ChunkStorage::clear() {
+    m_activeChunks.clear();
+    m_chunkGrid.clear();
+}
+
 void ChunkStorage::generateWorld(int radiusX, int radiusZ, int seed) {
     clear();
 
@@ -101,14 +106,20 @@ void ChunkStorage::generateWorld(int radiusX, int radiusZ, int seed) {
         threads.reserve(numThreads);
         for (uint32_t t = 0; t < numThreads; ++t) {
             threads.emplace_back([this, &surfaceTasks, &taskIdx, seed, surfaceCount]() {
+                FastNoiseLite noise;
+                noise.SetSeed(seed);
+                noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+                noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+                noise.SetFractalOctaves(3);
+                noise.SetFrequency(0.03f);
+                
                 while (true) {
                     size_t i = taskIdx.fetch_add(1, std::memory_order_relaxed);
                     if (i >= static_cast<size_t>(surfaceCount)) break;
                     
-                    // Phase 1: Surface Chunk (allocate + fillTerrain)
                     const auto& task = surfaceTasks[i];
                     auto chunk = std::make_unique<Chunk>(task.cx, task.cy, task.cz);
-                    chunk->fillTerrain(seed);
+                    chunk->fillTerrain(seed, &noise);
                     chunk->m_state.store(ChunkState::READY, std::memory_order_release);
                     m_chunkGrid[task.idx] = chunk.get();
                     m_activeChunks[i] = std::move(chunk);
@@ -132,25 +143,16 @@ void ChunkStorage::generateWorld(int radiusX, int radiusZ, int seed) {
               << "Underground chunks use Sparse Storage (deferred).\n" << std::flush;
 }
 
-void ChunkStorage::clear() {
-    m_activeChunks.clear();
-    m_chunkGrid.clear();
-    m_width = m_height = m_depth = 0;
-}
-
 void ChunkStorage::removeChunk(int cx, int cy, int cz) {
     size_t idx = getGridIndex(cx, cy, cz);
     if (idx != static_cast<size_t>(-1) && m_chunkGrid[idx]) {
-        Chunk* target = m_chunkGrid[idx];
         m_chunkGrid[idx] = nullptr;
-        // Remove from active chunks efficiently in O(1)
-        for (size_t i = 0; i < m_activeChunks.size(); ++i) {
-            if (m_activeChunks[i].get() == target) {
-                std::swap(m_activeChunks[i], m_activeChunks.back());
-                m_activeChunks.pop_back();
-                break;
-            }
-        }
+        // Remove from active chunks efficiently
+        auto it = std::remove_if(m_activeChunks.begin(), m_activeChunks.end(),
+        [cx, cy, cz](const std::unique_ptr<Chunk>& c) {
+            return c && c->getCX() == cx && c->getCY() == cy && c->getCZ() == cz;
+        });
+    m_activeChunks.erase(it, m_activeChunks.end());
     }
 }
 

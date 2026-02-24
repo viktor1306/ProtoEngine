@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <atomic>
 
+class FastNoiseLite;
+
 namespace world {
 
 enum class ChunkState : uint8_t {
@@ -28,6 +30,12 @@ class Chunk {
 public:
     // chunkCoord: grid position (multiply by CHUNK_SIZE to get world offset)
     explicit Chunk(int cx = 0, int cy = 0, int cz = 0);
+    
+    void reset(int cx, int cy, int cz) {
+        m_cx = cx; m_cy = cy; m_cz = cz;
+        m_isDirty = true;
+        m_state.store(ChunkState::UNGENERATED, std::memory_order_release);
+    }
 
     // ---- Voxel access -------------------------------------------------------
     void      setVoxel(int x, int y, int z, VoxelData v);
@@ -35,7 +43,7 @@ public:
 
     // ---- Fill helpers -------------------------------------------------------
     void fill(VoxelData v);
-    void fillTerrain(int seed = 0);   // heightmap-based terrain
+    void fillTerrain(int seed = 0, FastNoiseLite* noise = nullptr);   // heightmap-based terrain
     void fillRandom(int seed = 0);    // random solid/air for testing
 
     // ---- Mesh generation ----------------------------------------------------

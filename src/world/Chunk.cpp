@@ -26,34 +26,62 @@ void Chunk::fill(VoxelData v) {
     m_isDirty = true;
 }
 
-void Chunk::fillTerrain(int seed) {
+void Chunk::fillTerrain(int seed, FastNoiseLite* extNoise) {
     const VoxelData stone = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);
     const VoxelData dirt  = VoxelData::make(2, 255, 0, VOXEL_FLAG_SOLID);
     const VoxelData grass = VoxelData::make(3, 255, 0, VOXEL_FLAG_SOLID);
     
-    FastNoiseLite noise;
-    noise.SetSeed(seed);
-    noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-    noise.SetFractalOctaves(3);
-    noise.SetFrequency(0.03f);
+    FastNoiseLite localNoise;
+    FastNoiseLite* noise = extNoise;
+    if (!noise) {
+        localNoise.SetSeed(seed);
+        localNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+        localNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
+        localNoise.SetFractalOctaves(3);
+        localNoise.SetFrequency(0.03f);
+        noise = &localNoise;
+    }
 
     int worldBaseX = m_cx * CHUNK_SIZE;
     int worldBaseY = m_cy * CHUNK_SIZE;
     int worldBaseZ = m_cz * CHUNK_SIZE;
-    
+
     int heightmap[CHUNK_SIZE][CHUNK_SIZE];
-    for (int z = 0; z < CHUNK_SIZE; ++z) {
-        for (int x = 0; x < CHUNK_SIZE; ++x) {
-            float nx = static_cast<float>(worldBaseX + x);
-            float nz = static_cast<float>(worldBaseZ + z);
-            float n = noise.GetNoise(nx, nz);
-            heightmap[z][x] = 14 + static_cast<int>(n * 10.0f);
+    
+    constexpr int STEP = 4;
+    constexpr int SAMPLES = (CHUNK_SIZE / STEP) + 1; // 9
+    float sampled[SAMPLES][SAMPLES];
+
+    for (int sz = 0; sz < SAMPLES; ++sz) {
+        for (int sx = 0; sx < SAMPLES; ++sx) {
+            float nx = static_cast<float>(worldBaseX + sx * STEP);
+            float nz = static_cast<float>(worldBaseZ + sz * STEP);
+            sampled[sz][sx] = noise->GetNoise(nx, nz);
         }
     }
 
-    // Швидка початкова ініціалізація пустим повітрям
-    std::fill_n(m_voxels, CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE, VOXEL_AIR);
+    for (int sz = 0; sz < SAMPLES - 1; ++sz) {
+        for (int sx = 0; sx < SAMPLES - 1; ++sx) {
+            float h00 = sampled[sz][sx];
+            float h10 = sampled[sz][sx + 1];
+            float h01 = sampled[sz + 1][sx];
+            float h11 = sampled[sz + 1][sx + 1];
+
+            for (int dz = 0; dz < STEP; ++dz) {
+                float tz = static_cast<float>(dz) / STEP;
+                float h0 = h00 + (h01 - h00) * tz;
+                float h1 = h10 + (h11 - h10) * tz;
+
+                for (int dx = 0; dx < STEP; ++dx) {
+                    float tx = static_cast<float>(dx) / STEP;
+                    float final_n = h0 + (h1 - h0) * tx;
+                    heightmap[sz * STEP + dz][sx * STEP + dx] = 14 + static_cast<int>(final_n * 10.0f);
+                }
+            }
+        }
+    }
+
+    std::memset(m_voxels, 0, sizeof(m_voxels));
 
     for (int z = 0; z < CHUNK_SIZE; ++z) {
         for (int x = 0; x < CHUNK_SIZE; ++x) {

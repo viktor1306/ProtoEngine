@@ -2,6 +2,7 @@
 
 #include "Chunk.hpp"
 #include "VoxelData.hpp"
+#include "../vendor/FastNoiseLite.h"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -123,6 +124,10 @@ public:
 
 private:
     void workerLoop(std::stop_token st) {
+        FastNoiseLite noise;
+        bool noiseInit = false;
+        int currentSeed = 0;
+
         while (!st.stop_requested()) {
             MeshTask task;
             bool gotTask = false;
@@ -156,7 +161,16 @@ private:
             if (gotTask) {
                 if (task.chunk) {
                     if (task.type == MeshTask::Type::GENERATE) {
-                        task.chunk->fillTerrain(task.seed);
+                        if (!noiseInit || currentSeed != task.seed) {
+                            noise.SetSeed(task.seed);
+                            noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+                            noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+                            noise.SetFractalOctaves(3);
+                            noise.SetFrequency(0.03f);
+                            noiseInit = true;
+                            currentSeed = task.seed;
+                        }
+                        task.chunk->fillTerrain(task.seed, &noise);
                         task.chunk->m_state.store(ChunkState::READY, std::memory_order_release);
                     } else if (task.type == MeshTask::Type::MESH) {
                         task.result = task.chunk->generateMesh(task.neighbors, task.lod);

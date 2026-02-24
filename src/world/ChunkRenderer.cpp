@@ -45,6 +45,7 @@ void ChunkRenderer::flushDirty() {
     std::vector<MeshTask> batch;
     batch.reserve(m_dirtyPending.size());
 
+    // 1) Evaluate Frustum, LODs, & push visible
     for (const auto& key : m_dirtyPending) {
         auto chunk = m_storage.getChunk(key.x, key.y, key.z);
         if (!chunk) continue;

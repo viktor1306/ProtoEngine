@@ -26,7 +26,7 @@ enum VoxelFlags : uint8_t {
 };
 
 struct VoxelData {
-    uint32_t raw = 0;
+    uint32_t raw;
 
     // ---- Constructors -------------------------------------------------------
     VoxelData() = default;
