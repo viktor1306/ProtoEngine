@@ -14,9 +14,11 @@ void World::generateTestWorld() {
     m_totalIndices  = 0;
 
     // One test chunk at grid position (0,0,0)
-    // fillTerrain uses seed=42 for deterministic terrain
+    // fillTerrain uses TerrainConfig for deterministic terrain
     auto chunk = std::make_unique<Chunk>(0, 0, 0);
-    chunk->fillTerrain(42);
+    TerrainConfig config{};
+    config.seed = 42;
+    chunk->fillTerrain(config);
     m_chunks.push_back(std::move(chunk));
 
     rebuildMeshes();

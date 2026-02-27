@@ -136,10 +136,33 @@ Mesh* GeometryManager::uploadMesh(const std::vector<Vertex>& vertices,
 }
 
 // ---------------------------------------------------------------------------
+// update — process delayed frees
+// ---------------------------------------------------------------------------
+void GeometryManager::update(uint64_t currentFrame) {
+    std::lock_guard<std::mutex> lock(m_poolMutex);
+    m_currentFrame = currentFrame;
+    constexpr uint64_t FRAMES_IN_FLIGHT = 3;
+
+    auto it = m_delayedFrees.begin();
+    while (it != m_delayedFrees.end()) {
+        if (m_currentFrame >= it->frameIndex + FRAMES_IN_FLIGHT) {
+            if (it->bufferIndex < m_pools.size()) {
+                m_pools[it->bufferIndex]->vertexAllocator.free(static_cast<VkDeviceSize>(it->vertexOffsetSteps) * it->vertexStride, it->vertexBytes);
+                m_pools[it->bufferIndex]->indexAllocator.free(static_cast<VkDeviceSize>(it->firstIndex) * sizeof(uint32_t), it->indexBytes);
+            }
+            it = m_delayedFrees.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // reset — rewind offsets (GPU must be idle before calling)
 // ---------------------------------------------------------------------------
 void GeometryManager::reset() {
     std::lock_guard<std::mutex> lock(m_poolMutex);
+    m_delayedFrees.clear();
     for (auto& pool : m_pools) {
         pool->vertexAllocator.reset(m_totalVertexCapacity);
         pool->indexAllocator.reset(m_totalIndexCapacity);

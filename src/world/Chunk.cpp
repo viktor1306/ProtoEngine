@@ -1,8 +1,9 @@
-#include "Chunk.hpp"
-#include <cstdlib>
+#include "world/Chunk.hpp"
+#include <iostream>
 #include <cstring>
-#include <bit>
 #include <algorithm>
+#include <bit>
+#include <span>
 #include "../vendor/FastNoiseLite.h"
 
 namespace world {
@@ -15,6 +16,7 @@ Chunk::Chunk(int cx, int cy, int cz) : m_cx(cx), m_cy(cy), m_cz(cz) {}
 void Chunk::setVoxel(int x, int y, int z, VoxelData v) {
     m_voxels[idx(x, y, z)] = v;
     m_isDirty = true;
+    m_isModified = true; // Mark as modified by player to save in RAM cache
 }
 
 VoxelData Chunk::getVoxel(int x, int y, int z) const {
@@ -26,7 +28,7 @@ void Chunk::fill(VoxelData v) {
     m_isDirty = true;
 }
 
-void Chunk::fillTerrain(int seed, FastNoiseLite* extNoise) {
+void Chunk::fillTerrain(const TerrainConfig& config, FastNoiseLite* extNoise) {
     const VoxelData stone = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);
     const VoxelData dirt  = VoxelData::make(2, 255, 0, VOXEL_FLAG_SOLID);
     const VoxelData grass = VoxelData::make(3, 255, 0, VOXEL_FLAG_SOLID);
@@ -34,11 +36,11 @@ void Chunk::fillTerrain(int seed, FastNoiseLite* extNoise) {
     FastNoiseLite localNoise;
     FastNoiseLite* noise = extNoise;
     if (!noise) {
-        localNoise.SetSeed(seed);
+        localNoise.SetSeed(config.seed);
         localNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
         localNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        localNoise.SetFractalOctaves(3);
-        localNoise.SetFrequency(0.03f);
+        localNoise.SetFractalOctaves(config.octaves);
+        localNoise.SetFrequency(config.frequency);
         noise = &localNoise;
     }
 
@@ -75,13 +77,13 @@ void Chunk::fillTerrain(int seed, FastNoiseLite* extNoise) {
                 for (int dx = 0; dx < STEP; ++dx) {
                     float tx = static_cast<float>(dx) / STEP;
                     float final_n = h0 + (h1 - h0) * tx;
-                    heightmap[sz * STEP + dz][sx * STEP + dx] = 14 + static_cast<int>(final_n * 10.0f);
+                    heightmap[sz * STEP + dz][sx * STEP + dx] = config.baseHeight + static_cast<int>(final_n * config.amplitude);
                 }
             }
         }
     }
 
-    std::memset(m_voxels, 0, sizeof(m_voxels));
+    std::ranges::fill(m_voxels, VOXEL_AIR);
 
     for (int z = 0; z < CHUNK_SIZE; ++z) {
         for (int x = 0; x < CHUNK_SIZE; ++x) {
@@ -182,17 +184,17 @@ static inline int cacheIdx(int x, int y, int z) {
 }
 
 static uint8_t sampleAO(const VoxelData* cache,
-                        int pos[3], int d, int du, int dv, int normalDir)
+                        const std::array<int, 3>& pos, int d, int du, int dv, int normalDir)
 {
     const int u = (d + 1) % 3;
     const int v = (d + 2) % 3;
 
-    int base[3] = { pos[0], pos[1], pos[2] };
+    std::array<int, 3> base = pos;
     base[d] += (normalDir > 0) ? 1 : -1;
 
-    int s1[3] = { base[0], base[1], base[2] }; s1[u] += du;
-    int s2[3] = { base[0], base[1], base[2] }; s2[v] += dv;
-    int sc[3] = { base[0], base[1], base[2] }; sc[u] += du; sc[v] += dv;
+    std::array<int, 3> s1 = base; s1[u] += du;
+    std::array<int, 3> s2 = base; s2[v] += dv;
+    std::array<int, 3> sc = base; sc[u] += du; sc[v] += dv;
 
     bool b1 = cache[cacheIdx(s1[0], s1[1], s1[2])].isSolid();
     bool b2 = cache[cacheIdx(s2[0], s2[1], s2[2])].isSolid();
@@ -202,7 +204,7 @@ static uint8_t sampleAO(const VoxelData* cache,
 }
 
 static void emitQuad(VoxelMeshData& mesh,
-                     int corners[4][3],
+                     std::span<const std::array<int, 3>, 4> corners,
                      uint8_t faceID,
                      uint16_t paletteIdx,
                      uint8_t ao0, uint8_t ao1, uint8_t ao2, uint8_t ao3,
@@ -220,7 +222,7 @@ static void emitQuad(VoxelMeshData& mesh,
 
     uint32_t baseIdx = static_cast<uint32_t>(mesh.vertices.size());
     for (int c = 0; c < 4; ++c) {
-        const int* co = corners[vOrder[c]];
+        const auto& co = corners[vOrder[c]];
         VoxelVertex vert{};
         vert.x          = static_cast<uint8_t>(co[0]);
         vert.y          = static_cast<uint8_t>(co[1]);
@@ -253,6 +255,7 @@ static void emitQuad(VoxelMeshData& mesh,
 // generateMesh — LOD-aware Bitwise Greedy Meshing
 // ---------------------------------------------------------------------------
 VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
+                                  const std::array<int, 6>& neighborLODs,
                                   int lod) const
 {
     if (lod < 0) lod = 0;
@@ -311,6 +314,7 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
     }
 
     // Per-layer Bitboard Data
+    static_assert(CHUNK_SIZE <= 32, "Greedy meshing bitmask overflow: CHUNK_SIZE > 32 requires 64-bit masks");
     uint32_t layerMask[32];
     uint16_t palettes[32][32];
 
@@ -331,7 +335,7 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
                 // 1. Generate Bitmask and extract palettes
                 for (int j = 0; j < gridSize; ++j) {
                     for (int i = 0; i < gridSize; ++i) {
-                        int pos[3];
+                        std::array<int, 3> pos;
                         pos[d] = layer * step;
                         pos[u] = i     * step;
                         pos[v] = j     * step;
@@ -339,21 +343,46 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
                         const VoxelData& vox = m_voxels[idx(pos[0], pos[1], pos[2])];
                         if (!vox.isSolid()) continue;
 
-                        int npos[3] = { pos[0], pos[1], pos[2] };
+                        std::array<int, 3> npos = pos;
                         npos[d] += normalDir * step; // Base origin of the neighbor LOD block!
-                        
-                        // Exact single-voxel sampling for Culling.
-                        // Essential to match the single-voxel sampling for Block Presence!
-                        bool isNeighborSolid = volumeCache[cacheIdx(npos[0], npos[1], npos[2])].isSolid();
 
-                        // FORCE GENERATE FACES ON CHUNK BOUNDARIES FOR SKIRTS!
-                        // If we are at the edge of the chunk (layer == 0 && normalDir == -1 OR layer == gridSize-1 && normalDir == 1)
-                        // AND we are generating LOD > 0, we MUST generate the face to pull it down as a skirt!
-                        // Otherwise, the Culling will remove the face because the neighbor is solid, leaving a gap!
-                        if (lod > 0 && (d == 0 || d == 2)) {
-                            bool isBoundary = ((layer == 0 && normalDir == -1) || (layer == gridSize - 1 && normalDir == 1));
-                            if (isBoundary) {
-                                isNeighborSolid = false; // Force face generation
+                        // ------------------------------------------------------------------
+                        // SMART SKIRTS: Інтеграція в Bitwise Greedy Meshing
+                        // Якщо сусід відсутній (край світу) або має інший рівень деталізації (LOD):
+                        // Ми примусово вважаємо цю межу ПОВІТРЯМ (AIR -> isNeighborSolid = false).
+                        // Завдяки цьому, код нижче запише `1` у layerMask для КОЖНОГО вокселя обличчя (напр. 32x32), 
+                        // і Greedy Meshing автоматично об'єднає всю цю площину в ОДИН великий Quad!
+                        // ------------------------------------------------------------------
+                        bool isNeighborSolid = false;
+                        if (npos[d] >= 0 && npos[d] < CHUNK_SIZE) {
+                            // Internal voxel check
+                            isNeighborSolid = m_voxels[idx(npos[0], npos[1], npos[2])].isSolid();
+                        } else {
+                            // Boundary voxel check
+                            int neighborIdx = -1;
+                            int lx = npos[0], ly = npos[1], lz = npos[2];
+                            
+                            if (d == 0) {
+                                neighborIdx = (normalDir > 0) ? 0 : 1;
+                                lx = (normalDir > 0) ? 0 : (CHUNK_SIZE - step);
+                            } else if (d == 1) {
+                                neighborIdx = (normalDir > 0) ? 2 : 3;
+                                ly = (normalDir > 0) ? 0 : (CHUNK_SIZE - step);
+                            } else {
+                                neighborIdx = (normalDir > 0) ? 4 : 5;
+                                lz = (normalDir > 0) ? 0 : (CHUNK_SIZE - step);
+                            }
+                            
+                            const Chunk* nb = neighbors[neighborIdx];
+                            if (!nb || neighborLODs[neighborIdx] != lod) {
+                                // Спідниця: Edge of world OR LOD Boundary -> Повітря (щоб генерувався єдиний Quad)
+                                isNeighborSolid = false; 
+                            } else if (nb->m_state.load(std::memory_order_acquire) == ChunkState::READY) {
+                                // Same LOD: exact fast O(1) local voxel lookup
+                                isNeighborSolid = nb->m_voxels[idx(lx, ly, lz)].isSolid();
+                            } else {
+                                // Підземні чанки в процесі генерації (Sparse Storage)
+                                isNeighborSolid = true;
                             }
                         }
 
@@ -393,7 +422,7 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
                         }
                         
                         // Delayed AO Calculation (Compute ONLY for the 4 corners of the merged face!)
-                        int aoPos0[3], aoPos1[3], aoPos2[3], aoPos3[3];
+                        std::array<int, 3> aoPos0, aoPos1, aoPos2, aoPos3;
                         aoPos0[d] = aoPos1[d] = aoPos2[d] = aoPos3[d] = layer * step;
                         
                         aoPos0[u] = i * step;             aoPos0[v] = j * step;
@@ -413,7 +442,7 @@ VoxelMeshData Chunk::generateMesh(const std::array<const Chunk*, 6>& neighbors,
                         int vH  = H * step;
                         int faceLayer = layer * step + (normalDir > 0 ? step : 0);
                         
-                        int corners[4][3];
+                        std::array<std::array<int, 3>, 4> corners;
                         corners[0][d]=faceLayer; corners[0][u]=vi;    corners[0][v]=vj;
                         corners[1][d]=faceLayer; corners[1][u]=vi+vW; corners[1][v]=vj;
                         corners[2][d]=faceLayer; corners[2][u]=vi+vW; corners[2][v]=vj+vH;

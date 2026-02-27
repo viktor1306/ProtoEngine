@@ -14,14 +14,16 @@ namespace world {
 // ---------------------------------------------------------------------------
 class ChunkManager {
 public:
-    explicit ChunkManager(gfx::GeometryManager& geometryManager,
+    explicit ChunkManager(gfx::VulkanContext& context, gfx::GeometryManager& geometryManager,
                           uint32_t meshWorkerThreads = 0);
     ~ChunkManager() = default;
 
-    void generateWorld(int radiusX, int radiusZ, int seed = 42);
+    void generateWorld(int radiusX, int radiusZ, const TerrainConfig& config = {});
 
     void rebuildDirtyChunks(VkDevice device, float currentTime);
-    void render(VkCommandBuffer cmd, VkPipelineLayout layout, const scene::Frustum& frustum, float currentTime);
+
+    void cull(VkCommandBuffer cmd, const scene::Frustum& frustum, float currentTime, uint32_t currentFrame);
+    void render(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
 
     void markDirty(int cx, int cy, int cz);
     void flushDirty();
@@ -41,6 +43,8 @@ public:
     void setRenderRadius(int r)   { m_renderRadius = r; }
     float& getUnloadRadius()      { return m_unloadRadius; }
     float& getFrustumRadius()     { return m_frustumRadius; }
+    
+    TerrainConfig& getTerrainConfig() { return m_terrainConfig; }
 
     uint32_t getChunkCount()      const { return static_cast<uint32_t>(m_storage.getChunks().size()); }
     uint32_t getTotalVertices()   const { return m_renderer.getTotalVertices(); }
@@ -53,9 +57,14 @@ public:
     uint32_t getWorkerThreads() const { return m_renderer.getWorkerThreads(); }
     int      getPendingMeshes() const { return m_renderer.getPendingMeshes(); }
 
+    const ChunkRenderer& getRenderer() const { return m_renderer; }
+
     std::array<uint32_t, 3> getLODCounts() const { return m_renderer.getLODCounts(); }
 
     bool hasMesh() const { return m_renderer.hasMesh(); }
+
+    // Block until all background worker tasks complete (call before first frame to avoid blank screen)
+    void waitAllWorkers() { m_renderer.waitAllWorkers(); }
 
 private:
     ChunkStorage  m_storage;
@@ -65,6 +74,8 @@ private:
     int   m_renderRadius  = 16;
     float m_unloadRadius  = 512.0f;  // sphere: load+unload distance (blocks)
     float m_frustumRadius = 1024.0f; // frustum: camera view loading distance (blocks)
+    
+    TerrainConfig m_terrainConfig;
 };
 
 } // namespace world

@@ -141,10 +141,7 @@ public:
 
     void freeMesh(int32_t vertexOffsetSteps, uint32_t firstIndex, VkDeviceSize vertexBytes, VkDeviceSize indexBytes, size_t vertexStride, uint32_t bufferIndex) {
         std::lock_guard<std::mutex> lock(m_poolMutex);
-        if (bufferIndex < m_pools.size()) {
-            m_pools[bufferIndex]->vertexAllocator.free(static_cast<VkDeviceSize>(vertexOffsetSteps) * vertexStride, vertexBytes);
-            m_pools[bufferIndex]->indexAllocator.free(static_cast<VkDeviceSize>(firstIndex) * sizeof(uint32_t), indexBytes);
-        }
+        m_delayedFrees.push_back({m_currentFrame, vertexOffsetSteps, firstIndex, vertexBytes, indexBytes, vertexStride, bufferIndex});
     }
 
     // Execute multiple copies using a single staging buffer and memory barrier
@@ -155,6 +152,9 @@ public:
 
     // Reset all sub-allocations and pools
     void reset();
+
+    // Process delayed frees to avoid Use-After-Free
+    void update(uint64_t currentFrame);
 
     // Query current usage
     VkDeviceSize getVertexBytesUsed() const;
@@ -181,6 +181,19 @@ private:
     // Internal: stage and copy raw bytes to GPU buffers (no type knowledge)
     void uploadRawData(const void* vertexData, VkDeviceSize vertexBytes,
                        const void* indexData,  VkDeviceSize indexBytes);
+
+    uint64_t m_currentFrame = 0;
+    
+    struct DelayedFree {
+        uint64_t frameIndex;
+        int32_t vertexOffsetSteps;
+        uint32_t firstIndex;
+        VkDeviceSize vertexBytes;
+        VkDeviceSize indexBytes;
+        size_t vertexStride;
+        uint32_t bufferIndex;
+    };
+    std::vector<DelayedFree> m_delayedFrees;
 };
 
 } // namespace gfx

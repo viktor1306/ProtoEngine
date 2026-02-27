@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <windows.h>
+#include <psapi.h>
 
 #include "core/Timer.hpp"
 #include "core/Window.hpp"
@@ -92,10 +93,12 @@ int main() {
 
         // ---- Voxel World (ChunkManager) ------------------------------------
         // MeshWorker uses hardware_concurrency() threads by default
-        world::ChunkManager chunkManager(geometryManager);
-        chunkManager.setRenderRadius(64); // 64 chunks radius by default
+        world::ChunkManager chunkManager(vulkanContext, geometryManager);
+        chunkManager.setRenderRadius(10); // 10 chunks radius
         int worldSeed   = 42;
-        chunkManager.generateWorld(chunkManager.getRenderRadius(), chunkManager.getRenderRadius(), worldSeed);
+        world::TerrainConfig worldConfig{};
+        worldConfig.seed = worldSeed;
+        chunkManager.generateWorld(chunkManager.getRenderRadius(), chunkManager.getRenderRadius(), worldConfig);
         // Wait for all async meshing to complete before first frame
         chunkManager.rebuildDirtyChunks(vulkanContext.getDevice(), 0.0f);
         std::cout << "ChunkManager created: " << chunkManager.getChunkCount()
@@ -140,7 +143,7 @@ int main() {
         VkPushConstantRange voxelPCRange{};
         voxelPCRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         voxelPCRange.offset     = 0;
-        voxelPCRange.size       = 144; // VoxelGlobalPush (128) + VoxelChunkPush (16)
+        voxelPCRange.size       = sizeof(VoxelGlobalPush); // 128 bytes, no VoxelChunkPush
 
         // ---- Main Pipeline (standard gfx::Vertex) --------------------------
         gfx::PipelineConfig mainPipelineConfig{};
@@ -190,9 +193,10 @@ int main() {
         voxelPipelineConfig.bindingDescriptions   = {world::VoxelVertex::getBindingDescription()};
         auto voxelAttrs = world::VoxelVertex::getAttributeDescriptions();
         voxelPipelineConfig.attributeDescriptions = {voxelAttrs[0], voxelAttrs[1]};
-        // Descriptor sets: set=0 (shadow/renderer), set=1 (bindless + palette)
+        // Descriptor sets: set=0 (shadow/renderer), set=1 (bindless + palette), set=2 (SSBO chunk instances)
         voxelPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout());
         voxelPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
+        voxelPipelineConfig.descriptorSetLayouts.push_back(chunkManager.getRenderer().getDescriptorSetLayout());
         voxelPipelineConfig.pushConstantRanges.push_back(voxelPCRange);
         gfx::Pipeline voxelPipeline(vulkanContext, voxelPipelineConfig);
 
@@ -266,8 +270,17 @@ int main() {
         paletteData.colors[14] = {0.80f, 0.70f, 0.20f, 1.f}; // 14 Gold Ore
         paletteData.colors[15] = {0.40f, 0.60f, 0.80f, 1.f}; // 15 Diamond Ore
 
+        // ---- Wait for initial world generation -----------------------------
+        // Block until all background worker tasks complete
+        chunkManager.waitAllWorkers();
+        
+        // Force one pass of GPU upload before the first frame
+        chunkManager.rebuildDirtyChunks(vulkanContext.getDevice(), 0.0f);
+
         // ---- Main Loop -----------------------------------------------------
+        uint64_t absoluteFrame = 0;
         while (!window.shouldClose()) {
+            absoluteFrame++;
             timer.update();
             float dt = timer.getDeltaTime();
             float currentTime = static_cast<float>(timer.getTotalTime());
@@ -326,6 +339,7 @@ int main() {
 
             // ---- Collect async mesh results (non-blocking) -----------------
             chunkManager.rebuildDirtyChunks(vulkanContext.getDevice(), currentTime);
+            geometryManager.update(absoluteFrame);
 
             // ---- Raycast from mouse cursor position (screen-to-world) ------
             // Always use the actual mouse cursor position for picking.
@@ -418,6 +432,24 @@ int main() {
                 ImGui::Text("FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
                 ImGui::Separator();
 
+                // ---- Console Logging (Every 1 second) -----------------------
+                static float logTimer = 0.0f;
+                logTimer += dt;
+                if (logTimer >= 1.0f) {
+                    logTimer = 0.0f;
+                    PROCESS_MEMORY_COUNTERS pmc;
+                    size_t ramMB = 0;
+                    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+                        ramMB = pmc.WorkingSetSize / (1024 * 1024);
+                    }
+                    std::cout << "[Metrics] FPS: " << displayFPS 
+                              << " | FrameTime: " << displayMs << "ms"
+                              << " | RAM: " << ramMB << " MB"
+                              << " | Chunks (Vis/Tot): " << chunkManager.getVisibleCount() << "/" << chunkManager.getChunkCount()
+                              << " | CPU mesh threads: " << chunkManager.getWorkerThreads()
+                              << std::endl;
+                }
+
                 // ---- Debug Camera Toggle ------------------------------------
                 if (debugCameraMode) {
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f,0.3f,0.1f,1.0f));
@@ -477,12 +509,16 @@ int main() {
                     if (worldRadius > 64) worldRadius = 64; // Здоровий ліміт
                 }
                 if (ImGui::Button("Rebuild World")) {
-                    chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
+                    world::TerrainConfig config{};
+                    config.seed = worldSeed;
+                    chunkManager.generateWorld(worldRadius, worldRadius, config);
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("New Seed")) {
                     worldSeed = (worldSeed + 1337) % 99999;
-                    chunkManager.generateWorld(worldRadius, worldRadius, worldSeed);
+                    world::TerrainConfig config{};
+                    config.seed = worldSeed;
+                    chunkManager.generateWorld(worldRadius, worldRadius, config);
                 }
 
                 ImGui::Separator();
@@ -535,6 +571,11 @@ int main() {
             if (commandBuffer) {
                 uint32_t currentFrame = renderer.getCurrentFrameIndex();
 
+                // ---- GPU Compute Culling Pass ------------------------------
+                if (chunkManager.hasMesh()) {
+                    chunkManager.cull(commandBuffer, frustum, currentTime, currentFrame);
+                }
+
                 // Shadow pass (empty for now)
                 renderer.beginShadowPass(commandBuffer);
                 renderer.endShadowPass(commandBuffer);
@@ -566,7 +607,7 @@ int main() {
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0, sizeof(VoxelGlobalPush), &vpc);
 
-                    chunkManager.render(commandBuffer, activePipeline.getLayout(), frustum, currentTime);
+                    chunkManager.render(commandBuffer, activePipeline.getLayout(), currentFrame);
                 }
 
                 // ---- Debug Geometry (frustum + camera marker) ---------------

@@ -43,7 +43,7 @@ TARGET = $(BIN_DIR)/engine.exe
 GLSLC = $(VULKAN_SDK_PATH)/Bin/glslc.exe
 SHADER_SRC_DIR = shaders
 SHADER_BIN_DIR = $(BIN_DIR)/shaders
-SHADERS := $(wildcard $(SHADER_SRC_DIR)/*.vert) $(wildcard $(SHADER_SRC_DIR)/*.frag)
+SHADERS := $(wildcard $(SHADER_SRC_DIR)/*.vert) $(wildcard $(SHADER_SRC_DIR)/*.frag) $(wildcard $(SHADER_SRC_DIR)/*.comp)
 SPV_SHADERS := $(SHADERS:$(SHADER_SRC_DIR)/%=$(SHADER_BIN_DIR)/%.spv)
 
 # Font assets (copy system Consolas font to bin/fonts/ for TextRenderer)

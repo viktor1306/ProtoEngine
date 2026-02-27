@@ -17,15 +17,16 @@ namespace world {
 // MeshTask — one unit of work for the thread pool
 // ---------------------------------------------------------------------------
 struct MeshTask {
-    enum class Type { MESH, GENERATE };
+    enum class Type { GENERATE, MESH };
     Type type = Type::MESH;
 
     // Input
     Chunk*                          chunk     = nullptr; // non-const for generation
-    std::array<const Chunk*, 6>     neighbors = {};
-    int cx  = 0, cy = 0, cz = 0;
+    int cx = 0, cy = 0, cz = 0;
+    TerrainConfig config{}; // Replace explicit seed
     int lod = 0;  // Level of Detail: 0=full, 1=half, 2=quarter resolution
-    int seed = 0; // Used purely for GENERATE tasks
+    std::array<const Chunk*, 6> neighbors{};
+    std::array<int, 6> neighborLODs{};
 
     // Output (filled by worker)
     VoxelMeshData result;
@@ -124,9 +125,9 @@ public:
 
 private:
     void workerLoop(std::stop_token st) {
-        FastNoiseLite noise;
-        bool noiseInit = false;
-        int currentSeed = 0;
+        // FastNoiseLite noise; // Moved inside the loop for each generation task
+        // bool noiseInit = false; // No longer needed
+        // int currentSeed = 0; // No longer needed
 
         while (!st.stop_requested()) {
             MeshTask task;
@@ -136,8 +137,11 @@ private:
             size_t hH = m_headHigh.load(std::memory_order_relaxed);
             size_t tH = m_tailHigh.load(std::memory_order_acquire);
             while (hH < tH) {
+                // Безпечно копіюємо завдання ДО зміни вказівника (відсутність Data Race з швидким продюсером)
+                MeshTask localTask = m_ringHigh[hH & RING_MASK];
+
                 if (m_headHigh.compare_exchange_weak(hH, hH + 1, std::memory_order_acq_rel)) {
-                    task = std::move(m_ringHigh[hH & RING_MASK]);
+                    task = std::move(localTask);
                     gotTask = true;
                     break;
                 }
@@ -149,8 +153,10 @@ private:
                 size_t hL = m_headLow.load(std::memory_order_relaxed);
                 size_t tL = m_tailLow.load(std::memory_order_acquire);
                 while (hL < tL) {
+                    MeshTask localTask = m_ringLow[hL & RING_MASK];
+
                     if (m_headLow.compare_exchange_weak(hL, hL + 1, std::memory_order_acq_rel)) {
-                        task = std::move(m_ringLow[hL & RING_MASK]);
+                        task = std::move(localTask);
                         gotTask = true;
                         break;
                     }
@@ -161,19 +167,17 @@ private:
             if (gotTask) {
                 if (task.chunk) {
                     if (task.type == MeshTask::Type::GENERATE) {
-                        if (!noiseInit || currentSeed != task.seed) {
-                            noise.SetSeed(task.seed);
-                            noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-                            noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-                            noise.SetFractalOctaves(3);
-                            noise.SetFrequency(0.03f);
-                            noiseInit = true;
-                            currentSeed = task.seed;
-                        }
-                        task.chunk->fillTerrain(task.seed, &noise);
+                        FastNoiseLite noise;
+                        noise.SetSeed(task.config.seed);
+                        noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+                        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+                        noise.SetFractalOctaves(task.config.octaves);
+                        noise.SetFrequency(task.config.frequency);
+                        
+                        task.chunk->fillTerrain(task.config, &noise);
                         task.chunk->m_state.store(ChunkState::READY, std::memory_order_release);
                     } else if (task.type == MeshTask::Type::MESH) {
-                        task.result = task.chunk->generateMesh(task.neighbors, task.lod);
+                        task.result = task.chunk->generateMesh(task.neighbors, task.neighborLODs, task.lod);
                     }
                 }
 

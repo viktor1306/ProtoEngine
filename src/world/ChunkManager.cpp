@@ -3,17 +3,18 @@
 
 namespace world {
 
-ChunkManager::ChunkManager(gfx::GeometryManager& geometryManager, uint32_t meshWorkerThreads)
+ChunkManager::ChunkManager(gfx::VulkanContext& context, gfx::GeometryManager& geometryManager, uint32_t meshWorkerThreads)
     : m_storage()
     , m_lodCtrl()
-    , m_renderer(geometryManager, m_storage, m_lodCtrl, meshWorkerThreads)
+    , m_renderer(context, geometryManager, m_storage, m_lodCtrl, meshWorkerThreads)
 {
     // The components initialize themselves.
 }
 
-void ChunkManager::generateWorld(int radiusX, int radiusZ, int seed) {
+void ChunkManager::generateWorld(int radiusX, int radiusZ, const TerrainConfig& config) {
+    m_terrainConfig = config;
     m_renderer.clear();
-    m_storage.generateWorld(radiusX, radiusZ, seed);
+    m_storage.generateWorld(radiusX, radiusZ, config);
 
     auto& chunks = m_storage.getChunks();
 
@@ -46,8 +47,12 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device, float currentTime) {
     m_renderer.rebuildDirtyChunks(device, currentTime);
 }
 
-void ChunkManager::render(VkCommandBuffer cmd, VkPipelineLayout layout, const scene::Frustum& frustum, float currentTime) {
-    m_renderer.render(cmd, layout, frustum, currentTime);
+void ChunkManager::cull(VkCommandBuffer cmd, const scene::Frustum& frustum, float currentTime, uint32_t currentFrame) {
+    m_renderer.cull(cmd, frustum, currentTime, currentFrame);
+}
+
+void ChunkManager::render(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
+    m_renderer.render(cmd, layout, currentFrame);
 }
 
 void ChunkManager::markDirty(int cx, int cy, int cz) {
@@ -114,11 +119,12 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
 
                 if (distSq > genRadiusSq) continue;
 
-                auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz, 42);
+                auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz);
                 int worldMinY = m_storage.getMinY();
 
-                // Check all underground layers for this column
-                for (int cy = maxCY - 1; cy >= worldMinY; --cy) {
+                // Check all layers for this column — including surface (maxCY)
+                // so that streaming-created surface chunks also get picked up.
+                for (int cy = maxCY; cy >= worldMinY; --cy) {
                     float cy_center = cy * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
                     float dy = cameraPos.y - cy_center;
                     float distSq3D = distSq + dy * dy;
@@ -142,7 +148,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             Chunk* chunk = m_storage.getChunk(c.cx, c.cy, c.cz);
             if (!chunk) {
                 // Sparse allocation on the fly
-                m_storage.createChunkIfMissing(c.cx, c.cy, c.cz, 42, m_renderer, true);
+                m_storage.createChunkIfMissing(c.cx, c.cy, c.cz, m_terrainConfig, m_renderer, true);
                 chunk = m_storage.getChunk(c.cx, c.cy, c.cz);
             }
 
@@ -150,7 +156,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                 ChunkState expected = ChunkState::UNGENERATED;
                 if (chunk->m_state.compare_exchange_strong(expected, ChunkState::GENERATING,
                                                               std::memory_order_acq_rel)) {
-                    m_renderer.submitGenerateTaskHigh(chunk, 42);
+                    m_renderer.submitGenerateTaskHigh(chunk, m_terrainConfig);
                     ++submitted;
                 }
             }
@@ -177,13 +183,13 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                 float distSq = dx_chunk * dx_chunk + dz_chunk * dz_chunk;
 
                 if (distSq <= sphereRadiusSq) {
-                    auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz, 42);
+                    auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz);
                     for (int cy = minCY; cy <= maxCY; ++cy)
-                        m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer);
+                        m_storage.createChunkIfMissing(cx, cy, cz, m_terrainConfig, m_renderer);
                     
                     // Progressive underground allocation
                     for (int cy = m_storage.getMinY(); cy < minCY; ++cy)
-                        m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer, true);
+                        m_storage.createChunkIfMissing(cx, cy, cz, m_terrainConfig, m_renderer, true);
                 }
             }
         }
@@ -224,13 +230,13 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                 if (!frustum.isVisible(aabb)) continue;
 
                 // Camera is looking at this column — ensure all Y layers are loaded & meshed
-                auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz, 42);
+                auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz);
                 for (int cy = minCY; cy <= maxCY; ++cy)
-                    m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer);
+                    m_storage.createChunkIfMissing(cx, cy, cz, m_terrainConfig, m_renderer);
                 
                 // Progressive underground allocation
                 for (int cy = m_storage.getMinY(); cy < minCY; ++cy)
-                    m_storage.createChunkIfMissing(cx, cy, cz, 42, m_renderer, true);
+                    m_storage.createChunkIfMissing(cx, cy, cz, m_terrainConfig, m_renderer, true);
             }
         }
     }
@@ -288,25 +294,61 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             }
 
             // Tier 1 or 2: keep chunk — update LOD / schedule meshing
+            // Guard: skip chunks that are not yet fully generated.
+            // Meshing UNGENERATED/GENERATING yields empty meshes and wastes worker time.
+            {
+                Chunk* chunkPtr = m_storage.getChunk(key.x, key.y, key.z);
+                if (!chunkPtr || chunkPtr->m_state.load(std::memory_order_acquire) != ChunkState::READY)
+                    continue;
+            }
+
             int oldLOD = m_renderer.getLOD(key);
+
+            // LOD_EVICTED = chunk was intentionally unloaded by Tier-3.
+            // It's re-entering the visible zone now, so treat it as unassigned
+            // and let the normal LOD calculation assign a fresh value.
+            if (oldLOD == ChunkRenderer::LOD_EVICTED) {
+                oldLOD = ChunkRenderer::LOD_UNASSIGNED;
+            }
+
             int newLOD = m_lodCtrl.calculateLOD(key.x, key.y, key.z, oldLOD);
             if (newLOD != oldLOD) {
                 m_renderer.setLOD(key, newLOD);
                 m_renderer.markDirty(key.x, key.y, key.z);
-            } else if (oldLOD < 0) {
+                
+                // --- Smart Skirts: Neighbor Notification ---
+                // Коли змінюється LOD чанка, ми МАЄМО оновити сітки його 6 сусідів.
+                // Інакше вони збережуть старі "спідниці" (або дірки) і створять внутрішні стіни назавжди.
+                if (m_storage.getChunk(key.x + 1, key.y, key.z)) m_renderer.markDirty(key.x + 1, key.y, key.z);
+                if (m_storage.getChunk(key.x - 1, key.y, key.z)) m_renderer.markDirty(key.x - 1, key.y, key.z);
+                if (m_storage.getChunk(key.x, key.y + 1, key.z)) m_renderer.markDirty(key.x, key.y + 1, key.z);
+                if (m_storage.getChunk(key.x, key.y - 1, key.z)) m_renderer.markDirty(key.x, key.y - 1, key.z);
+                if (m_storage.getChunk(key.x, key.y, key.z + 1)) m_renderer.markDirty(key.x, key.y, key.z + 1);
+                if (m_storage.getChunk(key.x, key.y, key.z - 1)) m_renderer.markDirty(key.x, key.y, key.z - 1);
+
+            } else if (oldLOD == ChunkRenderer::LOD_UNASSIGNED) {
                 // Voxels exist but no GPU mesh — assign LOD and mesh
                 int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
                 m_renderer.setLOD(key, lod);
                 m_renderer.markDirty(key.x, key.y, key.z);
+                
+                // --- Smart Skirts: Initial Gen Notification ---
+                if (m_storage.getChunk(key.x + 1, key.y, key.z)) m_renderer.markDirty(key.x + 1, key.y, key.z);
+                if (m_storage.getChunk(key.x - 1, key.y, key.z)) m_renderer.markDirty(key.x - 1, key.y, key.z);
+                if (m_storage.getChunk(key.x, key.y + 1, key.z)) m_renderer.markDirty(key.x, key.y + 1, key.z);
+                if (m_storage.getChunk(key.x, key.y - 1, key.z)) m_renderer.markDirty(key.x, key.y - 1, key.z);
+                if (m_storage.getChunk(key.x, key.y, key.z + 1)) m_renderer.markDirty(key.x, key.y, key.z + 1);
+                if (m_storage.getChunk(key.x, key.y, key.z - 1)) m_renderer.markDirty(key.x, key.y, key.z - 1);
             }
         }
 
         for (const auto& key : chunksToFullyRemove) {
             m_renderer.removeChunk(key);
-            m_storage.removeChunk(key.x, key.y, key.z);
         }
+        m_storage.removeChunks(chunksToFullyRemove);
+        
         for (const auto& key : chunksMeshOnly) {
-            m_renderer.removeChunk(key);  // free GPU only, voxels stay
+            m_renderer.unloadMeshOnly(key);  // free GPU only, voxels stay, LOD = EVICTED
         }
 
 
@@ -325,9 +367,9 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             if (underChunk && underChunk->m_state.load(std::memory_order_acquire) == ChunkState::UNGENERATED) {
                 ChunkState expected = ChunkState::UNGENERATED;
                 if (underChunk->m_state.compare_exchange_strong(expected, ChunkState::GENERATING, std::memory_order_acq_rel))
-                    m_renderer.submitGenerateTaskHigh(underChunk, 42);
+                    m_renderer.submitGenerateTaskHigh(underChunk, m_terrainConfig);
             } else if (!underChunk) {
-                m_storage.createChunkIfMissing(px, targetCY, pz, 42, m_renderer);
+                m_storage.createChunkIfMissing(px, targetCY, pz, m_terrainConfig, m_renderer);
             }
         }
     }

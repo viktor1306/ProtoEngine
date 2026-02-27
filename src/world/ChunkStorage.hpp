@@ -2,6 +2,9 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
+#include <cstdint>
+#include <mutex>
 #include "world/Chunk.hpp"
 
 namespace world {
@@ -27,11 +30,12 @@ class ChunkRenderer; // Forward declaration
 
 class ChunkStorage {
 public:
-    void generateWorld(int radiusX, int radiusZ, int seed = 42);
+    void generateWorld(int radiusX, int radiusZ, const TerrainConfig& config = {});
     void clear();
     void removeChunk(int cx, int cy, int cz);
+    void removeChunks(const std::vector<IVec3Key>& keys);
     
-    void createChunkIfMissing(int cx, int cy, int cz, int seed, ChunkRenderer& renderer, bool async = false);
+    void createChunkIfMissing(int cx, int cy, int cz, const TerrainConfig& config, ChunkRenderer& renderer, bool async = false);
 
     VoxelData getVoxel(int wx, int wy, int wz) const;
     void      setVoxel(int wx, int wy, int wz, VoxelData v);
@@ -39,8 +43,12 @@ public:
     const Chunk* getChunk(int cx, int cy, int cz) const;
     Chunk*       getChunk(int cx, int cy, int cz);
 
-    std::pair<int, int> getSurfaceBounds(int cx, int cz, int seed = 42) const;
+    // Використовують кешований noise (ініціалізований у generateWorld)
+    std::pair<int, int> getSurfaceBounds(int cx, int cz) const;
     int                 getSurfaceMidY  (int cx, int cz) const;
+
+    // Доступ до кешованого конфігу (потрібен ChunkManager для передачі в createChunkIfMissing)
+    const TerrainConfig& getCachedConfig() const { return m_cachedConfig; }
 
     const std::vector<std::unique_ptr<Chunk>>& getChunks() const { return m_activeChunks; }
     std::vector<std::unique_ptr<Chunk>>&       getChunks()       { return m_activeChunks; }
@@ -57,10 +65,22 @@ private:
     std::vector<std::unique_ptr<Chunk>> m_activeChunks;
     std::vector<Chunk*> m_chunkGrid;
     
+    // --- RAM Cache for modified chunks ---
+    std::unordered_map<IVec3Key, std::unique_ptr<Chunk>, IVec3Hash> m_dirtyCache;
+    std::mutex m_cacheMutex;
+    
     int m_minX = 0, m_maxX = 0;
     int m_minY = 0, m_maxY = 0;
     int m_minZ = 0, m_maxZ = 0;
     int m_width = 0, m_height = 0, m_depth = 0;
+
+    // Cached config — set once in generateWorld, used by getSurfaceBounds.
+    TerrainConfig m_cachedConfig;
+
+    // Lazy surface-bounds cache: each column (cx,cz) computed at most once per session.
+    // Terrain is deterministic, so bounds never change after generateWorld.
+    // Key = (uint32(cx) << 32) | uint32(cz).
+    mutable std::unordered_map<uint64_t, std::pair<int, int>> m_boundsCache;
 
     inline size_t getGridIndex(int cx, int cy, int cz) const {
         if (cx < m_minX || cx > m_maxX || cy < m_minY || cy > m_maxY || cz < m_minZ || cz > m_maxZ)

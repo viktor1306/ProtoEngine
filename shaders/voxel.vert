@@ -29,11 +29,21 @@ layout(location = 4) out float fragFade;
 // Push Constants (matches VoxelPushConstants in main.cpp — 144 bytes)
 // ---------------------------------------------------------------------------
 layout(push_constant) uniform PushConstants {
-    mat4  viewProj;
-    mat4  lightSpaceMatrix;
-    vec3  chunkOffset;
-    float fadeProgress;
+    mat4 viewProj;
+    mat4 lightSpaceMatrix;
 } pc;
+
+// ---------------------------------------------------------------------------
+// Chunk Instance Data SSBO - Set 2
+// ---------------------------------------------------------------------------
+struct ChunkInstanceData {
+    float posX, posY, posZ;
+    float fadeProgress;
+};
+
+layout(std140, set = 2, binding = 0) readonly buffer InstanceBuffer {
+    ChunkInstanceData instances[];
+};
 
 // ---------------------------------------------------------------------------
 // Block palette UBO (indexed by paletteIdx 0-15)
@@ -72,8 +82,12 @@ void main() {
     float lz     = float(iz);
     uint  faceID = inPosAndFace.w;
 
+    // Fetch chunk layout from SSBO via gl_InstanceIndex
+    ChunkInstanceData chunkData = instances[gl_InstanceIndex];
+    vec3 chunkOffset = vec3(chunkData.posX, chunkData.posY, chunkData.posZ);
+
     // World position = chunk offset + local position
-    vec3 worldPos = pc.chunkOffset + vec3(lx, ly, lz);
+    vec3 worldPos = chunkOffset + vec3(lx, ly, lz);
 
     // Unpack AO and palette index
     uint ao         = inAoAndPalette.x;
@@ -93,5 +107,5 @@ void main() {
     fragNormal   = k_normals[clamp(faceID, 0u, 5u)];  // flat — provoking vertex value
     fragAO       = aoFactor;                            // flat — no gradient across quad
     fragWorldPos = worldPos;
-    fragFade     = pc.fadeProgress;
+    fragFade     = chunkData.fadeProgress;
 }

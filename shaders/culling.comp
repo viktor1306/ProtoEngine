@@ -1,0 +1,62 @@
+#version 450
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// Структура даних чанка, що формується CPU
+struct ChunkInstanceData {
+    float posX, posY, posZ;
+    float fadeStartTime;
+};
+
+// Непряма команда малювання
+struct VkDrawIndexedIndirectCommand {
+    uint indexCount;
+    uint instanceCount;
+    uint firstIndex;
+    int  vertexOffset;
+    uint firstInstance; // Використовуватиметься для gl_InstanceIndex
+};
+
+layout(std140, set = 0, binding = 0) readonly buffer InstanceBuffer {
+    ChunkInstanceData instances[];
+};
+
+layout(std430, set = 0, binding = 1) writeonly buffer IndirectBuffer {
+    VkDrawIndexedIndirectCommand indirects[];
+};
+
+layout(push_constant) uniform ComputePushConstants {
+    vec4 planes[6];
+    uint count; // Кількість чанків у буфері
+} pc;
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= pc.count) return;
+
+    ChunkInstanceData data = instances[idx];
+    
+    // Побудова AABB
+    vec3 minP = vec3(data.posX, data.posY, data.posZ);
+    vec3 maxP = minP + vec3(32.0); // CHUNK_SIZE = 32
+    
+    // Frustum Culling
+    bool visible = true;
+    for (int i = 0; i < 6; i++) {
+        vec4 plane = pc.planes[i];
+        
+        vec3 p = minP;
+        if (plane.x >= 0.0) p.x = maxP.x;
+        if (plane.y >= 0.0) p.y = maxP.y;
+        if (plane.z >= 0.0) p.z = maxP.z;
+        
+        if (dot(plane.xyz, p) + plane.w < 0.0) {
+            visible = false;
+            break;
+        }
+    }
+
+    // Тільки якщо чанк видимий, ми дозволяємо графічному пайплайну його малювати.
+    // Усі інші параметри (indexCount, firstIndex) не чіпаємо - вони встановлені CPU.
+    indirects[idx].instanceCount = visible ? 1 : 0;
+}

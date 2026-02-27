@@ -110,6 +110,7 @@ void VulkanContext::createLogicalDevice() {
     deviceFeatures.samplerAnisotropy  = VK_TRUE;
     deviceFeatures.shaderInt64        = VK_TRUE;
     deviceFeatures.fillModeNonSolid   = VK_TRUE; // required for VK_POLYGON_MODE_LINE (wireframe)
+    deviceFeatures.multiDrawIndirect  = VK_TRUE; // required for Multi-Draw Indirect
 
     VkPhysicalDeviceVulkan13Features features13{};
     features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;

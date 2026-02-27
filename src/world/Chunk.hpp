@@ -26,6 +26,14 @@ struct VoxelMeshData {
     bool empty() const { return vertices.empty(); }
 };
 
+struct TerrainConfig {
+    int seed = 0;
+    int baseHeight = 14;
+    float amplitude = 10.0f;
+    int octaves = 3;
+    float frequency = 0.03f;
+};
+
 class Chunk {
 public:
     // chunkCoord: grid position (multiply by CHUNK_SIZE to get world offset)
@@ -43,7 +51,7 @@ public:
 
     // ---- Fill helpers -------------------------------------------------------
     void fill(VoxelData v);
-    void fillTerrain(int seed = 0, FastNoiseLite* noise = nullptr);   // heightmap-based terrain
+    void fillTerrain(const TerrainConfig& config, FastNoiseLite* noise = nullptr);   // heightmap-based terrain
     void fillRandom(int seed = 0);    // random solid/air for testing
 
     // ---- Mesh generation ----------------------------------------------------
@@ -59,6 +67,7 @@ public:
     //   LOD 1: 2×2×2 super-voxels, ~4× fewer vertices
     //   LOD 2: 4×4×4 super-voxels, ~16× fewer vertices
     VoxelMeshData generateMesh(const std::array<const Chunk*, 6>& neighbors = {},
+                               const std::array<int, 6>& neighborLODs = {},
                                int lod = 0) const;
 
     // ---- State --------------------------------------------------------------
@@ -73,6 +82,9 @@ public:
 
     // State for progressive generation
     std::atomic<ChunkState> m_state{ChunkState::READY};
+
+    // Tracks player edits to avoid destroying chunk data during Tier-4 stream unloads
+    std::atomic<bool> m_isModified{false};
 
     // World-space offset of this chunk's (0,0,0) corner (in block units)
     float getWorldOffsetX() const { return static_cast<float>(m_cx * CHUNK_SIZE); }

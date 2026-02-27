@@ -52,6 +52,8 @@ public:
     // Returns true if the AABB is visible (intersects or inside frustum).
     bool isVisible(const AABB& box) const { return !isAABBOutside(box); }
 
+    const Plane* getPlanes() const { return m_planes; }
+
 private:
     Plane m_planes[6]; // Left, Right, Bottom, Top, Near, Far
 };
