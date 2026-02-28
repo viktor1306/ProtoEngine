@@ -99,6 +99,13 @@ Pipeline::Pipeline(VulkanContext& context, const PipelineConfig& config)
         layoutInfo.pPushConstantRanges    = &defaultPCR;
     }
 
+    fprintf(stderr, "[Pipeline] Creating layout. Count: %zu, ptrs: ", config.descriptorSetLayouts.size());
+    for (auto l : config.descriptorSetLayouts) {
+        fprintf(stderr, "%p ", (void*)l);
+    }
+    fprintf(stderr, "\n");
+    fflush(stderr);
+
     if (vkCreatePipelineLayout(m_context.getDevice(), &layoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout!");
 

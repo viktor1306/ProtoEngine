@@ -171,6 +171,7 @@ int main() {
         shadowPipelineConfig.depthBiasEnable        = false;
         shadowPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout());
         shadowPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
+        shadowPipelineConfig.descriptorSetLayouts.push_back(chunkManager.getRenderer().getDescriptorSetLayout());
         shadowPipelineConfig.pushConstantRanges.push_back(stdPCRange);
         gfx::Pipeline shadowPipeline(vulkanContext, shadowPipelineConfig);
 
@@ -197,6 +198,13 @@ int main() {
         voxelPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout());
         voxelPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
         voxelPipelineConfig.descriptorSetLayouts.push_back(chunkManager.getRenderer().getDescriptorSetLayout());
+        
+        fprintf(stderr, "[DEBUG] Layouts: %p, %p, %p\n", 
+                  (void*)renderer.getDescriptorSetLayout(),
+                  (void*)bindlessSystem.getDescriptorSetLayout(),
+                  (void*)chunkManager.getRenderer().getDescriptorSetLayout());
+        fflush(stderr);
+                  
         voxelPipelineConfig.pushConstantRanges.push_back(voxelPCRange);
         gfx::Pipeline voxelPipeline(vulkanContext, voxelPipelineConfig);
 
@@ -245,6 +253,9 @@ int main() {
 
         // ---- Raycast state (persistent across frames for ImGui display) ----
         world::RayResult lastRayHit{};
+
+        fprintf(stderr, "[Main] Initialization complete. Entering main render loop...\n");
+        fflush(stderr);
 
         // ---- FPS Cap and Smoothing -----------------------------------------
         const double targetFrameTime = 1.0 / 4000.0;
@@ -573,7 +584,16 @@ int main() {
 
                 // ---- GPU Compute Culling Pass ------------------------------
                 if (chunkManager.hasMesh()) {
+                    fprintf(stderr, "[Main] Frame %u: Dispatching GPU Cull...\n", currentFrame);
+                    fflush(stderr);
+
+                    // 1. GPU Frustum Culling Compute Pass (MDI Generation)
                     chunkManager.cull(commandBuffer, frustum, currentTime, currentFrame);
+
+                    fprintf(stderr, "[Main] Frame %u: Executing Graphic Passes...\n", currentFrame);
+                    fflush(stderr);
+
+                    // 2. GRAPHICS PASSEShadow pass (empty for now)
                 }
 
                 // Shadow pass (empty for now)
