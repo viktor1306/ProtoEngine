@@ -6,7 +6,7 @@ VULKAN_SDK_PATH = C:/VulkanSDK/1.4.341.1
 # Compiler and Flags
 CXX = g++
 CFLAGS = -std=c++20 -O2 -Wall -Wextra -I$(VULKAN_SDK_PATH)/Include -I./src -I./src/vendor -I./src/vendor/imgui -I./src/vendor/imgui/backends
-LDFLAGS = -L$(VULKAN_SDK_PATH)/Lib -lvulkan-1 -lgdi32 -luser32 -lkernel32 -ldwmapi
+LDFLAGS = -L$(VULKAN_SDK_PATH)/Lib -lvulkan-1 -lgdi32 -luser32 -lkernel32 -ldwmapi -lpsapi
 
 # Directories
 SRC_DIR = src

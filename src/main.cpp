@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <windows.h>
+#include <psapi.h>
 
 #include "core/Timer.hpp"
 #include "core/Window.hpp"
@@ -45,6 +46,60 @@ struct VoxelGlobalPush {
     core::math::Mat4 lightSpaceMatrix;  // 64 bytes
 };
 static_assert(sizeof(VoxelGlobalPush) == 128, "VoxelGlobalPush size mismatch");
+
+// ---- CPU and RAM Profiling ------------------------------------------------
+static ULARGE_INTEGER lastCPU, lastSysCPU, lastUserCPU;
+static int numProcessors;
+static HANDLE selfHandle;
+static bool cpuInit = false;
+
+static double getProcessCPUUsage() {
+    FILETIME ftime, fsys, fuser;
+    ULARGE_INTEGER now, sys, user;
+    double percent;
+
+    if (!cpuInit) {
+        SYSTEM_INFO sysInfo;
+        GetSystemInfo(&sysInfo);
+        numProcessors = sysInfo.dwNumberOfProcessors;
+
+        GetSystemTimeAsFileTime(&ftime);
+        memcpy(&lastCPU, &ftime, sizeof(FILETIME));
+
+        selfHandle = GetCurrentProcess();
+        GetProcessTimes(selfHandle, &ftime, &ftime, &fsys, &fuser);
+        memcpy(&lastSysCPU, &fsys, sizeof(FILETIME));
+        memcpy(&lastUserCPU, &fuser, sizeof(FILETIME));
+
+        cpuInit = true;
+        return 0.0;
+    }
+
+    GetSystemTimeAsFileTime(&ftime);
+    memcpy(&now, &ftime, sizeof(FILETIME));
+
+    GetProcessTimes(selfHandle, &ftime, &ftime, &fsys, &fuser);
+    memcpy(&sys, &fsys, sizeof(FILETIME));
+    memcpy(&user, &fuser, sizeof(FILETIME));
+
+    percent = (sys.QuadPart - lastSysCPU.QuadPart) + (user.QuadPart - lastUserCPU.QuadPart);
+    percent /= (now.QuadPart - lastCPU.QuadPart);
+    percent /= numProcessors;
+
+    lastCPU = now;
+    lastUserCPU = user;
+    lastSysCPU = sys;
+
+    return percent * 100.0;
+}
+
+static size_t getProcessRAMUsageMB() {
+    PROCESS_MEMORY_COUNTERS_EX pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
+        return pmc.WorkingSetSize / (1024 * 1024);
+    }
+    return 0;
+}
 
 int main() {
     // Set working directory to project root (parent of bin/)
@@ -93,7 +148,8 @@ int main() {
         // ---- Voxel World (ChunkManager) ------------------------------------
         // MeshWorker uses hardware_concurrency() threads by default
         world::ChunkManager chunkManager(vulkanContext, geometryManager);
-        chunkManager.setRenderRadius(64); // 64 chunks radius by default
+        int initialWorldRadius = 10;
+        chunkManager.setRenderRadius(initialWorldRadius); 
         int worldSeed   = 42;
         world::TerrainConfig worldConfig{};
         worldConfig.seed = worldSeed;
@@ -248,7 +304,10 @@ int main() {
         // ---- FPS Cap and Smoothing -----------------------------------------
         const double targetFrameTime = 1.0 / 4000.0;
         float displayFPS = 0.0f;
-        float displayMs  = 0.0f;
+        float displayMs = 0.0f;
+        double displayCPU = 0.0;
+        size_t displayRAM = 0;
+        float statsTimer = 0.0f;
 
         // ---- Palette Data --------------------------------------------------
         gfx::BindlessSystem::PaletteUBO paletteData{};
@@ -428,7 +487,20 @@ int main() {
                     displayMs  = displayMs  * 0.95f + currentMs  * 0.05f;
                 }
 
-                ImGui::Text("FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
+                statsTimer += currentMs;
+                if (statsTimer > 500.0f) {
+                    displayCPU = getProcessCPUUsage();
+                    displayRAM = getProcessRAMUsageMB();
+                    std::cout << "[Metrics] FPS: " << displayFPS 
+                              << " | FrameTime: " << displayMs << " ms"
+                              << " | CPU: " << displayCPU << "%"
+                              << " | RAM: " << displayRAM << " MB\n";
+                    statsTimer = 0.0f;
+                }
+
+                ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "CPU:  %.1f%%", displayCPU);
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "RAM:  %zu MB", displayRAM);
                 ImGui::Separator();
 
                 // ---- Debug Camera Toggle ------------------------------------
