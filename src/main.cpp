@@ -2,7 +2,6 @@
 #include <stdexcept>
 #include <filesystem>
 #include <windows.h>
-#include <psapi.h>
 
 #include "core/Timer.hpp"
 #include "core/Window.hpp"
@@ -94,7 +93,7 @@ int main() {
         // ---- Voxel World (ChunkManager) ------------------------------------
         // MeshWorker uses hardware_concurrency() threads by default
         world::ChunkManager chunkManager(vulkanContext, geometryManager);
-        chunkManager.setRenderRadius(10); // 10 chunks radius
+        chunkManager.setRenderRadius(64); // 64 chunks radius by default
         int worldSeed   = 42;
         world::TerrainConfig worldConfig{};
         worldConfig.seed = worldSeed;
@@ -171,7 +170,6 @@ int main() {
         shadowPipelineConfig.depthBiasEnable        = false;
         shadowPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout());
         shadowPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
-        shadowPipelineConfig.descriptorSetLayouts.push_back(chunkManager.getRenderer().getDescriptorSetLayout());
         shadowPipelineConfig.pushConstantRanges.push_back(stdPCRange);
         gfx::Pipeline shadowPipeline(vulkanContext, shadowPipelineConfig);
 
@@ -198,13 +196,6 @@ int main() {
         voxelPipelineConfig.descriptorSetLayouts.push_back(renderer.getDescriptorSetLayout());
         voxelPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
         voxelPipelineConfig.descriptorSetLayouts.push_back(chunkManager.getRenderer().getDescriptorSetLayout());
-        
-        fprintf(stderr, "[DEBUG] Layouts: %p, %p, %p\n", 
-                  (void*)renderer.getDescriptorSetLayout(),
-                  (void*)bindlessSystem.getDescriptorSetLayout(),
-                  (void*)chunkManager.getRenderer().getDescriptorSetLayout());
-        fflush(stderr);
-                  
         voxelPipelineConfig.pushConstantRanges.push_back(voxelPCRange);
         gfx::Pipeline voxelPipeline(vulkanContext, voxelPipelineConfig);
 
@@ -253,9 +244,6 @@ int main() {
 
         // ---- Raycast state (persistent across frames for ImGui display) ----
         world::RayResult lastRayHit{};
-
-        fprintf(stderr, "[Main] Initialization complete. Entering main render loop...\n");
-        fflush(stderr);
 
         // ---- FPS Cap and Smoothing -----------------------------------------
         const double targetFrameTime = 1.0 / 4000.0;
@@ -443,24 +431,6 @@ int main() {
                 ImGui::Text("FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
                 ImGui::Separator();
 
-                // ---- Console Logging (Every 1 second) -----------------------
-                static float logTimer = 0.0f;
-                logTimer += dt;
-                if (logTimer >= 1.0f) {
-                    logTimer = 0.0f;
-                    PROCESS_MEMORY_COUNTERS pmc;
-                    size_t ramMB = 0;
-                    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
-                        ramMB = pmc.WorkingSetSize / (1024 * 1024);
-                    }
-                    std::cout << "[Metrics] FPS: " << displayFPS 
-                              << " | FrameTime: " << displayMs << "ms"
-                              << " | RAM: " << ramMB << " MB"
-                              << " | Chunks (Vis/Tot): " << chunkManager.getVisibleCount() << "/" << chunkManager.getChunkCount()
-                              << " | CPU mesh threads: " << chunkManager.getWorkerThreads()
-                              << std::endl;
-                }
-
                 // ---- Debug Camera Toggle ------------------------------------
                 if (debugCameraMode) {
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f,0.3f,0.1f,1.0f));
@@ -584,16 +554,7 @@ int main() {
 
                 // ---- GPU Compute Culling Pass ------------------------------
                 if (chunkManager.hasMesh()) {
-                    fprintf(stderr, "[Main] Frame %u: Dispatching GPU Cull...\n", currentFrame);
-                    fflush(stderr);
-
-                    // 1. GPU Frustum Culling Compute Pass (MDI Generation)
                     chunkManager.cull(commandBuffer, frustum, currentTime, currentFrame);
-
-                    fprintf(stderr, "[Main] Frame %u: Executing Graphic Passes...\n", currentFrame);
-                    fflush(stderr);
-
-                    // 2. GRAPHICS PASSEShadow pass (empty for now)
                 }
 
                 // Shadow pass (empty for now)

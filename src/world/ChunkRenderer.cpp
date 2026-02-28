@@ -1,7 +1,7 @@
 #include "ChunkRenderer.hpp"
+#include "gfx/rendering/Pipeline.hpp"
 #include <chrono>
 #include <iostream>
-#include <algorithm>
 #include <fstream>
 
 namespace world {
@@ -13,11 +13,8 @@ ChunkRenderer::ChunkRenderer(gfx::VulkanContext& context, gfx::GeometryManager& 
               << m_meshWorker.getThreadCount() << "\n" << std::flush;
               
     createDescriptorSetLayout();
-    createBuffers();
     createComputePipeline();
-    
-    std::cout << "[ChunkRenderer] MDI and SSBO Buffers initialized. Max visible chunks: " << MAX_VISIBLE_CHUNKS << "\n";
-    std::cout << "[ChunkRenderer] DescriptorSetLayout = " << m_descriptorSetLayout << "\n";
+    createBuffers();
 }
 
 ChunkRenderer::~ChunkRenderer() {
@@ -27,18 +24,32 @@ ChunkRenderer::~ChunkRenderer() {
     
     vkDestroyDescriptorPool(device, m_descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
+    
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (m_instanceBuffers[i]) m_instanceBuffers[i]->unmap();
+        if (m_indirectBuffers[i]) m_indirectBuffers[i]->unmap();
+    }
 }
 
 void ChunkRenderer::createDescriptorSetLayout() {
-    std::vector<VkDescriptorSetLayoutBinding> bindings = {
-        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}
-    };
+    VkDescriptorSetLayoutBinding bindings[2]{};
+    
+    // Binding 0: SSBO (InstanceData)
+    bindings[0].binding = 0;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+
+    // Binding 1: SSBO (IndirectCmds)
+    bindings[1].binding = 1;
+    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bindings[1].descriptorCount = 1;
+    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
+    layoutInfo.bindingCount = 2;
+    layoutInfo.pBindings = bindings;
 
     if (vkCreateDescriptorSetLayout(m_context.getDevice(), &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("ChunkRenderer: Failed to create SSBO descriptor set layout!");
@@ -46,10 +57,10 @@ void ChunkRenderer::createDescriptorSetLayout() {
 
     VkDescriptorPoolSize poolSizes[2]{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+    poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT; // Для InstanceBuffer
     
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[1].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+    poolSizes[1].descriptorCount = MAX_FRAMES_IN_FLIGHT; // Для IndirectBuffer
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -58,7 +69,7 @@ void ChunkRenderer::createDescriptorSetLayout() {
     poolInfo.maxSets = MAX_FRAMES_IN_FLIGHT;
 
     if (vkCreateDescriptorPool(m_context.getDevice(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("ChunkRenderer: Failed to create descriptor pool!");
+        throw std::runtime_error("ChunkRenderer: Failed to create SSBO descriptor pool!");
     }
 
     std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_descriptorSetLayout);
@@ -73,11 +84,67 @@ void ChunkRenderer::createDescriptorSetLayout() {
     }
 }
 
+static std::vector<char> readShaderFile(const std::string& filename) {
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+    if (!file.is_open()) throw std::runtime_error("failed to open " + filename);
+    size_t fileSize = (size_t) file.tellg();
+    std::vector<char> buffer(fileSize);
+    file.seekg(0); file.read(buffer.data(), fileSize);
+    return buffer;
+}
+
+void ChunkRenderer::createComputePipeline() {
+    auto compCode = readShaderFile("bin/shaders/culling.comp.spv");
+    
+    VkShaderModuleCreateInfo moduleInfo{};
+    moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleInfo.codeSize = compCode.size();
+    moduleInfo.pCode = reinterpret_cast<const uint32_t*>(compCode.data());
+    
+    VkShaderModule compModule;
+    if (vkCreateShaderModule(m_context.getDevice(), &moduleInfo, nullptr, &compModule) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create compute shader module!");
+    }
+    
+    VkPipelineShaderStageCreateInfo shaderStage{};
+    shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    shaderStage.module = compModule;
+    shaderStage.pName = "main";
+    
+    VkPushConstantRange pushRange{};
+    pushRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushRange.offset = 0;
+    pushRange.size = sizeof(float) * 24 + sizeof(uint32_t); // 6 planes * 4 floats + 1 uint = 100 bytes
+    
+    VkPipelineLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layoutInfo.setLayoutCount = 1;
+    layoutInfo.pSetLayouts = &m_descriptorSetLayout;
+    layoutInfo.pushConstantRangeCount = 1;
+    layoutInfo.pPushConstantRanges = &pushRange;
+    
+    if (vkCreatePipelineLayout(m_context.getDevice(), &layoutInfo, nullptr, &m_computePipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create compute pipeline layout!");
+    }
+    
+    VkComputePipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipelineInfo.stage = shaderStage;
+    pipelineInfo.layout = m_computePipelineLayout;
+    
+    if (vkCreateComputePipelines(m_context.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_computePipeline) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create compute pipeline!");
+    }
+    
+    vkDestroyShaderModule(m_context.getDevice(), compModule, nullptr);
+}
+
 void ChunkRenderer::createBuffers() {
     VkDeviceSize instanceBufferSize = MAX_VISIBLE_CHUNKS * sizeof(ChunkInstanceData);
     VkDeviceSize indirectBufferSize = MAX_VISIBLE_CHUNKS * sizeof(VkDrawIndexedIndirectCommand);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         m_instanceBuffers[i] = std::make_unique<gfx::Buffer>(
             m_context,
             instanceBufferSize,
@@ -94,24 +161,24 @@ void ChunkRenderer::createBuffers() {
         );
         m_indirectBuffers[i]->map(&m_indirectMapped[i]);
 
-        VkDescriptorBufferInfo instanceInfo{};
-        instanceInfo.buffer = m_instanceBuffers[i]->getBuffer();
-        instanceInfo.offset = 0;
-        instanceInfo.range = VK_WHOLE_SIZE;
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = m_instanceBuffers[i]->getBuffer();
+        bufferInfo.offset = 0;
+        bufferInfo.range = instanceBufferSize;
 
         VkDescriptorBufferInfo indirectInfo{};
         indirectInfo.buffer = m_indirectBuffers[i]->getBuffer();
         indirectInfo.offset = 0;
-        indirectInfo.range = VK_WHOLE_SIZE;
+        indirectInfo.range = indirectBufferSize;
 
-        std::array<VkWriteDescriptorSet, 2> writes{};
+        VkWriteDescriptorSet writes[2]{};
         writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[0].dstSet = m_descriptorSets[i];
         writes[0].dstBinding = 0;
         writes[0].dstArrayElement = 0;
         writes[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         writes[0].descriptorCount = 1;
-        writes[0].pBufferInfo = &instanceInfo;
+        writes[0].pBufferInfo = &bufferInfo;
 
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[1].dstSet = m_descriptorSets[i];
@@ -121,64 +188,9 @@ void ChunkRenderer::createBuffers() {
         writes[1].descriptorCount = 1;
         writes[1].pBufferInfo = &indirectInfo;
 
-        vkUpdateDescriptorSets(m_context.getDevice(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+        vkUpdateDescriptorSets(m_context.getDevice(), 2, writes, 0, nullptr);
     }
-}
-
-void ChunkRenderer::createComputePipeline() {
-    VkDevice device = m_context.getDevice();
-    
-    auto readFile = [](const std::string& filename) {
-        std::ifstream file(filename, std::ios::ate | std::ios::binary);
-        if (!file.is_open()) throw std::runtime_error("failed to open " + filename);
-        size_t fileSize = (size_t)file.tellg();
-        std::vector<char> buffer(fileSize);
-        file.seekg(0);
-        file.read(buffer.data(), fileSize);
-        file.close();
-        return buffer;
-    };
-    
-    auto code = readFile("bin/shaders/culling.comp.spv");
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-    
-    VkShaderModule computeShaderModule;
-    if (vkCreateShaderModule(device, &createInfo, nullptr, &computeShaderModule) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute shader module!");
-    }
-    
-    VkPushConstantRange pcRange{};
-    pcRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    pcRange.offset = 0;
-    pcRange.size = sizeof(float)*4*6 + sizeof(uint32_t)*4; // 6 planes (vec4) + align
-    
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
-    pipelineLayoutInfo.pPushConstantRanges = &pcRange;
-    
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_computePipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline layout!");
-    }
-    
-    VkComputePipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    pipelineInfo.stage.module = computeShaderModule;
-    pipelineInfo.stage.pName = "main";
-    pipelineInfo.layout = m_computePipelineLayout;
-    
-    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_computePipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline!");
-    }
-    
-    vkDestroyShaderModule(device, computeShaderModule, nullptr);
+    std::cout << "[ChunkRenderer] MDI and SSBO Buffers initialized. Max visible chunks: " << MAX_VISIBLE_CHUNKS << "\n";
 }
 
 void ChunkRenderer::clear() {
@@ -187,15 +199,15 @@ void ChunkRenderer::clear() {
     m_renderData.clear();
     m_chunkLOD.clear();
     m_dirtyPending.clear();
+    m_listDirty = true;
     m_totalVertices = 0;
     m_totalIndices = 0;
     m_visibleCount = 0;
     m_culledCount = 0;
     m_visibleVertices = 0;
-    
-    m_listDirty = true;
-    for(int i=0; i<MAX_FRAMES_IN_FLIGHT; ++i) m_gpuBuffersDirty[i] = true;
 }
+
+
 
 scene::AABB ChunkRenderer::buildAABB(int cx, int cy, int cz) const {
     float wx = static_cast<float>(cx * CHUNK_SIZE);
@@ -206,7 +218,11 @@ scene::AABB ChunkRenderer::buildAABB(int cx, int cy, int cz) const {
 }
 
 void ChunkRenderer::markDirty(int cx, int cy, int cz) {
-    if (!m_storage.getChunk(cx, cy, cz)) return;
+    auto* chunk = m_storage.getChunk(cx, cy, cz);
+    if (!chunk) return;
+    // Guard: only mesh chunks whose voxel data is fully ready.
+    // Submitting UNGENERATED or GENERATING chunks yields empty meshes.
+    if (chunk->m_state.load(std::memory_order_acquire) != ChunkState::READY) return;
     m_dirtyPending.insert({cx, cy, cz});
 }
 
@@ -233,10 +249,20 @@ void ChunkRenderer::flushDirty() {
             m_storage.getChunk(key.x, key.y, key.z + 1),
             m_storage.getChunk(key.x, key.y, key.z - 1)
         };
+        
+        std::array<int, 6> nLODs = {
+            m_lodCtrl.calculateLOD(key.x + 1, key.y, key.z),
+            m_lodCtrl.calculateLOD(key.x - 1, key.y, key.z),
+            m_lodCtrl.calculateLOD(key.x, key.y + 1, key.z),
+            m_lodCtrl.calculateLOD(key.x, key.y - 1, key.z),
+            m_lodCtrl.calculateLOD(key.x, key.y, key.z + 1),
+            m_lodCtrl.calculateLOD(key.x, key.y, key.z - 1)
+        };
 
         MeshTask task;
         task.chunk = chunk;
         task.neighbors = neighbors;
+        task.neighborLODs = nLODs;
         task.cx = key.x;
         task.cy = key.y;
         task.cz = key.z;
@@ -274,14 +300,22 @@ void ChunkRenderer::submitGenerateTaskLow(Chunk* chunk, const TerrainConfig& con
     task.cy = chunk->getCY();
     task.cz = chunk->getCZ();
     task.config = config;
-    
+
     std::vector<MeshTask> batch;
     batch.push_back(std::move(task));
-    m_meshWorker.submitBatchLow(batch);
+    m_meshWorker.submitBatchLow(batch);  // LOW priority: won't starve mesh rebuilds
+}
+
+void ChunkRenderer::waitAllWorkers() {
+    m_meshWorker.waitAll();
 }
 
 void ChunkRenderer::setLOD(const IVec3Key& key, int lod) {
-    m_chunkLOD[key] = lod;
+    auto it = m_chunkLOD.find(key);
+    if (it == m_chunkLOD.end() || it->second != lod) {
+        m_chunkLOD[key] = lod;
+        m_listDirty = true;
+    }
 }
 
 int ChunkRenderer::getLOD(const IVec3Key& key) const {
@@ -302,6 +336,115 @@ bool ChunkRenderer::hasMesh() const {
         if (rd.valid && rd.mesh) return true;
     }
     return false;
+}
+
+void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& frustum, float currentTime, uint32_t currentFrame) {
+    auto* instances = static_cast<ChunkInstanceData*>(m_instanceMapped[currentFrame]);
+    auto* indirects = static_cast<VkDrawIndexedIndirectCommand*>(m_indirectMapped[currentFrame]);
+
+    // 1. Sort chunks CPU-side for initial Early-Z (LOD 0 -> 2)
+    if (m_listDirty) {
+        m_sortedChunks.clear();
+        for (const auto& [key, rd] : m_renderData) {
+            if (!rd.valid || !rd.mesh) continue;
+            m_sortedChunks.push_back({key, rd.mesh->getBufferIndex(), m_chunkLOD[key]});
+        }
+        
+        std::sort(m_sortedChunks.begin(), m_sortedChunks.end(), [](const ChunkDrawCmd& a, const ChunkDrawCmd& b) {
+            if (a.poolIndex != b.poolIndex) return a.poolIndex < b.poolIndex;
+            return a.lod < b.lod; 
+        });
+        
+        m_listDirty = false;
+    }
+
+    m_activeBatches.clear();
+    m_activeInstances = 0;
+
+    if (m_sortedChunks.empty()) return;
+
+    // 2. Prepare dynamic buffers linearly
+    uint32_t currentPool = m_sortedChunks[0].poolIndex;
+    uint32_t startIdx = 0;
+
+    for (const auto& cmdDraw : m_sortedChunks) {
+        if (cmdDraw.poolIndex != currentPool) {
+            m_activeBatches.push_back({currentPool, startIdx, m_activeInstances - startIdx});
+            currentPool = cmdDraw.poolIndex;
+            startIdx = m_activeInstances;
+        }
+
+        const auto& rd = m_renderData[cmdDraw.key];
+        uint32_t idx = m_activeInstances++;
+
+        // Fill SSBO Data
+        instances[idx].posX = static_cast<float>(cmdDraw.key.x * CHUNK_SIZE);
+        instances[idx].posY = static_cast<float>(cmdDraw.key.y * CHUNK_SIZE);
+        instances[idx].posZ = static_cast<float>(cmdDraw.key.z * CHUNK_SIZE);
+        instances[idx].fadeProgress = std::clamp((currentTime - rd.fadeStartTime) / 1.0f, 0.0f, 1.0f);
+
+        // Fill non-culled Indirect command
+        indirects[idx].indexCount    = rd.indexCount;
+        indirects[idx].instanceCount = 0; // GPU Culling Compute Shader will set to 1 if visible
+        indirects[idx].firstIndex    = rd.mesh->getFirstIndex();
+        indirects[idx].vertexOffset  = rd.mesh->getVertexOffset();
+        indirects[idx].firstInstance = idx; 
+    }
+    m_activeBatches.push_back({currentPool, startIdx, m_activeInstances - startIdx});
+
+    // 3. GPU Compute Shader Dispatch
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipelineLayout, 0, 1, &m_descriptorSets[currentFrame], 0, nullptr);
+
+    struct ComputePush {
+        core::math::Vec4 planes[6];
+        uint32_t count;
+    } push{};
+    
+    for (int i = 0; i < 6; i++) {
+        const auto& p = frustum.getPlanes()[i];
+        push.planes[i] = core::math::Vec4{p.normal.x, p.normal.y, p.normal.z, p.d};
+    }
+    push.count = m_activeInstances;
+
+    vkCmdPushConstants(cmd, m_computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePush), &push);
+
+    uint32_t groupCount = (m_activeInstances + 63) / 64;
+    vkCmdDispatch(cmd, groupCount, 1, 1);
+
+    // 4. Memory Barrier (Compute Write -> Graphic Indirect Read)
+    VkMemoryBarrier2 barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
+
+    VkDependencyInfo dep{};
+    dep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dep.memoryBarrierCount = 1;
+    dep.pMemoryBarriers = &barrier;
+
+    vkCmdPipelineBarrier2(cmd, &dep);
+}
+
+void ChunkRenderer::render(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
+    if (m_activeInstances == 0) return;
+
+    // Bind SSBO Descriptor Set
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        layout, 2, 1, &m_descriptorSets[currentFrame], 0, nullptr);
+
+    VkBuffer indirectBuffer = m_indirectBuffers[currentFrame]->getBuffer();
+    uint32_t stride = sizeof(VkDrawIndexedIndirectCommand);
+
+    for (const auto& batch : m_activeBatches) {
+        m_geometryManager.bindPool(cmd, batch.poolIndex);
+        vkCmdDrawIndexedIndirect(cmd, indirectBuffer, batch.startIdx * stride, batch.count, stride);
+    }
+
+    // Since GPU does the culling, we loosely set visibleCount
+    m_visibleCount = m_activeInstances;
 }
 
 void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
@@ -327,7 +470,7 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     }
 
     if (!latestTasks.empty() && device != VK_NULL_HANDLE) {
-        vkDeviceWaitIdle(device);
+        // vkDeviceWaitIdle(device); // ВИДАЛЕНО: Pipeline Stall виправлено через Delayed Free у GeometryManager!
     }
 
     std::vector<gfx::GeometryManager::UploadRequest> requests;
@@ -338,54 +481,61 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
         if (task.type != MeshTask::Type::GENERATE) {
             auto lodIt = m_chunkLOD.find(key);
             int desiredLOD = (lodIt != m_chunkLOD.end()) ? lodIt->second : 0;
-            if (task.lod != desiredLOD) continue;
+            if (task.lod != desiredLOD) {
+                continue;
+            }
         }
 
         auto& rd = m_renderData[key];
-        
-        if (task.type == MeshTask::Type::GENERATE) {
-            if (task.chunk) {   
-                ChunkState expected = ChunkState::GENERATING;
-                task.chunk->m_state.compare_exchange_strong(expected, ChunkState::READY, std::memory_order_acq_rel);
-            }
-            continue;
-        }
 
-        if (rd.mesh) {
-            uint32_t vOff = rd.mesh->getVertexOffset();
-            uint32_t iOff = rd.mesh->getFirstIndex();
-            m_geometryManager.freeMesh(vOff, iOff,
-                rd.vertexCount * sizeof(VoxelVertex), rd.indexCount * sizeof(uint32_t), sizeof(VoxelVertex), rd.mesh->getBufferIndex());
+        if (rd.valid) {
             m_totalVertices -= rd.vertexCount;
             m_totalIndices  -= rd.indexCount;
+            if (rd.mesh) {
+                int32_t vOff = rd.mesh->getVertexOffset();
+                uint32_t iOff = rd.mesh->getFirstIndex();
+                m_geometryManager.freeMesh(vOff, iOff, 
+                    rd.vertexCount * sizeof(VoxelVertex), rd.indexCount * sizeof(uint32_t), sizeof(VoxelVertex), rd.mesh->getBufferIndex());
+            }
+            rd.mesh.reset();
+            rd.valid = false;
             m_listDirty = true;
         }
 
-        if (task.result.vertices.empty() || task.result.indices.empty()) {
-            rd.valid = false;
-            auto it = m_chunkLOD.find(key);
-            if(it != m_chunkLOD.end()) {
-                m_listDirty = true;
+        if (task.type == MeshTask::Type::GENERATE) {
+            // Task already generated voxels, now we just need to queue it for meshing.
+            m_dirtyPending.insert(IVec3Key{key.x, key.y, key.z});
+            continue; // Do not build mesh right away, it needs neighbor data
+        }
+
+        if (task.result.empty()) {
+            if (task.lod == 0) {
+                auto chunk = m_storage.getChunk(key.x, key.y, key.z);
+                if (chunk) chunk->markClean();
             }
             continue;
         }
 
-        rd.vertexCount = static_cast<uint32_t>(task.result.vertices.size());
-        rd.indexCount  = static_cast<uint32_t>(task.result.indices.size());
-        rd.aabb = buildAABB(key.x, key.y, key.z);
-        rd.valid = true;
-        
-        if (rd.fadeStartTime == 0.0f) {
-            rd.fadeStartTime = currentTime;
-        }
+        // Voxel vertices are already generated in local chunk space [0, CHUNK_SIZE]!
+        // No worldBias shifting needed. The position is sent per-chunk via PushConstants.
 
         gfx::GeometryManager::UploadRequest req;
-        rd.mesh.reset(m_geometryManager.allocateMeshRaw(rd.vertexCount, rd.indexCount, req, task.result.vertices, task.result.indices));
-        requests.push_back(req);
+        rd.mesh.reset(m_geometryManager.allocateMeshRaw(static_cast<uint32_t>(task.result.vertices.size()), static_cast<uint32_t>(task.result.indices.size()), req, task.result.vertices, task.result.indices));
+        rd.aabb = buildAABB(key.x, key.y, key.z);
+        rd.vertexCount = static_cast<uint32_t>(task.result.vertices.size());
+        rd.indexCount  = static_cast<uint32_t>(task.result.indices.size());
+        rd.valid = true;
+        m_listDirty = true;
+
+        rd.fadeStartTime = currentTime;
 
         m_totalVertices += rd.vertexCount;
         m_totalIndices  += rd.indexCount;
-        m_listDirty = true;
+
+        requests.push_back(req);
+
+        auto chunk = m_storage.getChunk(key.x, key.y, key.z);
+        if (chunk) chunk->markClean();
     }
 
     if (!requests.empty()) {
@@ -396,177 +546,35 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     m_lastRebuildMs = std::chrono::duration<float, std::milli>(t1 - t0).count();
 }
 
-void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& frustum, float currentTime, uint32_t currentFrame) {
-    auto* instances = static_cast<ChunkInstanceData*>(m_instanceMapped[currentFrame]);
-    auto* indirects = static_cast<VkDrawIndexedIndirectCommand*>(m_indirectMapped[currentFrame]);
-
-    fprintf(stderr, "[Cull] Starting cull...\n"); fflush(stderr);
-
-    if (m_listDirty) {
-        fprintf(stderr, "[Cull] m_listDirty is true. Clearing active lists...\n"); fflush(stderr);
-        m_sortedChunks.clear();
-        for (auto& [key, rd] : m_renderData) {
-            if (!rd.valid || !rd.mesh) continue;
-            m_sortedChunks.push_back({key, rd.mesh->getBufferIndex(), m_chunkLOD[key], &rd});
-        }
-        
-        fprintf(stderr, "[Cull] Sorting %zu chunks...\n", m_sortedChunks.size()); fflush(stderr);
-        std::sort(m_sortedChunks.begin(), m_sortedChunks.end(), [](const ChunkDrawCmd& a, const ChunkDrawCmd& b) {
-            if (a.poolIndex != b.poolIndex) return a.poolIndex < b.poolIndex;
-            return a.lod < b.lod; 
-        });
-
-        m_activeBatches.clear();
-        m_activeInstances = 0;
-        m_cpuInstances.clear();
-        m_cpuIndirects.clear();
-
-        fprintf(stderr, "[Cull] Building CPU instances...\n"); fflush(stderr);
-
-        if (!m_sortedChunks.empty()) {
-            m_activeBatches.reserve(m_sortedChunks.size());
-            m_cpuInstances.reserve(m_sortedChunks.size());
-            m_cpuIndirects.reserve(m_sortedChunks.size());
-
-            uint32_t currentPool = m_sortedChunks[0].poolIndex;
-            uint32_t startIdx = 0;
-
-            for (const auto& cmdDraw : m_sortedChunks) {
-                if (cmdDraw.poolIndex != currentPool) {
-                    m_activeBatches.emplace_back(currentPool, startIdx, m_activeInstances - startIdx);
-                    currentPool = cmdDraw.poolIndex;
-                    startIdx = m_activeInstances;
-                }
-
-                auto* rd = cmdDraw.rd;
-                uint32_t idx = m_activeInstances++;
-
-                fprintf(stderr, "  [Loop] Iter %u, pool %u, rd: %p\n", idx, currentPool, (void*)rd); fflush(stderr);
-
-                ChunkInstanceData inst{};
-                inst.posX = static_cast<float>(cmdDraw.key.x * CHUNK_SIZE);
-                inst.posY = static_cast<float>(cmdDraw.key.y * CHUNK_SIZE);
-                inst.posZ = static_cast<float>(cmdDraw.key.z * CHUNK_SIZE);
-                inst.fadeProgress = 1.0f; 
-                
-                fprintf(stderr, "  [Loop] Pushing cpuInstance...\n"); fflush(stderr);
-                m_cpuInstances.push_back(inst);
-
-                VkDrawIndexedIndirectCommand cmdInd{};
-                cmdInd.indexCount    = rd->indexCount;
-                cmdInd.instanceCount = 0; 
-                
-                fprintf(stderr, "  [Loop] Getting mesh offsets from rd->mesh...\n"); fflush(stderr);
-                cmdInd.firstIndex    = rd->mesh->getFirstIndex();
-                cmdInd.vertexOffset  = rd->mesh->getVertexOffset();
-                cmdInd.firstInstance = idx; 
-                
-                fprintf(stderr, "  [Loop] Pushing cpuIndirect...\n"); fflush(stderr);
-                m_cpuIndirects.push_back(cmdInd);
-            }
-            fprintf(stderr, "  [Loop] Exited loop. Pushing active batch...\n"); fflush(stderr);
-            m_activeBatches.emplace_back(currentPool, startIdx, m_activeInstances - startIdx);
-            fprintf(stderr, "  [Loop] Active batch pushed.\n"); fflush(stderr);
-        }
-        
-        fprintf(stderr, "[Cull] Marking dirty for all frames...\n"); fflush(stderr);
-        for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) m_gpuBuffersDirty[i] = true;
-        m_listDirty = false;
-        
-        fprintf(stderr, "[Cull] m_listDirty completed.\n"); fflush(stderr);
-    }
-
-    if (m_activeInstances == 0) return;
-
-    fprintf(stderr, "[Cull] instances ptr: %p, indirects ptr: %p\n", (void*)instances, (void*)indirects);
-    fflush(stderr);
-
-    if (m_gpuBuffersDirty[currentFrame]) {
-        if (!m_cpuInstances.empty()) {
-            memcpy(instances, m_cpuInstances.data(), m_activeInstances * sizeof(ChunkInstanceData));
-            memcpy(indirects, m_cpuIndirects.data(), m_activeInstances * sizeof(VkDrawIndexedIndirectCommand));
-        }
-        m_gpuBuffersDirty[currentFrame] = false;
-    }
-
-    for (size_t i = 0; i < m_activeInstances; i++) {
-        instances[i].fadeProgress = std::clamp((currentTime - m_sortedChunks[i].rd->fadeStartTime) / 1.0f, 0.0f, 1.0f);
-    }
-
-    fprintf(stderr, "[Cull] Binding pipeline...\n"); fflush(stderr);
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipeline);
-
-    fprintf(stderr, "[Cull] Binding descriptor sets...\n"); fflush(stderr);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipelineLayout, 0, 1, &m_descriptorSets[currentFrame], 0, nullptr);
-
-    struct ComputePushConstants {
-        float planes[24];
-        uint32_t count;
-    } pc;
-
-    const auto& frustumPlanes = frustum.getPlanes();
-    for (int i = 0; i < 6; i++) {
-        pc.planes[i * 4 + 0] = frustumPlanes[i].normal.x;
-        pc.planes[i * 4 + 1] = frustumPlanes[i].normal.y;
-        pc.planes[i * 4 + 2] = frustumPlanes[i].normal.z;
-        pc.planes[i * 4 + 3] = frustumPlanes[i].d;
-    }
-    pc.count = m_activeInstances;
-
-    fprintf(stderr, "[Cull] Pushing constants...\n"); fflush(stderr);
-    vkCmdPushConstants(cmd, m_computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &pc);
-
-    uint32_t groupCountX = (m_activeInstances + 63) / 64;
-    fprintf(stderr, "[Cull] Dispatching compute (groups: %u)...\n", groupCountX); fflush(stderr);
-    vkCmdDispatch(cmd, groupCountX, 1, 1);
-
-    VkMemoryBarrier2 barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
-    barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-    barrier.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT;
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
-    barrier.dstAccessMask = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
-
-    VkDependencyInfo depInfo{};
-    depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    depInfo.memoryBarrierCount = 1;
-    depInfo.pMemoryBarriers = &barrier;
-
-    fprintf(stderr, "[Cull] Submitting barrier...\n"); fflush(stderr);
-    vkCmdPipelineBarrier2(cmd, &depInfo);
-    fprintf(stderr, "[Cull] Done.\n"); fflush(stderr);
-}
-
-void ChunkRenderer::render(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
-    m_visibleCount    = m_activeInstances; 
-    m_culledCount     = 0; 
-    m_visibleVertices = 0; // GPU culling hides this info unless parsed back
-
-    if (m_activeInstances == 0) return;
-
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &m_descriptorSets[currentFrame], 0, nullptr);
-
-    VkBuffer indirectBuf = m_indirectBuffers[currentFrame]->getBuffer();
-
-    for (const auto& batch : m_activeBatches) {
-        if (batch.count == 0) continue;
-        m_geometryManager.bindPool(cmd, batch.poolIndex);
-        
-        VkDeviceSize offset = batch.startIdx * sizeof(VkDrawIndexedIndirectCommand);
-        vkCmdDrawIndexedIndirect(cmd, indirectBuf, offset, batch.count, sizeof(VkDrawIndexedIndirectCommand));
-    }
-}
-
-void ChunkRenderer::waitAllWorkers() {
-    m_meshWorker.waitAll();
-}
 
 void ChunkRenderer::removeChunk(const IVec3Key& key) {
     auto it = m_renderData.find(key);
     if (it != m_renderData.end()) {
-        auto& rd = it->second;
+        ChunkRenderData& rd = it->second;
         if (rd.mesh) {
-            uint32_t vOff = rd.mesh->getVertexOffset();
+            int32_t  vOff = rd.mesh->getVertexOffset();
+            uint32_t iOff = rd.mesh->getFirstIndex();
+            m_geometryManager.freeMesh(vOff, iOff, 
+                rd.vertexCount * sizeof(VoxelVertex), rd.indexCount * sizeof(uint32_t), sizeof(VoxelVertex), rd.mesh->getBufferIndex());
+            m_totalVertices -= rd.vertexCount;
+            m_totalIndices  -= rd.indexCount;
+        }
+        m_renderData.erase(it);
+    }
+    m_chunkLOD.erase(key);
+    m_dirtyPending.erase(key);
+    m_listDirty = true;
+}
+
+void ChunkRenderer::unloadMeshOnly(const IVec3Key& key) {
+    // Tier-3: звільняємо GPU пам'ять, але залишаємо LOD_EVICTED у m_chunkLOD.
+    // Це блокує LOD-логіку від повторного markDirty, поки чанк не повернеться
+    // у зону видимості (Zone 2 або Tier-1/2) та не отримає реальний LOD.
+    auto it = m_renderData.find(key);
+    if (it != m_renderData.end()) {
+        ChunkRenderData& rd = it->second;
+        if (rd.mesh) {
+            int32_t  vOff = rd.mesh->getVertexOffset();
             uint32_t iOff = rd.mesh->getFirstIndex();
             m_geometryManager.freeMesh(vOff, iOff,
                 rd.vertexCount * sizeof(VoxelVertex), rd.indexCount * sizeof(uint32_t), sizeof(VoxelVertex), rd.mesh->getBufferIndex());
@@ -576,26 +584,12 @@ void ChunkRenderer::removeChunk(const IVec3Key& key) {
         m_renderData.erase(it);
         m_listDirty = true;
     }
-    m_chunkLOD.erase(key);
+    // Ключова відмінність від removeChunk: ставимо sentinel LOD_EVICTED,
+    // а не erase — щоб updateCamera знала "цей чанк вивантажено свідомо".
+    m_chunkLOD[key] = LOD_EVICTED;
+    m_dirtyPending.erase(key);
 }
 
-void ChunkRenderer::unloadMeshOnly(const IVec3Key& key) {
-    auto it = m_renderData.find(key);
-    if (it != m_renderData.end()) {
-        auto& rd = it->second;
-        if (rd.mesh) {
-            uint32_t vOff = rd.mesh->getVertexOffset();
-            uint32_t iOff = rd.mesh->getFirstIndex();
-            m_geometryManager.freeMesh(vOff, iOff,
-                rd.vertexCount * sizeof(VoxelVertex), rd.indexCount * sizeof(uint32_t), sizeof(VoxelVertex), rd.mesh->getBufferIndex());
-            m_totalVertices -= rd.vertexCount;
-            m_totalIndices  -= rd.indexCount;
-        }
-        rd.valid = false;
-        rd.mesh.reset();
-        m_listDirty = true;
-    }
-    m_chunkLOD[key] = LOD_EVICTED;
-}
+
 
 } // namespace world
