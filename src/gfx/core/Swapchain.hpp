@@ -14,14 +14,17 @@ public:
     void cleanup();
     void recreate();
 
+    void setVSync(bool vsync);
+    bool getVSync() const { return m_vsync; }
+
     VkSwapchainKHR getHandle() const { return m_swapchain; }
     VkFormat getImageFormat() const { return m_swapchainImageFormat; }
     VkExtent2D getExtent() const { return m_swapchainExtent; }
     const std::vector<VkImageView>& getImageViews() const { return m_swapchainImageViews; }
     const std::vector<VkImage>& getImages() const { return m_swapchainImages; }
 
-    VkImage getDepthImage() const { return m_depthImage; }
-    VkImageView getDepthImageView() const { return m_depthImageView; }
+    VkImage getDepthImage(uint32_t index) const { return m_depthImages[index]; }
+    VkImageView getDepthImageView(uint32_t index) const { return m_depthImageViews[index]; }
     VkFormat getDepthFormat() const { return m_depthFormat; }
 
 private:
@@ -42,9 +45,11 @@ private:
     VkFormat m_swapchainImageFormat;
     VkExtent2D m_swapchainExtent;
 
-    VkImage m_depthImage = VK_NULL_HANDLE;
-    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
-    VkImageView m_depthImageView = VK_NULL_HANDLE;
+    bool m_vsync = false;
+
+    std::vector<VkImage> m_depthImages;
+    std::vector<VkDeviceMemory> m_depthImageMemories;
+    std::vector<VkImageView> m_depthImageViews;
     VkFormat m_depthFormat;
 };
 

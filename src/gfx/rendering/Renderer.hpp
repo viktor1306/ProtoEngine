@@ -24,12 +24,14 @@ public:
     VkCommandBuffer beginFrame();
     void beginShadowPass(VkCommandBuffer cmd);
     void endShadowPass  (VkCommandBuffer cmd);
+    void beginDepthPrePass(VkCommandBuffer cmd);
+    void endDepthPrePass  (VkCommandBuffer cmd);
     void beginMainPass  (VkCommandBuffer cmd);
     void endMainPass    (VkCommandBuffer cmd);
     void endFrame       (VkCommandBuffer cmd);
 
     VkDescriptorSetLayout getDescriptorSetLayout() const { return m_descriptorSetLayout; }
-    VkDescriptorSet       getDescriptorSet()       const { return m_descriptorSet; }
+    VkDescriptorSet       getDescriptorSet(uint32_t frame) const { return m_descriptorSets[frame]; }
     uint32_t              getCurrentFrameIndex()   const { return m_currentFrame; }
     float                 getAspectRatio()         const {
         auto ext = m_swapchain.getExtent();
@@ -37,6 +39,8 @@ public:
     }
     Swapchain&      getSwapchain()      { return m_swapchain; }
     BindlessSystem& getBindlessSystem() { return m_bindlessSystem; }
+
+    double getGpuFrameTimeMs() const { return m_gpuFrameTimeMs; }
 
     void updateDescriptorSet();
     void reloadShaders();
@@ -56,7 +60,10 @@ private:
 
     VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     VkDescriptorPool      m_descriptorPool      = VK_NULL_HANDLE;
-    VkDescriptorSet       m_descriptorSet       = VK_NULL_HANDLE;
+    std::vector<VkDescriptorSet> m_descriptorSets;
+
+    VkQueryPool           m_queryPool           = VK_NULL_HANDLE;
+    double                m_gpuFrameTimeMs      = 0.0;
 
     uint32_t m_currentFrame = 0;
     uint32_t m_imageIndex   = 0;

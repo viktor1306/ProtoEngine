@@ -24,9 +24,12 @@ void Swapchain::create() {
 void Swapchain::cleanup() {
     VkDevice device = m_context.getDevice();
 
-    if (m_depthImageView != VK_NULL_HANDLE) { vkDestroyImageView(device, m_depthImageView, nullptr); m_depthImageView = VK_NULL_HANDLE; }
-    if (m_depthImage != VK_NULL_HANDLE) { vkDestroyImage(device, m_depthImage, nullptr); m_depthImage = VK_NULL_HANDLE; }
-    if (m_depthImageMemory != VK_NULL_HANDLE) { vkFreeMemory(device, m_depthImageMemory, nullptr); m_depthImageMemory = VK_NULL_HANDLE; }
+    for (auto v : m_depthImageViews) vkDestroyImageView(device, v, nullptr);
+    for (auto i : m_depthImages) vkDestroyImage(device, i, nullptr);
+    for (auto m : m_depthImageMemories) vkFreeMemory(device, m, nullptr);
+    m_depthImageViews.clear();
+    m_depthImages.clear();
+    m_depthImageMemories.clear();
 
     for (auto imageView : m_swapchainImageViews)
         vkDestroyImageView(device, imageView, nullptr);
@@ -41,6 +44,13 @@ void Swapchain::recreate() {
     vkDeviceWaitIdle(m_context.getDevice());
     cleanup();
     create();
+}
+
+void Swapchain::setVSync(bool vsync) {
+    if (m_vsync != vsync) {
+        m_vsync = vsync;
+        recreate();
+    }
 }
 
 void Swapchain::createSwapchain() {
@@ -115,9 +125,14 @@ VkSurfaceFormatKHR Swapchain::chooseSwapSurfaceFormat(const std::vector<VkSurfac
 }
 
 VkPresentModeKHR Swapchain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
-    for (const auto& m : availablePresentModes)
-        if (m == VK_PRESENT_MODE_MAILBOX_KHR) return m;
-    return VK_PRESENT_MODE_FIFO_KHR;
+    if (m_vsync) {
+        for (const auto& m : availablePresentModes)
+            if (m == VK_PRESENT_MODE_FIFO_KHR) return m;
+    } else {
+        for (const auto& m : availablePresentModes)
+            if (m == VK_PRESENT_MODE_MAILBOX_KHR) return m;
+    }
+    return VK_PRESENT_MODE_FIFO_KHR; // Fallback
 }
 
 VkExtent2D Swapchain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
@@ -132,43 +147,50 @@ void Swapchain::createDepthResources() {
     m_depthFormat = m_context.findDepthFormat();
     VkExtent2D extent = m_swapchainExtent;
 
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent = {extent.width, extent.height, 1};
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = m_depthFormat;
-    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    size_t count = 3; // MAX_FRAMES_IN_FLIGHT
+    m_depthImages.resize(count);
+    m_depthImageMemories.resize(count);
+    m_depthImageViews.resize(count);
 
-    if (vkCreateImage(m_context.getDevice(), &imageInfo, nullptr, &m_depthImage) != VK_SUCCESS)
-        throw std::runtime_error("failed to create depth image!");
+    for (size_t i = 0; i < count; i++) {
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.extent = {extent.width, extent.height, 1};
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.format = m_depthFormat;
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(m_context.getDevice(), m_depthImage, &memRequirements);
+        if (vkCreateImage(m_context.getDevice(), &imageInfo, nullptr, &m_depthImages[i]) != VK_SUCCESS)
+            throw std::runtime_error("failed to create depth image!");
 
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = m_context.findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(m_context.getDevice(), m_depthImages[i], &memRequirements);
 
-    if (vkAllocateMemory(m_context.getDevice(), &allocInfo, nullptr, &m_depthImageMemory) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate depth image memory!");
-    vkBindImageMemory(m_context.getDevice(), m_depthImage, m_depthImageMemory, 0);
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = m_context.findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = m_depthImage;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = m_depthFormat;
-    viewInfo.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
+        if (vkAllocateMemory(m_context.getDevice(), &allocInfo, nullptr, &m_depthImageMemories[i]) != VK_SUCCESS)
+            throw std::runtime_error("failed to allocate depth image memory!");
+        vkBindImageMemory(m_context.getDevice(), m_depthImages[i], m_depthImageMemories[i], 0);
 
-    if (vkCreateImageView(m_context.getDevice(), &viewInfo, nullptr, &m_depthImageView) != VK_SUCCESS)
-        throw std::runtime_error("failed to create depth image view!");
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = m_depthImages[i];
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = m_depthFormat;
+        viewInfo.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
+
+        if (vkCreateImageView(m_context.getDevice(), &viewInfo, nullptr, &m_depthImageViews[i]) != VK_SUCCESS)
+            throw std::runtime_error("failed to create depth image view!");
+    }
 }
 
 } // namespace gfx

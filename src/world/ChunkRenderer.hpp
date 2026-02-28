@@ -57,10 +57,11 @@ public:
     // Process async tasks and upload to GPU
     void rebuildDirtyChunks(VkDevice device, float currentTime);
     // GPU Compute Frustum Culling and MDI generation
-    void cull(VkCommandBuffer cmd, const scene::Frustum& frustum, float currentTime, uint32_t currentFrame);
+    void cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, float currentTime, uint32_t currentFrame);
 
-    // Call inside main render pass
-    void render(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
+    // Call inside main render passes
+    void renderCamera(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
+    void renderShadow(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
 
     // LOD
     void setLOD(const IVec3Key& key, int lod);
@@ -129,15 +130,18 @@ private:
     // Hardware resources (MDI + SSBO + Compute)
     VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     VkDescriptorPool      m_descriptorPool      = VK_NULL_HANDLE;
-    VkDescriptorSet       m_descriptorSets[MAX_FRAMES_IN_FLIGHT]{};
+    VkDescriptorSet       m_cameraDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
+    VkDescriptorSet       m_shadowDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
 
     VkPipelineLayout      m_computePipelineLayout = VK_NULL_HANDLE;
     VkPipeline            m_computePipeline       = VK_NULL_HANDLE;
 
     std::unique_ptr<gfx::Buffer> m_instanceBuffers[MAX_FRAMES_IN_FLIGHT];
-    std::unique_ptr<gfx::Buffer> m_indirectBuffers[MAX_FRAMES_IN_FLIGHT];
+    std::unique_ptr<gfx::Buffer> m_cameraIndirectBuffers[MAX_FRAMES_IN_FLIGHT];
+    std::unique_ptr<gfx::Buffer> m_shadowIndirectBuffers[MAX_FRAMES_IN_FLIGHT];
     void* m_instanceMapped[MAX_FRAMES_IN_FLIGHT]{};
-    void* m_indirectMapped[MAX_FRAMES_IN_FLIGHT]{};
+    void* m_cameraIndirectMapped[MAX_FRAMES_IN_FLIGHT]{};
+    void* m_shadowIndirectMapped[MAX_FRAMES_IN_FLIGHT]{};
 
     // Tracks how many commands were dispatched per pool
     struct PoolBatch {

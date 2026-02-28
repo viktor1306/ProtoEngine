@@ -47,12 +47,16 @@ void ChunkManager::rebuildDirtyChunks(VkDevice device, float currentTime) {
     m_renderer.rebuildDirtyChunks(device, currentTime);
 }
 
-void ChunkManager::cull(VkCommandBuffer cmd, const scene::Frustum& frustum, float currentTime, uint32_t currentFrame) {
-    m_renderer.cull(cmd, frustum, currentTime, currentFrame);
+void ChunkManager::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, float currentTime, uint32_t currentFrame) {
+    m_renderer.cull(cmd, cameraFrustum, shadowFrustum, cameraPos, shadowDistanceLimit, currentTime, currentFrame);
 }
 
-void ChunkManager::render(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
-    m_renderer.render(cmd, layout, currentFrame);
+void ChunkManager::renderCamera(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
+    m_renderer.renderCamera(cmd, layout, currentFrame);
+}
+
+void ChunkManager::renderShadow(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
+    m_renderer.renderShadow(cmd, layout, currentFrame);
 }
 
 void ChunkManager::markDirty(int cx, int cy, int cz) {

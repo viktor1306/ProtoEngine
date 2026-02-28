@@ -64,8 +64,8 @@ Pipeline::Pipeline(VulkanContext& context, const PipelineConfig& config)
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
     depthStencil.depthTestEnable  = config.enableDepthTest ? VK_TRUE : VK_FALSE;
-    depthStencil.depthWriteEnable = config.enableDepthTest ? VK_TRUE : VK_FALSE;
-    depthStencil.depthCompareOp   = VK_COMPARE_OP_LESS;
+    depthStencil.depthWriteEnable = config.depthWriteEnable;
+    depthStencil.depthCompareOp   = config.depthCompareOp;
 
     VkPipelineColorBlendAttachmentState blendAttachment{};
     blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT|VK_COLOR_COMPONENT_G_BIT|VK_COLOR_COMPONENT_B_BIT|VK_COLOR_COMPONENT_A_BIT;

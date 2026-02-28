@@ -253,6 +253,17 @@ int main() {
         voxelPipelineConfig.descriptorSetLayouts.push_back(bindlessSystem.getDescriptorSetLayout());
         voxelPipelineConfig.descriptorSetLayouts.push_back(chunkManager.getRenderer().getDescriptorSetLayout());
         voxelPipelineConfig.pushConstantRanges.push_back(voxelPCRange);
+        // ---- Voxel Depth Pre-Pass Pipeline ---------------------------------
+        gfx::PipelineConfig voxelDepthPrePassConfig = voxelPipelineConfig;
+        voxelDepthPrePassConfig.colorAttachmentFormats = {}; // Вимкнути запис кольору
+        voxelDepthPrePassConfig.depthWriteEnable = VK_TRUE;
+        voxelDepthPrePassConfig.depthCompareOp = VK_COMPARE_OP_LESS;
+        gfx::Pipeline voxelDepthPrePass(vulkanContext, voxelDepthPrePassConfig);
+
+        // ---- Voxel Color Pass Pipeline -------------------------------------
+        // Модифікуємо оригінальний конфіг для основного кольорового пасу
+        voxelPipelineConfig.depthWriteEnable = VK_FALSE;
+        voxelPipelineConfig.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         gfx::Pipeline voxelPipeline(vulkanContext, voxelPipelineConfig);
 
         // ---- Voxel Wireframe Pipeline (VK_POLYGON_MODE_LINE) ---------------
@@ -308,6 +319,8 @@ int main() {
         double displayCPU = 0.0;
         size_t displayRAM = 0;
         float statsTimer = 0.0f;
+        double displayCullMs = 0.0;
+        double displayRenderMs = 0.0;
 
         // ---- Palette Data --------------------------------------------------
         gfx::BindlessSystem::PaletteUBO paletteData{};
@@ -493,14 +506,26 @@ int main() {
                     displayRAM = getProcessRAMUsageMB();
                     std::cout << "[Metrics] FPS: " << displayFPS 
                               << " | FrameTime: " << displayMs << " ms"
+                              << " | GPU: " << renderer.getGpuFrameTimeMs() << " ms"
+                              << " | Cull: " << displayCullMs << " ms"
+                              << " | Render: " << displayRenderMs << " ms"
                               << " | CPU: " << displayCPU << "%"
                               << " | RAM: " << displayRAM << " MB\n";
                     statsTimer = 0.0f;
                 }
 
                 ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
-                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "CPU:  %.1f%%", displayCPU);
-                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "RAM:  %zu MB", displayRAM);
+                ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f), "GPU Time:    %.4f ms", renderer.getGpuFrameTimeMs());
+                ImGui::TextColored(ImVec4(0.8f, 0.4f, 1.0f, 1.0f), "Cull (CPU):  %.4f ms", displayCullMs);
+                ImGui::TextColored(ImVec4(0.8f, 0.4f, 1.0f, 1.0f), "Render (CPU):%.4f ms", displayRenderMs);
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "CPU Usage:   %.1f%%", displayCPU);
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "RAM Usage:   %zu MB", displayRAM);
+                ImGui::Separator();
+
+                bool useVSync = swapchain.getVSync();
+                if (ImGui::Checkbox("V-Sync", &useVSync)) {
+                    swapchain.setVSync(useVSync);
+                }
                 ImGui::Separator();
 
                 // ---- Debug Camera Toggle ------------------------------------
@@ -625,12 +650,47 @@ int main() {
                 uint32_t currentFrame = renderer.getCurrentFrameIndex();
 
                 // ---- GPU Compute Culling Pass ------------------------------
+                double cullTime = 0.0;
+                float shadowDistanceLimit = 150.0f; // Limit shadow distance to 150 blocks
                 if (chunkManager.hasMesh()) {
-                    chunkManager.cull(commandBuffer, frustum, currentTime, currentFrame);
+                    auto cullStart = std::chrono::high_resolution_clock::now();
+                    chunkManager.cull(commandBuffer, frustum, frustum, activeCamera.getPosition(), shadowDistanceLimit, currentTime, currentFrame);
+                    auto cullEnd = std::chrono::high_resolution_clock::now();
+                    cullTime = std::chrono::duration<double, std::milli>(cullEnd - cullStart).count();
                 }
+                if (displayCullMs == 0.0) displayCullMs = cullTime;
+                else displayCullMs = displayCullMs * 0.95 + cullTime * 0.05;
 
-                // Shadow pass (empty for now)
+                // ---- Depth Pre-Pass ----------------------------------------
+                double renderTime = 0.0;
+                renderer.beginDepthPrePass(commandBuffer);
+                if (chunkManager.hasMesh()) {
+                    auto renderStart = std::chrono::high_resolution_clock::now();
+                    
+                    voxelDepthPrePass.bind(commandBuffer);
+
+                    VoxelGlobalPush vpc{};
+                    vpc.viewProj         = renderViewProj;
+                    vpc.lightSpaceMatrix = lightSpaceMatrix;
+                    vkCmdPushConstants(commandBuffer, voxelDepthPrePass.getLayout(),
+                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                        0, sizeof(VoxelGlobalPush), &vpc);
+
+                    VkDescriptorSet descriptorSet = renderer.getDescriptorSet(currentFrame);
+                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        voxelDepthPrePass.getLayout(), 0, 1, &descriptorSet, 0, nullptr);
+                    bindlessSystem.bind(commandBuffer, voxelDepthPrePass.getLayout(), currentFrame, 1);
+
+                    chunkManager.renderCamera(commandBuffer, voxelDepthPrePass.getLayout(), currentFrame);
+                    
+                    auto renderEnd = std::chrono::high_resolution_clock::now();
+                    renderTime += std::chrono::duration<double, std::milli>(renderEnd - renderStart).count();
+                }
+                renderer.endDepthPrePass(commandBuffer);
+
+                // Shadow pass (placeholder for voxel shadows)
                 renderer.beginShadowPass(commandBuffer);
+                // if (chunkManager.hasMesh()) chunkManager.renderShadow(commandBuffer, shadowPipelineLayout, currentFrame);
                 renderer.endShadowPass(commandBuffer);
 
                 // Update Palette UBO
@@ -639,16 +699,10 @@ int main() {
                 // Main pass
                 renderer.beginMainPass(commandBuffer);
 
-                // Geometry buffers are now bound per-chunk dynamically
-
-                // Bind descriptor sets (set 0 + set 1)
-                VkDescriptorSet descriptorSet = renderer.getDescriptorSet();
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    voxelPipeline.getLayout(), 0, 1, &descriptorSet, 0, nullptr);
-                bindlessSystem.bind(commandBuffer, voxelPipeline.getLayout(), currentFrame, 1);
-
-                // ---- Voxel World -------------------------------------------
+                // ---- Voxel World (Color Pass) ------------------------------
                 if (chunkManager.hasMesh()) {
+                    auto renderStart = std::chrono::high_resolution_clock::now();
+                    
                     // Select pipeline: wireframe or solid fill
                     gfx::Pipeline& activePipeline = wireframe ? voxelWirePipeline : voxelPipeline;
                     activePipeline.bind(commandBuffer);
@@ -660,8 +714,18 @@ int main() {
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0, sizeof(VoxelGlobalPush), &vpc);
 
-                    chunkManager.render(commandBuffer, activePipeline.getLayout(), currentFrame);
+                    VkDescriptorSet descriptorSet = renderer.getDescriptorSet(currentFrame);
+                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        activePipeline.getLayout(), 0, 1, &descriptorSet, 0, nullptr);
+                    bindlessSystem.bind(commandBuffer, activePipeline.getLayout(), currentFrame, 1);
+
+                    chunkManager.renderCamera(commandBuffer, activePipeline.getLayout(), currentFrame);
+                    
+                    auto renderEnd = std::chrono::high_resolution_clock::now();
+                    renderTime += std::chrono::duration<double, std::milli>(renderEnd - renderStart).count();
                 }
+                if (displayRenderMs == 0.0) displayRenderMs = renderTime;
+                else displayRenderMs = displayRenderMs * 0.95 + renderTime * 0.05;
 
                 // ---- Debug Geometry (frustum + camera marker) ---------------
                 if (debugCameraMode) {

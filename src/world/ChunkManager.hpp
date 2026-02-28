@@ -22,8 +22,9 @@ public:
 
     void rebuildDirtyChunks(VkDevice device, float currentTime);
 
-    void cull(VkCommandBuffer cmd, const scene::Frustum& frustum, float currentTime, uint32_t currentFrame);
-    void render(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
+    void cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, float currentTime, uint32_t currentFrame);
+    void renderCamera(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
+    void renderShadow(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
 
     void markDirty(int cx, int cy, int cz);
     void flushDirty();

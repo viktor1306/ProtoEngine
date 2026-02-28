@@ -13,6 +13,8 @@ struct PipelineConfig {
     std::string vertexShaderPath;
     std::string fragmentShaderPath;
     bool enableDepthTest = true;
+    VkBool32 depthWriteEnable = VK_TRUE;
+    VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
     bool enableBlend     = false;
     VkPrimitiveTopology topology    = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     VkPolygonMode       polygonMode = VK_POLYGON_MODE_FILL;
