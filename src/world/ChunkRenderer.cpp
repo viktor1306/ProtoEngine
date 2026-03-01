@@ -226,15 +226,22 @@ void ChunkRenderer::createBuffers() {
         vkUpdateDescriptorSets(m_context.getDevice(), 4, writes, 0, nullptr);
     }
     std::cout << "[ChunkRenderer] MDI and SSBO Buffers initialized. Max visible chunks: " << MAX_VISIBLE_CHUNKS << "\n";
+
+    // Persistent SSBO: Reserve CPU-side buffers
+    m_cpuInstanceData.reserve(MAX_VISIBLE_CHUNKS);
+    m_fadeStartTimes.reserve(MAX_VISIBLE_CHUNKS);
 }
 
 void ChunkRenderer::clear() {
     m_meshWorker.waitAll();
     m_meshWorker.collect();
     m_renderData.clear();
-    m_chunkLOD.clear();
     m_dirtyPending.clear();
+    m_cpuInstanceData.clear();
+    m_fadeStartTimes.clear();
+    m_sortedChunks.clear();
     m_listDirty = true;
+    m_framesDirty = {true, true, true};
     m_totalVertices = 0;
     m_totalIndices = 0;
     m_visibleCount = 0;
@@ -273,8 +280,8 @@ void ChunkRenderer::flushDirty() {
         if (!chunk) continue;
         chunk->markDirty();
 
-        int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
-        m_chunkLOD[key] = lod;
+        int lod = chunk->m_currentLOD.load(std::memory_order_relaxed);
+        if (lod < 0) lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z); // fallback if unassigned
 
         std::array<const Chunk*, 6> neighbors = {
             m_storage.getChunk(key.x + 1, key.y, key.z),
@@ -345,22 +352,11 @@ void ChunkRenderer::waitAllWorkers() {
     m_meshWorker.waitAll();
 }
 
-void ChunkRenderer::setLOD(const IVec3Key& key, int lod) {
-    auto it = m_chunkLOD.find(key);
-    if (it == m_chunkLOD.end() || it->second != lod) {
-        m_chunkLOD[key] = lod;
-        m_listDirty = true;
-    }
-}
-
-int ChunkRenderer::getLOD(const IVec3Key& key) const {
-    auto it = m_chunkLOD.find(key);
-    return (it != m_chunkLOD.end()) ? it->second : -1;
-}
-
 std::array<uint32_t, 3> ChunkRenderer::getLODCounts() const {
     std::array<uint32_t, 3> out{0, 0, 0};
-    for (const auto& [key, lod] : m_chunkLOD) {
+    for (const auto& ac : m_storage.getChunks()) {
+        if (!ac.chunk) continue;
+        int lod = ac.chunk->m_currentLOD.load(std::memory_order_relaxed);
         if (lod >= 0 && lod <= 2) out[static_cast<size_t>(lod)]++;
     }
     return out;
@@ -373,70 +369,125 @@ bool ChunkRenderer::hasMesh() const {
     return false;
 }
 
-void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, float currentTime, uint32_t currentFrame) {
-    auto* instances = static_cast<ChunkInstanceData*>(m_instanceMapped[currentFrame]);
-    auto* cameraIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_cameraIndirectMapped[currentFrame]);
-    auto* shadowIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_shadowIndirectMapped[currentFrame]);
+// ---------------------------------------------------------------------------
+// Persistent SSBO helpers
+// ---------------------------------------------------------------------------
 
-    // 1. Sort chunks CPU-side for initial Early-Z (LOD 0 -> 2)
-    if (m_listDirty) {
-        m_sortedChunks.clear();
-        for (const auto& [key, rd] : m_renderData) {
-            if (!rd.valid || !rd.mesh) continue;
-            m_sortedChunks.push_back({key, rd.mesh->getBufferIndex(), m_chunkLOD[key]});
-        }
-        
-        std::sort(m_sortedChunks.begin(), m_sortedChunks.end(), [](const ChunkDrawCmd& a, const ChunkDrawCmd& b) {
-            if (a.poolIndex != b.poolIndex) return a.poolIndex < b.poolIndex;
-            return a.lod < b.lod; 
-        });
-        
-        m_listDirty = false;
+void ChunkRenderer::rebuildSortedList() {
+    m_sortedChunks.clear();
+    for (const auto& [key, rd] : m_renderData) {
+        if (!rd.valid || !rd.mesh) continue;
+        Chunk* chunk = m_storage.getChunk(key.x, key.y, key.z);
+        if (!chunk) continue;
+        int lod = chunk->m_currentLOD.load(std::memory_order_relaxed);
+        m_sortedChunks.push_back({key, rd.mesh->getBufferIndex(), lod});
+    }
+    std::sort(m_sortedChunks.begin(), m_sortedChunks.end(), [](const ChunkDrawCmd& a, const ChunkDrawCmd& b) {
+        if (a.poolIndex != b.poolIndex) return a.poolIndex < b.poolIndex;
+        return a.lod < b.lod;
+    });
+}
+
+void ChunkRenderer::rebuildCpuInstanceData() {
+    m_cpuInstanceData.clear();
+    m_fadeStartTimes.clear();
+    m_cpuInstanceData.reserve(m_sortedChunks.size());
+    m_fadeStartTimes.reserve(m_sortedChunks.size());
+
+    for (const auto& cmd : m_sortedChunks) {
+        const auto& rd = m_renderData[cmd.key];
+        ChunkInstanceData inst;
+        inst.posX         = static_cast<float>(cmd.key.x * CHUNK_SIZE);
+        inst.posY         = static_cast<float>(cmd.key.y * CHUNK_SIZE);
+        inst.posZ         = static_cast<float>(cmd.key.z * CHUNK_SIZE);
+        inst.fadeProgress = rd.fadeProgress; // збережено з попереднього стану
+        m_cpuInstanceData.push_back(inst);
+        m_fadeStartTimes.push_back(rd.fadeStartTime);
     }
 
-    m_activeBatches.clear();
-    m_activeInstances = 0;
+    // Всі GPU буфери застаріли — потрібен memcpy для кожного кадру
+    m_framesDirty = {true, true, true};
+}
 
+void ChunkRenderer::rebuildIndirectBuffers(uint32_t frame) {
+    auto* cameraIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_cameraIndirectMapped[frame]);
+    auto* shadowIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_shadowIndirectMapped[frame]);
+
+    m_activeBatches.clear();
     if (m_sortedChunks.empty()) return;
 
-    // 2. Prepare dynamic buffers linearly
     uint32_t currentPool = m_sortedChunks[0].poolIndex;
     uint32_t startIdx = 0;
 
-    for (const auto& cmdDraw : m_sortedChunks) {
-        if (cmdDraw.poolIndex != currentPool) {
-            m_activeBatches.push_back({currentPool, startIdx, m_activeInstances - startIdx});
-            currentPool = cmdDraw.poolIndex;
-            startIdx = m_activeInstances;
+    for (uint32_t idx = 0; idx < static_cast<uint32_t>(m_sortedChunks.size()); ++idx) {
+        const auto& cmd = m_sortedChunks[idx];
+        if (cmd.poolIndex != currentPool) {
+            m_activeBatches.push_back({currentPool, startIdx, idx - startIdx});
+            currentPool = cmd.poolIndex;
+            startIdx = idx;
         }
 
-        const auto& rd = m_renderData[cmdDraw.key];
-        uint32_t idx = m_activeInstances++;
+        const auto& rd = m_renderData[cmd.key];
 
-        // Fill SSBO Data
-        instances[idx].posX = static_cast<float>(cmdDraw.key.x * CHUNK_SIZE);
-        instances[idx].posY = static_cast<float>(cmdDraw.key.y * CHUNK_SIZE);
-        instances[idx].posZ = static_cast<float>(cmdDraw.key.z * CHUNK_SIZE);
-        instances[idx].fadeProgress = std::clamp((currentTime - rd.fadeStartTime) / 1.0f, 0.0f, 1.0f);
-
-        // Fill non-culled Indirect command (Camera)
         cameraIndirects[idx].indexCount    = rd.indexCount;
-        cameraIndirects[idx].instanceCount = 0; // GPU Culling Compute Shader will set to 1 if visible
+        cameraIndirects[idx].instanceCount = 0; // GPU Compute виставить 1, якщо видимий
         cameraIndirects[idx].firstIndex    = rd.mesh->getFirstIndex();
         cameraIndirects[idx].vertexOffset  = rd.mesh->getVertexOffset();
-        cameraIndirects[idx].firstInstance = idx; 
+        cameraIndirects[idx].firstInstance = idx;
 
-        // Fill non-culled Indirect command (Shadow)
         shadowIndirects[idx].indexCount    = rd.indexCount;
-        shadowIndirects[idx].instanceCount = 0; // GPU Culling Compute Shader will set to 1 if visible
+        shadowIndirects[idx].instanceCount = 0;
         shadowIndirects[idx].firstIndex    = rd.mesh->getFirstIndex();
         shadowIndirects[idx].vertexOffset  = rd.mesh->getVertexOffset();
-        shadowIndirects[idx].firstInstance = idx; 
+        shadowIndirects[idx].firstInstance = idx;
     }
-    m_activeBatches.push_back({currentPool, startIdx, m_activeInstances - startIdx});
+    m_activeBatches.push_back({currentPool, startIdx,
+        static_cast<uint32_t>(m_sortedChunks.size()) - startIdx});
+}
 
-    // 3. GPU Compute Shader Dispatch
+void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, float currentTime, uint32_t currentFrame) {
 
+    // 1. Якщо список чанків змінився (load/unload) — перебудуємо sorted list і CPU-буфер.
+    // m_listDirty встановлюється ТІЛЬКИ у rebuildDirtyChunks / removeChunk / unloadMeshOnly.
+    // Після rebuild знімаємо m_listDirty, щоб наступний кадр НЕ перебудовував даремно.
+    if (m_listDirty) {
+        rebuildSortedList();
+        rebuildCpuInstanceData(); // встановлює m_framesDirty = {true, true, true}
+        m_listDirty = false;      // структурна зміна оброблена — більше не будуємо
+    }
+
+    // 2. Оновити fadeProgress на боці CPU (лише незавершені fade — O(нових чанків))
+    bool fadeUpdated = false;
+    for (size_t i = 0; i < m_cpuInstanceData.size(); i++) {
+        float& fp = m_cpuInstanceData[i].fadeProgress;
+        if (fp < 1.0f) {
+            fp = std::clamp((currentTime - m_fadeStartTimes[i]) / 1.0f, 0.0f, 1.0f);
+            fadeUpdated = true;
+        }
+    }
+    if (fadeUpdated) m_framesDirty[currentFrame] = true;
+
+    // 3. Один memcpy якщо GPU-буфер поточного кадру застарів
+    if (m_framesDirty[currentFrame] && !m_cpuInstanceData.empty()) {
+        size_t sz = m_cpuInstanceData.size() * sizeof(ChunkInstanceData);
+        memcpy(m_instanceMapped[currentFrame], m_cpuInstanceData.data(), sz);
+        rebuildIndirectBuffers(currentFrame);
+        m_framesDirty[currentFrame] = false;
+    }
+
+    m_activeInstances = static_cast<uint32_t>(m_cpuInstanceData.size());
+
+    static int cullLogs = 0;
+    if (cullLogs < 50 && !m_sortedChunks.empty()) {
+        std::cout << "[Cull] renderData: " << m_renderData.size()
+                  << ", sorted: " << m_sortedChunks.size()
+                  << ", active: " << m_activeInstances << "\n";
+        cullLogs++;
+    }
+
+    if (m_activeInstances == 0) return;
+
+    // 4. GPU Compute Shader Dispatch
     struct ComputePush {
         core::math::Vec4 planes[6];
         core::math::Vec4 cameraPosAndLimit;
@@ -452,7 +503,7 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
         const auto& p = cameraFrustum.getPlanes()[i];
         push.planes[i] = core::math::Vec4{p.normal.x, p.normal.y, p.normal.z, p.d};
     }
-    push.cameraPosAndLimit = core::math::Vec4{cameraPos.x, cameraPos.y, cameraPos.z, 0.0f}; // limit=0 -> no shadow distance check
+    push.cameraPosAndLimit = core::math::Vec4{cameraPos.x, cameraPos.y, cameraPos.z, 0.0f};
     push.count = m_activeInstances;
     vkCmdPushConstants(cmd, m_computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePush), &push);
     vkCmdDispatch(cmd, groupCount, 1, 1);
@@ -463,13 +514,12 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
         const auto& p = shadowFrustum.getPlanes()[i];
         push.planes[i] = core::math::Vec4{p.normal.x, p.normal.y, p.normal.z, p.d};
     }
-    push.cameraPosAndLimit = core::math::Vec4{cameraPos.x, cameraPos.y, cameraPos.z, shadowDistanceLimit}; // limits shadow geometry distance
+    push.cameraPosAndLimit = core::math::Vec4{cameraPos.x, cameraPos.y, cameraPos.z, shadowDistanceLimit};
     push.count = m_activeInstances;
     vkCmdPushConstants(cmd, m_computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePush), &push);
     vkCmdDispatch(cmd, groupCount, 1, 1);
 
-
-    // 4. Memory Barrier (Compute Write -> Graphic Indirect Read)
+    // 5. Memory Barrier (Compute Write -> Graphic Indirect Read)
     VkMemoryBarrier2 barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
     barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
@@ -480,7 +530,6 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
     VkDependencyInfo dep{};
     dep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
     dep.memoryBarrierCount = 1;
-    // We only need one global memory barrier for all buffer writes from Compute -> Draw Indirect
     dep.pMemoryBarriers = &barrier;
 
     vkCmdPipelineBarrier2(cmd, &dep);
@@ -529,6 +578,11 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     auto done = m_meshWorker.collect();
     if (done.empty()) return;
 
+    static int logged = 0;
+    if (logged < 5) {
+        std::cout << "[Rebuild] Collected " << done.size() << " tasks from workers.\n";
+    }
+
     std::unordered_map<IVec3Key, MeshTask, IVec3Hash> latestTasks;
     for (auto& task : done) {
         IVec3Key key{task.cx, task.cy, task.cz};
@@ -538,11 +592,21 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
             continue;
         }
 
-        auto lodIt = m_chunkLOD.find(key);
-        int desiredLOD = (lodIt != m_chunkLOD.end()) ? lodIt->second : 0;
+        auto chunk = m_storage.getChunk(key.x, key.y, key.z);
+        int desiredLOD = chunk ? chunk->m_currentLOD.load(std::memory_order_relaxed) : 0;
+        if (logged < 5) {
+            std::cout << "[Rebuild] Task for " << key.x << "," << key.y << "," << key.z 
+                      << " lod=" << task.lod << " desired=" << desiredLOD << "\n";
+        }
         if (task.lod == desiredLOD) {
             latestTasks[key] = std::move(task);
+        } else if (logged < 5) {
+            std::cout << "[Rebuild] -> REJECTED due to LOD mismatch!\n";
         }
+    }
+
+    if (logged < 5) {
+        std::cout << "[Rebuild] " << latestTasks.size() << " latest tasks will be processed.\n";
     }
 
     if (!latestTasks.empty() && device != VK_NULL_HANDLE) {
@@ -555,8 +619,8 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     for (auto& [key, task] : latestTasks) {
 
         if (task.type != MeshTask::Type::GENERATE) {
-            auto lodIt = m_chunkLOD.find(key);
-            int desiredLOD = (lodIt != m_chunkLOD.end()) ? lodIt->second : 0;
+            auto chunk = m_storage.getChunk(key.x, key.y, key.z);
+            int desiredLOD = chunk ? chunk->m_currentLOD.load(std::memory_order_relaxed) : 0;
             if (task.lod != desiredLOD) {
                 continue;
             }
@@ -576,6 +640,7 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
             rd.mesh.reset();
             rd.valid = false;
             m_listDirty = true;
+            m_framesDirty = {true, true, true};
         }
 
         if (task.type == MeshTask::Type::GENERATE) {
@@ -585,6 +650,9 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
         }
 
         if (task.result.empty()) {
+            if (logged < 5) {
+                std::cout << "[Rebuild] -> Task result EMPTY for " << key.x << "," << key.y << "," << key.z << "\n";
+            }
             if (task.lod == 0) {
                 auto chunk = m_storage.getChunk(key.x, key.y, key.z);
                 if (chunk) chunk->markClean();
@@ -601,9 +669,10 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
         rd.vertexCount = static_cast<uint32_t>(task.result.vertices.size());
         rd.indexCount  = static_cast<uint32_t>(task.result.indices.size());
         rd.valid = true;
-        m_listDirty = true;
-
         rd.fadeStartTime = currentTime;
+        rd.fadeProgress  = 0.0f; // новий mesh — fade з 0
+        m_listDirty = true;             // список змінився — потрібен rebuild
+        m_framesDirty = {true, true, true};
 
         m_totalVertices += rd.vertexCount;
         m_totalIndices  += rd.indexCount;
@@ -620,6 +689,11 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
 
     auto t1 = std::chrono::high_resolution_clock::now();
     m_lastRebuildMs = std::chrono::duration<float, std::milli>(t1 - t0).count();
+
+    if (logged < 5) {
+        std::cout << "[Rebuild] Uploaded " << requests.size() << " meshes in " << m_lastRebuildMs << " ms\n";
+        logged++;
+    }
 }
 
 
@@ -636,16 +710,14 @@ void ChunkRenderer::removeChunk(const IVec3Key& key) {
             m_totalIndices  -= rd.indexCount;
         }
         m_renderData.erase(it);
+        m_listDirty = true;
+        m_framesDirty = {true, true, true};
     }
-    m_chunkLOD.erase(key);
     m_dirtyPending.erase(key);
-    m_listDirty = true;
 }
 
 void ChunkRenderer::unloadMeshOnly(const IVec3Key& key) {
     // Tier-3: звільняємо GPU пам'ять, але залишаємо LOD_EVICTED у m_chunkLOD.
-    // Це блокує LOD-логіку від повторного markDirty, поки чанк не повернеться
-    // у зону видимості (Zone 2 або Tier-1/2) та не отримає реальний LOD.
     auto it = m_renderData.find(key);
     if (it != m_renderData.end()) {
         ChunkRenderData& rd = it->second;
@@ -659,10 +731,12 @@ void ChunkRenderer::unloadMeshOnly(const IVec3Key& key) {
         }
         m_renderData.erase(it);
         m_listDirty = true;
+        m_framesDirty = {true, true, true};
     }
     // Ключова відмінність від removeChunk: ставимо sentinel LOD_EVICTED,
     // а не erase — щоб updateCamera знала "цей чанк вивантажено свідомо".
-    m_chunkLOD[key] = LOD_EVICTED;
+    Chunk* chunk = m_storage.getChunk(key.x, key.y, key.z);
+    if (chunk) chunk->m_currentLOD.store(LOD_EVICTED, std::memory_order_relaxed);
     m_dirtyPending.erase(key);
 }
 

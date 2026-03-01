@@ -86,6 +86,10 @@ public:
     // Tracks player edits to avoid destroying chunk data during Tier-4 stream unloads
     std::atomic<bool> m_isModified{false};
 
+    // Current Level of Detail (LOD) assigned by ChunkManager (LODController)
+    // Values: -1 (UNASSIGNED), -2 (EVICTED), or 0, 1, 2...
+    std::atomic<int> m_currentLOD{-1};
+
     // World-space offset of this chunk's (0,0,0) corner (in block units)
     float getWorldOffsetX() const { return static_cast<float>(m_cx * CHUNK_SIZE); }
     float getWorldOffsetY() const { return static_cast<float>(m_cy * CHUNK_SIZE); }

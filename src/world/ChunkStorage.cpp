@@ -130,7 +130,7 @@ void ChunkStorage::generateWorld(int radiusX, int radiusZ, const TerrainConfig& 
                     chunk->fillTerrain(config, &noise);
                     chunk->m_state.store(ChunkState::READY, std::memory_order_release);
                     m_chunkGrid[task.idx] = chunk.get();
-                    m_activeChunks[i] = std::move(chunk);
+                    m_activeChunks[i] = {task.cx, task.cy, task.cz, std::move(chunk)};
                 }
             });
         }
@@ -157,8 +157,8 @@ void ChunkStorage::removeChunk(int cx, int cy, int cz) {
         m_chunkGrid[idx] = nullptr;
         // Remove from active chunks efficiently
         auto it = std::remove_if(m_activeChunks.begin(), m_activeChunks.end(),
-        [cx, cy, cz](const std::unique_ptr<Chunk>& c) {
-            return c && c->getCX() == cx && c->getCY() == cy && c->getCZ() == cz;
+        [cx, cy, cz](const ActiveChunk& ac) {
+            return ac.chunk && ac.cx == cx && ac.cy == cy && ac.cz == cz;
         });
     m_activeChunks.erase(it, m_activeChunks.end());
     }
@@ -177,14 +177,14 @@ void ChunkStorage::removeChunks(const std::vector<IVec3Key>& keys) {
     std::unordered_set<IVec3Key, IVec3Hash> keysToRemove(keys.begin(), keys.end());
 
     auto it = std::remove_if(m_activeChunks.begin(), m_activeChunks.end(),
-        [this, &keysToRemove](std::unique_ptr<Chunk>& c) {
-            if (!c) return true;
-            IVec3Key k{c->getCX(), c->getCY(), c->getCZ()};
+        [this, &keysToRemove](ActiveChunk& ac) {
+            if (!ac.chunk) return true;
+            IVec3Key k{ac.cx, ac.cy, ac.cz};
             if (keysToRemove.find(k) != keysToRemove.end()) {
                 // RAM Cache Intercept: Preserve modified chunks
-                if (c->m_isModified.load(std::memory_order_relaxed)) {
+                if (ac.chunk->m_isModified.load(std::memory_order_relaxed)) {
                     std::lock_guard<std::mutex> lock(m_cacheMutex);
-                    m_dirtyCache[k] = std::move(c);
+                    m_dirtyCache[k] = std::move(ac.chunk);
                 }
                 return true;
             }
@@ -250,7 +250,7 @@ void ChunkStorage::createChunkIfMissing(int cx, int cy, int cz, const TerrainCon
         if (cachedChunk) {
             Chunk* rawPtr = cachedChunk.get();
             m_chunkGrid[idx] = rawPtr;
-            m_activeChunks.push_back(std::move(cachedChunk));
+            m_activeChunks.push_back({cx, cy, cz, std::move(cachedChunk)});
             
             // The chunk is already populated from the cache.
             // Do NOT call submitGenerateTaskHigh, because that forces a GENERATE task 
@@ -265,7 +265,7 @@ void ChunkStorage::createChunkIfMissing(int cx, int cy, int cz, const TerrainCon
 
         Chunk* rawPtr = chunk.get();
         m_chunkGrid[idx] = rawPtr;
-        m_activeChunks.push_back(std::move(chunk));
+        m_activeChunks.push_back({cx, cy, cz, std::move(chunk)});
 
         // Immediately submit a low-priority background generation task.
         ChunkState expected = ChunkState::UNGENERATED;

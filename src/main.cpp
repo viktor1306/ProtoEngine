@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <windows.h>
 #include <psapi.h>
+#include <timeapi.h>
 
 #include "core/Timer.hpp"
 #include "core/Window.hpp"
@@ -102,6 +103,8 @@ static size_t getProcessRAMUsageMB() {
 }
 
 int main() {
+    timeBeginPeriod(1);
+
     // Set working directory to project root (parent of bin/)
     {
         wchar_t exePath[MAX_PATH] = {};
@@ -314,13 +317,14 @@ int main() {
 
         // ---- FPS Cap and Smoothing -----------------------------------------
         const double targetFrameTime = 1.0 / 4000.0;
-        float displayFPS = 0.0f;
-        float displayMs = 0.0f;
+        float displayFPS = 0.0f, displayMs = 0.0f;
+        float displayCullMs = 0.0f, displayRenderMs = 0.0f;
         double displayCPU = 0.0;
         size_t displayRAM = 0;
+        float displayAcquireMs = 0.0f, displayWaitFenceMs = 0.0f, displaySubmitMs = 0.0f, displayPresentMs = 0.0f;
+        float displayUpdateMs = 0.0f, displayRecordMs = 0.0f;
+        float displayEventsMs = 0.0f, displayLodMs = 0.0f, displayRebuildMs = 0.0f, displayRaycastMs = 0.0f, displayUiMs = 0.0f;
         float statsTimer = 0.0f;
-        double displayCullMs = 0.0;
-        double displayRenderMs = 0.0;
 
         // ---- Palette Data --------------------------------------------------
         gfx::BindlessSystem::PaletteUBO paletteData{};
@@ -356,6 +360,9 @@ int main() {
             float dt = timer.getDeltaTime();
             float currentTime = static_cast<float>(timer.getTotalTime());
 
+            auto updateStart = std::chrono::high_resolution_clock::now();
+
+            auto t0 = std::chrono::high_resolution_clock::now();
             core::InputManager::get().update();
             window.pollEvents();
 
@@ -365,6 +372,7 @@ int main() {
             }
 
             if (window.shouldClose()) break;
+            auto t1 = std::chrono::high_resolution_clock::now();
 
             camera.setAspectRatio(renderer.getAspectRatio());
             debugCamera.setAspectRatio(renderer.getAspectRatio());
@@ -407,10 +415,12 @@ int main() {
             if (autoLOD) {
                 chunkManager.updateCamera(camera.getPosition(), mainFrustum);
             }
+            auto t2 = std::chrono::high_resolution_clock::now();
 
             // ---- Collect async mesh results (non-blocking) -----------------
             chunkManager.rebuildDirtyChunks(vulkanContext.getDevice(), currentTime);
             geometryManager.update(absoluteFrame);
+            auto t3 = std::chrono::high_resolution_clock::now();
 
             // ---- Raycast from mouse cursor position (screen-to-world) ------
             // Always use the actual mouse cursor position for picking.
@@ -434,6 +444,7 @@ int main() {
                                             rayDir,
                                             reachDistance);
             }
+            auto t4 = std::chrono::high_resolution_clock::now();
 
             // ---- Block interaction (LMB / RMB) — only if ImGui not capturing
             // Use ImGui::IsWindowHovered to avoid acting when cursor is over UI
@@ -492,12 +503,35 @@ int main() {
                 // Smooth FPS display (EWMA filter)
                 float currentMs = timer.getDeltaTimeMs();
                 float currentFPS = (currentMs > 0.0f) ? (1000.0f / currentMs) : 0.0f;
+                float currentAcquireMs = static_cast<float>(renderer.getAcquireTimeMs());
+                float currentWaitFenceMs = static_cast<float>(renderer.getWaitFenceTimeMs());
+                float currentSubmitMs = static_cast<float>(renderer.getSubmitTimeMs());
+                float currentPresentMs = static_cast<float>(renderer.getPresentTimeMs());
+
+                float currentUpdateMs = static_cast<float>(std::chrono::duration<double, std::milli>(t4 - updateStart).count()); // Temp, wait we need to compute the rest
+
+                float currentEventsMs  = static_cast<float>(std::chrono::duration<double, std::milli>(t1 - t0).count());
+                float currentLodMs     = static_cast<float>(std::chrono::duration<double, std::milli>(t2 - t1).count());
+                float currentRebuildMs = static_cast<float>(std::chrono::duration<double, std::milli>(t3 - t2).count());
+                float currentRaycastMs = static_cast<float>(std::chrono::duration<double, std::milli>(t4 - t3).count());
+
                 if (displayFPS == 0.0f) {
-                    displayFPS = currentFPS;
-                    displayMs = currentMs;
+                    displayFPS = currentFPS; displayMs = currentMs;
+                    displayAcquireMs = currentAcquireMs; displayWaitFenceMs = currentWaitFenceMs;
+                    displaySubmitMs = currentSubmitMs; displayPresentMs = currentPresentMs;
+                    displayEventsMs = currentEventsMs; displayLodMs = currentLodMs;
+                    displayRebuildMs = currentRebuildMs; displayRaycastMs = currentRaycastMs;
                 } else {
                     displayFPS = displayFPS * 0.95f + currentFPS * 0.05f;
                     displayMs  = displayMs  * 0.95f + currentMs  * 0.05f;
+                    displayAcquireMs   = displayAcquireMs * 0.95f + currentAcquireMs * 0.05f;
+                    displayWaitFenceMs = displayWaitFenceMs * 0.95f + currentWaitFenceMs * 0.05f;
+                    displaySubmitMs    = displaySubmitMs * 0.95f + currentSubmitMs * 0.05f;
+                    displayPresentMs   = displayPresentMs * 0.95f + currentPresentMs * 0.05f;
+                    displayEventsMs    = displayEventsMs * 0.95f + currentEventsMs * 0.05f;
+                    displayLodMs       = displayLodMs * 0.95f + currentLodMs * 0.05f;
+                    displayRebuildMs   = displayRebuildMs * 0.95f + currentRebuildMs * 0.05f;
+                    displayRaycastMs   = displayRaycastMs * 0.95f + currentRaycastMs * 0.05f;
                 }
 
                 statsTimer += currentMs;
@@ -505,19 +539,36 @@ int main() {
                     displayCPU = getProcessCPUUsage();
                     displayRAM = getProcessRAMUsageMB();
                     std::cout << "[Metrics] FPS: " << displayFPS 
-                              << " | FrameTime: " << displayMs << " ms"
-                              << " | GPU: " << renderer.getGpuFrameTimeMs() << " ms"
-                              << " | Cull: " << displayCullMs << " ms"
-                              << " | Render: " << displayRenderMs << " ms"
+                              << " | Update: " << displayUpdateMs << "ms (Ev:" << displayEventsMs << " LOD:" << displayLodMs << " Reb:" << displayRebuildMs << " Ray:" << displayRaycastMs << " UI:" << displayUiMs << ")"
+                              << " | Record: " << displayRecordMs << "ms"
+                              << " | GPU: " << renderer.getGpuFrameTimeMs() << "ms"
+                              << " | Acquire: " << displayAcquireMs << "ms"
+                              << " | WaitFence: " << displayWaitFenceMs << "ms"
+                              << " | Submit: " << displaySubmitMs << "ms"
+                              << " | Present: " << displayPresentMs << "ms"
+                              << " | Cull: " << displayCullMs << "ms"
+                              << " | Render: " << displayRenderMs << "ms"
                               << " | CPU: " << displayCPU << "%"
-                              << " | RAM: " << displayRAM << " MB\n";
+                              << " | RAM: " << displayRAM << "MB\n";
                     statsTimer = 0.0f;
                 }
 
+                // Removed FPS from text info so the GUI is cleaner
                 ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
                 ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f), "GPU Time:    %.4f ms", renderer.getGpuFrameTimeMs());
+                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "vkAcquire:   %.4f ms", displayAcquireMs);
+                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "vkWaitFence: %.4f ms", displayWaitFenceMs);
+                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "vkQueueSub:  %.4f ms", displaySubmitMs);
+                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "vkPresent:   %.4f ms", displayPresentMs);
+                ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f), "Update Logic:%.4f ms", displayUpdateMs);
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - Events:   %.4f ms", displayEventsMs);
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - LOD Cam:  %.4f ms", displayLodMs);
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - Rebuild:  %.4f ms", displayRebuildMs);
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - Raycast:  %.4f ms", displayRaycastMs);
+                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - ImGui UI: %.4f ms", displayUiMs);
+                ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f), "Render Rec:  %.4f ms", displayRecordMs);
                 ImGui::TextColored(ImVec4(0.8f, 0.4f, 1.0f, 1.0f), "Cull (CPU):  %.4f ms", displayCullMs);
-                ImGui::TextColored(ImVec4(0.8f, 0.4f, 1.0f, 1.0f), "Render (CPU):%.4f ms", displayRenderMs);
+                ImGui::TextColored(ImVec4(0.8f, 0.4f, 1.0f, 1.0f), "Render(CPU): %.4f ms", displayRenderMs);
                 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "CPU Usage:   %.1f%%", displayCPU);
                 ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "RAM Usage:   %zu MB", displayRAM);
                 ImGui::Separator();
@@ -644,7 +695,20 @@ int main() {
                 -10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 20.0f);
             core::math::Mat4 lightSpaceMatrix = lightProj * lightView;
 
+            auto updateEnd = std::chrono::high_resolution_clock::now();
+            double currentUpdateMs = std::chrono::duration<double, std::milli>(updateEnd - updateStart).count();
+            double currentUiMs = std::chrono::duration<double, std::milli>(updateEnd - t4).count();
+
+            if (displayUpdateMs == 0.0f) {
+                displayUpdateMs = static_cast<float>(currentUpdateMs);
+                displayUiMs = static_cast<float>(currentUiMs);
+            } else {
+                displayUpdateMs = displayUpdateMs * 0.95f + static_cast<float>(currentUpdateMs) * 0.05f;
+                displayUiMs = displayUiMs * 0.95f + static_cast<float>(currentUiMs) * 0.05f;
+            }
+
             // ---- Render frame ----------------------------------------------
+            auto recordStart = std::chrono::high_resolution_clock::now();
             VkCommandBuffer commandBuffer = renderer.beginFrame();
             if (commandBuffer) {
                 uint32_t currentFrame = renderer.getCurrentFrameIndex();
@@ -663,6 +727,7 @@ int main() {
 
                 // ---- Depth Pre-Pass ----------------------------------------
                 double renderTime = 0.0;
+                
                 renderer.beginDepthPrePass(commandBuffer);
                 if (chunkManager.hasMesh()) {
                     auto renderStart = std::chrono::high_resolution_clock::now();
@@ -684,9 +749,10 @@ int main() {
                     chunkManager.renderCamera(commandBuffer, voxelDepthPrePass.getLayout(), currentFrame);
                     
                     auto renderEnd = std::chrono::high_resolution_clock::now();
-                    renderTime += std::chrono::duration<double, std::milli>(renderEnd - renderStart).count();
+                    // renderTime += ... (not logged for prepass)
                 }
                 renderer.endDepthPrePass(commandBuffer);
+                
 
                 // Shadow pass (placeholder for voxel shadows)
                 renderer.beginShadowPass(commandBuffer);
@@ -746,16 +812,11 @@ int main() {
                 renderer.endMainPass(commandBuffer);
                 renderer.endFrame(commandBuffer);
             }
+            auto recordEnd = std::chrono::high_resolution_clock::now();
+            double currentRecordMs = std::chrono::duration<double, std::milli>(recordEnd - recordStart).count();
+            if (displayRecordMs == 0.0f) displayRecordMs = static_cast<float>(currentRecordMs);
+            else displayRecordMs = displayRecordMs * 0.95f + static_cast<float>(currentRecordMs) * 0.05f;
 
-            // ---- FPS Limit to 4000 -----------------------------------------
-            // We read deltaTime AGAIN to sleep the rest of the frame, but we don't 
-            // want to accumulate the time we sleep into timer.getDeltaTime() later, 
-            // wait, timer.getDeltaTime() in next frame will include sleep, which is fine!
-            double elapsed = timer.getDeltaTime();
-            if (elapsed < targetFrameTime) {
-                double sleepTime = targetFrameTime - elapsed;
-                std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
-            }
         }
 
         vkDeviceWaitIdle(vulkanContext.getDevice());
@@ -763,8 +824,10 @@ int main() {
     } catch (const std::exception& e) {
         std::cerr << "Fatal Error: " << e.what() << std::endl;
         system("pause");
+        timeEndPeriod(1);
         return EXIT_FAILURE;
     }
 
+    timeEndPeriod(1);
     return EXIT_SUCCESS;
 }

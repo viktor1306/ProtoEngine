@@ -50,8 +50,13 @@ public:
     // Доступ до кешованого конфігу (потрібен ChunkManager для передачі в createChunkIfMissing)
     const TerrainConfig& getCachedConfig() const { return m_cachedConfig; }
 
-    const std::vector<std::unique_ptr<Chunk>>& getChunks() const { return m_activeChunks; }
-    std::vector<std::unique_ptr<Chunk>>&       getChunks()       { return m_activeChunks; }
+    struct ActiveChunk {
+        int cx, cy, cz;
+        std::unique_ptr<Chunk> chunk;
+    };
+
+    const std::vector<ActiveChunk>& getChunks() const { return m_activeChunks; }
+    std::vector<ActiveChunk>&       getChunks()       { return m_activeChunks; }
 
     // World grid bounds (in chunk coords)
     int getMinX() const { return m_minX; }
@@ -62,7 +67,7 @@ public:
     int getMaxZ() const { return m_maxZ; }
 
 private:
-    std::vector<std::unique_ptr<Chunk>> m_activeChunks;
+    std::vector<ActiveChunk> m_activeChunks;
     std::vector<Chunk*> m_chunkGrid;
     
     // --- RAM Cache for modified chunks ---

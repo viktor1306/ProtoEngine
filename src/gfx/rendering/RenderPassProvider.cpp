@@ -126,9 +126,27 @@ void RenderPassProvider::endDepthPrePass(VkCommandBuffer cmd) {
 }
 
 void RenderPassProvider::beginMainPass(VkCommandBuffer cmd, uint32_t swapchainImageIndex, uint32_t currentFrame) {
+    // 1. Sync Color Image
     utils::transitionImageLayout(cmd, m_swapchain.getImages()[swapchainImageIndex],
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-    // Depth image is already in DEPTH_STENCIL_ATTACHMENT_OPTIMAL from Depth Pre-Pass. No transition needed.
+    
+    // 2. Sync Depth Image (Write from Prepass -> Read in Main pass)
+    VkImageMemoryBarrier2 depthBarrier{};
+    depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    depthBarrier.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+    depthBarrier.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    depthBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
+    depthBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    depthBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthBarrier.image = m_swapchain.getDepthImage(currentFrame);
+    depthBarrier.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
+
+    VkDependencyInfo depInfo{};
+    depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    depInfo.imageMemoryBarrierCount = 1;
+    depInfo.pImageMemoryBarriers = &depthBarrier;
+    vkCmdPipelineBarrier2(cmd, &depInfo);
 
     VkRenderingAttachmentInfo colorAtt{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
     colorAtt.imageView   = m_swapchain.getImageViews()[swapchainImageIndex];
@@ -140,7 +158,7 @@ void RenderPassProvider::beginMainPass(VkCommandBuffer cmd, uint32_t swapchainIm
     VkRenderingAttachmentInfo depthAtt{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
     depthAtt.imageView   = m_swapchain.getDepthImageView(currentFrame);
     depthAtt.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depthAtt.loadOp      = VK_ATTACHMENT_LOAD_OP_LOAD; // LOAD instread of CLEAR
+    depthAtt.loadOp      = VK_ATTACHMENT_LOAD_OP_LOAD; // LOAD! We need the prepass depth!
     depthAtt.storeOp     = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAtt.clearValue.depthStencil = {1.0f, 0};
 

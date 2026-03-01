@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <array>
+#include <chrono>
 
 namespace gfx {
 
@@ -86,10 +87,13 @@ void Renderer::updateDescriptorSet() {
 VkCommandBuffer Renderer::beginFrame() {
     m_syncManager->waitAndResetFence(m_currentFrame);
 
+    auto start = std::chrono::high_resolution_clock::now();
     VkResult result = vkAcquireNextImageKHR(
         m_context.getDevice(), m_swapchain.getHandle(), UINT64_MAX,
         m_syncManager->getImageAvailableSemaphore(m_currentFrame),
         VK_NULL_HANDLE, &m_imageIndex);
+    auto end = std::chrono::high_resolution_clock::now();
+    m_acquireTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreateSwapchain();

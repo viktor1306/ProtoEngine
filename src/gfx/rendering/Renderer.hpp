@@ -41,6 +41,11 @@ public:
     BindlessSystem& getBindlessSystem() { return m_bindlessSystem; }
 
     double getGpuFrameTimeMs() const { return m_gpuFrameTimeMs; }
+    
+    double getAcquireTimeMs()   const { return m_acquireTimeMs; }
+    double getWaitFenceTimeMs() const { return m_syncManager->getWaitFenceTimeMs(); }
+    double getSubmitTimeMs()    const { return m_syncManager->getSubmitTimeMs(); }
+    double getPresentTimeMs()   const { return m_syncManager->getPresentTimeMs(); }
 
     void updateDescriptorSet();
     void reloadShaders();
@@ -64,6 +69,7 @@ private:
 
     VkQueryPool           m_queryPool           = VK_NULL_HANDLE;
     double                m_gpuFrameTimeMs      = 0.0;
+    double                m_acquireTimeMs       = 0.0;
 
     uint32_t m_currentFrame = 0;
     uint32_t m_imageIndex   = 0;

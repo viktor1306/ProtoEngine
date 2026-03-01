@@ -26,9 +26,9 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, const TerrainConfig& 
                                       static_cast<float>(radiusX * CHUNK_SIZE));
 
     for (size_t i = 0; i < chunks.size(); ++i) {
-        const auto& chunkPtr = chunks[i];
-        if (!chunkPtr) continue;
-        IVec3Key key{chunkPtr->getCX(), chunkPtr->getCY(), chunkPtr->getCZ()};
+        const auto& ac = chunks[i];
+        if (!ac.chunk) continue;
+        IVec3Key key{ac.cx, ac.cy, ac.cz};
 
         float cx_center = key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
         float cz_center = key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
@@ -37,7 +37,7 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, const TerrainConfig& 
         if (distSq > meshRadius * meshRadius) continue; // let streaming handle it
 
         int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
-        m_renderer.setLOD(key, lod);
+        ac.chunk->m_currentLOD.store(lod, std::memory_order_relaxed);
         m_renderer.markDirty(key.x, key.y, key.z);
     }
     m_renderer.flushDirty();
@@ -167,6 +167,9 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
         }
     }
 
+    static float tZ1 = 0, tZ2 = 0, tZ3 = 0, tCount = 0;
+    auto startAll = std::chrono::high_resolution_clock::now();
+
     // --- STREAMING IN ---
     // Zone 1 (sphere): grid loop within m_unloadRadius — always load nearest columns
     {
@@ -198,6 +201,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             }
         }
     }
+    auto endZ1 = std::chrono::high_resolution_clock::now();
 
     // Zone 2 (frustum): load chunks in camera view direction beyond sphere radius.
     // IMPORTANT: iterate the world GRID BOUNDS (not getChunks()) so that chunks
@@ -244,6 +248,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             }
         }
     }
+    auto endZ2 = std::chrono::high_resolution_clock::now();
 
 
     // --- STREAMING OUT + LOD UPDATE + FRUSTUM LOADING: one unified pass ---
@@ -263,9 +268,9 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
         std::vector<IVec3Key> chunksToFullyRemove;  // voxels + GPU
         std::vector<IVec3Key> chunksMeshOnly;        // GPU mesh only (keep voxels)
 
-        for (const auto& chunkPtr : m_storage.getChunks()) {
-            if (!chunkPtr) continue;
-            IVec3Key key{chunkPtr->getCX(), chunkPtr->getCY(), chunkPtr->getCZ()};
+        for (const auto& ac : m_storage.getChunks()) {
+            if (!ac.chunk) continue;
+            IVec3Key key{ac.cx, ac.cy, ac.cz};
 
             float cx_center = key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
             float cz_center = key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
@@ -279,34 +284,34 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                 continue;
             }
 
-            // Compute AABB for frustum check (to be used by tier 2 & 3)
-            float wy = static_cast<float>(key.y * CHUNK_SIZE);
-            scene::AABB aabb{
-                {cx_center - CHUNK_SIZE / 2.0f, wy,              cz_center - CHUNK_SIZE / 2.0f},
-                {cx_center + CHUNK_SIZE / 2.0f, wy + CHUNK_SIZE, cz_center + CHUNK_SIZE / 2.0f}
-            };
-
             bool inSphere  = (distSq <= unloadRadiusSq);
-            bool inFrustum = frustum.isVisible(aabb);
+            bool inFrustum = false;
 
-            if (!inSphere && !inFrustum) {
-                // Tier 3: beyond sphere and not in view — free GPU mesh, keep voxels
-                // When camera turns back, chunk is still in m_storage.getChunks()
-                // → the LOD update below will re-mesh it next frame.
-                chunksMeshOnly.push_back(key);
-                continue;
+            if (!inSphere) {
+                // Compute AABB for frustum check only if outside sphere
+                float wy = static_cast<float>(key.y * CHUNK_SIZE);
+                scene::AABB aabb{
+                    {cx_center - CHUNK_SIZE / 2.0f, wy,              cz_center - CHUNK_SIZE / 2.0f},
+                    {cx_center + CHUNK_SIZE / 2.0f, wy + CHUNK_SIZE, cz_center + CHUNK_SIZE / 2.0f}
+                };
+                inFrustum = frustum.isVisible(aabb);
+
+                if (!inFrustum) {
+                    // Tier 3: beyond sphere and not in view — free GPU mesh, keep voxels
+                    chunksMeshOnly.push_back(key);
+                    continue;
+                }
             }
 
             // Tier 1 or 2: keep chunk — update LOD / schedule meshing
             // Guard: skip chunks that are not yet fully generated.
             // Meshing UNGENERATED/GENERATING yields empty meshes and wastes worker time.
             {
-                Chunk* chunkPtr = m_storage.getChunk(key.x, key.y, key.z);
-                if (!chunkPtr || chunkPtr->m_state.load(std::memory_order_acquire) != ChunkState::READY)
+                if (ac.chunk->m_state.load(std::memory_order_acquire) != ChunkState::READY)
                     continue;
             }
 
-            int oldLOD = m_renderer.getLOD(key);
+            int oldLOD = ac.chunk->m_currentLOD.load(std::memory_order_relaxed);
 
             // LOD_EVICTED = chunk was intentionally unloaded by Tier-3.
             // It's re-entering the visible zone now, so treat it as unassigned
@@ -317,7 +322,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
 
             int newLOD = m_lodCtrl.calculateLOD(key.x, key.y, key.z, oldLOD);
             if (newLOD != oldLOD) {
-                m_renderer.setLOD(key, newLOD);
+                ac.chunk->m_currentLOD.store(newLOD, std::memory_order_relaxed);
                 m_renderer.markDirty(key.x, key.y, key.z);
                 
                 // --- Smart Skirts: Neighbor Notification ---
@@ -333,7 +338,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             } else if (oldLOD == ChunkRenderer::LOD_UNASSIGNED) {
                 // Voxels exist but no GPU mesh — assign LOD and mesh
                 int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
-                m_renderer.setLOD(key, lod);
+                ac.chunk->m_currentLOD.store(lod, std::memory_order_relaxed);
                 m_renderer.markDirty(key.x, key.y, key.z);
                 
                 // --- Smart Skirts: Initial Gen Notification ---
@@ -379,6 +384,17 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
     }
 
     m_renderer.flushDirty();
+
+    auto endZ3 = std::chrono::high_resolution_clock::now();
+    tZ1 += std::chrono::duration<float, std::milli>(endZ1 - startAll).count();
+    tZ2 += std::chrono::duration<float, std::milli>(endZ2 - endZ1).count();
+    tZ3 += std::chrono::duration<float, std::milli>(endZ3 - endZ2).count();
+    tCount += 1.0f;
+    if (tCount >= 1000.0f) {
+        printf("[ChunkManager::updateCamera (avg of 1000)] Zone 1: %.4f ms | Zone 2 (Map Lookups): %.4f ms | Zone 3 (LOD Update): %.4f ms\n",
+               tZ1 / tCount, tZ2 / tCount, tZ3 / tCount);
+        tZ1 = 0; tZ2 = 0; tZ3 = 0; tCount = 0;
+    }
 }
 
 int ChunkManager::calculateLOD(int cx, int cy, int cz, int currentLOD) const {

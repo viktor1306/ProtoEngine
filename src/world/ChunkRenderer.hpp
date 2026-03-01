@@ -22,7 +22,8 @@ struct ChunkRenderData {
     uint32_t indexCount  = 0;
     scene::AABB aabb;
     bool valid = false;
-    float fadeStartTime = 0.0f;
+    float fadeStartTime  = 0.0f;
+    float fadeProgress   = 0.0f; // cached fade value (зберігається при rebuildCpuInstanceData)
 };
 
 // SSBO layout for chunk instance data
@@ -63,9 +64,7 @@ public:
     void renderCamera(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
     void renderShadow(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
 
-    // LOD
-    void setLOD(const IVec3Key& key, int lod);
-    int  getLOD(const IVec3Key& key) const;
+    // LOD Counters
     std::array<uint32_t, 3> getLODCounts() const;
 
     // Stats
@@ -95,6 +94,11 @@ private:
     void createBuffers();
     void createComputePipeline();
 
+    // Persistent SSBO helpers (викликаються рідко — лише при load/unload)
+    void rebuildSortedList();                    // сортує m_sortedChunks
+    void rebuildCpuInstanceData();               // перебудовує m_cpuInstanceData + встановлює m_framesDirty
+    void rebuildIndirectBuffers(uint32_t frame); // записує indirect cmds для одного frame
+
     // -------------------------------------------------------------
     // Core references
     gfx::VulkanContext&   m_context;
@@ -104,9 +108,7 @@ private:
     MeshWorker            m_meshWorker;
 
     // -------------------------------------------------------------
-    // Main state
     std::unordered_map<IVec3Key, ChunkRenderData, IVec3Hash> m_renderData;
-    std::unordered_map<IVec3Key, int, IVec3Hash>             m_chunkLOD;
     std::unordered_set<IVec3Key, IVec3Hash>                  m_dirtyPending;
 
     // GPU Culling State (Front-to-Back sorting + Persistent MDI generation)
@@ -116,7 +118,22 @@ private:
         int lod;
     };
     std::vector<ChunkDrawCmd> m_sortedChunks;
+
+    // --- Persistent SSBO: CPU-side dense buffer ---
+    // Щільний масив даних чанків на боці CPU. При зміні списку (load/unload)
+    // перебудовується повністю (мікросекунди). У cull() — один memcpy на GPU.
+    std::vector<ChunkInstanceData> m_cpuInstanceData;  // index = позиція в SSBO
+    std::vector<float>             m_fadeStartTimes;    // [i] -> fadeStartTime
+
+    // Structural dirty: true = список чанків змінився (load/unload), потрібен rebuildSortedList + rebuildCpuInstanceData.
+    // Встановлюється в rebuildDirtyChunks / removeChunk / unloadMeshOnly. Знімається в cull() після rebuild.
     bool m_listDirty = true;
+
+    // Per-frame dirty flags.
+    // true = GPU-буфер цього кадру застарів, потрібен memcpy перед dispatch.
+    // При load/unload чанка встановлюємо всі три у true.
+    // У cull() знімаємо прапорець лише для currentFrame після memcpy.
+    std::array<bool, MAX_FRAMES_IN_FLIGHT> m_framesDirty = {true, true, true};
 
     // Statistics
     uint32_t m_totalVertices = 0;

@@ -130,7 +130,7 @@ VkPresentModeKHR Swapchain::chooseSwapPresentMode(const std::vector<VkPresentMod
             if (m == VK_PRESENT_MODE_FIFO_KHR) return m;
     } else {
         for (const auto& m : availablePresentModes)
-            if (m == VK_PRESENT_MODE_MAILBOX_KHR) return m;
+            if (m == VK_PRESENT_MODE_IMMEDIATE_KHR) return m;
     }
     return VK_PRESENT_MODE_FIFO_KHR; // Fallback
 }

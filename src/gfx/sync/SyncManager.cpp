@@ -1,5 +1,6 @@
 #include "SyncManager.hpp"
 #include <stdexcept>
+#include <chrono>
 
 namespace gfx {
 
@@ -33,7 +34,11 @@ SyncManager::~SyncManager() {
 }
 
 void SyncManager::waitAndResetFence(uint32_t frameIndex) {
+    auto start = std::chrono::high_resolution_clock::now();
     vkWaitForFences(m_context.getDevice(), 1, &m_inFlightFences[frameIndex], VK_TRUE, UINT64_MAX);
+    auto end = std::chrono::high_resolution_clock::now();
+    m_waitFenceTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
+
     vkResetFences(m_context.getDevice(), 1, &m_inFlightFences[frameIndex]);
 }
 
@@ -54,7 +59,12 @@ void SyncManager::submitFrame(VkCommandBuffer cmd, uint32_t frameIndex, VkQueue 
     submitInfo.commandBufferInfoCount   = 1; submitInfo.pCommandBufferInfos   = &cmdInfo;
     submitInfo.signalSemaphoreInfoCount = 1; submitInfo.pSignalSemaphoreInfos = &signalSem;
 
-    if (vkQueueSubmit2(graphicsQueue, 1, &submitInfo, m_inFlightFences[frameIndex]) != VK_SUCCESS)
+    auto start = std::chrono::high_resolution_clock::now();
+    VkResult submitResult = vkQueueSubmit2(graphicsQueue, 1, &submitInfo, m_inFlightFences[frameIndex]);
+    auto end = std::chrono::high_resolution_clock::now();
+    m_submitTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
+
+    if (submitResult != VK_SUCCESS)
         throw std::runtime_error("SyncManager: failed to submit command buffer!");
 }
 
@@ -67,7 +77,11 @@ bool SyncManager::presentFrame(uint32_t frameIndex, VkSwapchainKHR swapchain,
     presentInfo.pSwapchains        = &swapchain;
     presentInfo.pImageIndices      = &imageIndex;
 
+    auto start = std::chrono::high_resolution_clock::now();
     VkResult result = vkQueuePresentKHR(presentQueue, &presentInfo);
+    auto end = std::chrono::high_resolution_clock::now();
+    m_presentTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
+
     return (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR);
 }
 

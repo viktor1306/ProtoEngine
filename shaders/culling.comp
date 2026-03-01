@@ -42,8 +42,8 @@ void main() {
         vec3 centerPos = vec3(data.posX + 16.0, data.posY + 16.0, data.posZ + 16.0);
         float dist = distance(centerPos, pc.cameraPosAndLimit.xyz);
         if (dist > pc.cameraPosAndLimit.w) {
-            indirects[idx].instanceCount = 0;
-            return;
+             indirects[idx].instanceCount = 0; 
+             return;
         }
     }
 
@@ -53,6 +53,7 @@ void main() {
     
     // Frustum Culling
     bool visible = true;
+    
     for (int i = 0; i < 6; i++) {
         vec4 plane = pc.planes[i];
         
@@ -66,6 +67,7 @@ void main() {
             break;
         }
     }
+    
 
     // Тільки якщо чанк видимий, ми дозволяємо графічному пайплайну його малювати.
     // Усі інші параметри (indexCount, firstIndex) не чіпаємо - вони встановлені CPU.
