@@ -275,6 +275,7 @@ int main() {
         voxelWireConfig.cullMode    = VK_CULL_MODE_NONE; // show all edges
         gfx::Pipeline voxelWirePipeline(vulkanContext, voxelWireConfig);
 
+
         // ---- Wireframe toggle state ----------------------------------------
         bool wireframe = false;
 
@@ -709,9 +710,11 @@ int main() {
 
             // ---- Render frame ----------------------------------------------
             auto recordStart = std::chrono::high_resolution_clock::now();
+
             VkCommandBuffer commandBuffer = renderer.beginFrame();
             if (commandBuffer) {
                 uint32_t currentFrame = renderer.getCurrentFrameIndex();
+
 
                 // ---- GPU Compute Culling Pass ------------------------------
                 double cullTime = 0.0;
@@ -752,7 +755,7 @@ int main() {
                     // renderTime += ... (not logged for prepass)
                 }
                 renderer.endDepthPrePass(commandBuffer);
-                
+
 
                 // Shadow pass (placeholder for voxel shadows)
                 renderer.beginShadowPass(commandBuffer);

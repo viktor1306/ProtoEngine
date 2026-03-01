@@ -230,6 +230,7 @@ void ChunkRenderer::createBuffers() {
     // Persistent SSBO: Reserve CPU-side buffers
     m_cpuInstanceData.reserve(MAX_VISIBLE_CHUNKS);
     m_fadeStartTimes.reserve(MAX_VISIBLE_CHUNKS);
+    m_activeBatches.reserve(128); // avoid heap allocation during hot rendering loop
 }
 
 void ChunkRenderer::clear() {
@@ -416,6 +417,9 @@ void ChunkRenderer::rebuildIndirectBuffers(uint32_t frame) {
     m_activeBatches.clear();
     if (m_sortedChunks.empty()) return;
 
+    // Pre-reserve to avoid heap allocation during the hot loop
+    m_activeBatches.reserve(m_sortedChunks.size());
+
     uint32_t currentPool = m_sortedChunks[0].poolIndex;
     uint32_t startIdx = 0;
 
@@ -427,10 +431,12 @@ void ChunkRenderer::rebuildIndirectBuffers(uint32_t frame) {
             startIdx = idx;
         }
 
-        const auto& rd = m_renderData[cmd.key];
+        const auto it = m_renderData.find(cmd.key);
+        if (it == m_renderData.end() || !it->second.mesh) continue;
+        const auto& rd = it->second;
 
         cameraIndirects[idx].indexCount    = rd.indexCount;
-        cameraIndirects[idx].instanceCount = 0; // GPU Compute виставить 1, якщо видимий
+        cameraIndirects[idx].instanceCount = 0; // GPU Compute will set to 1 if visible
         cameraIndirects[idx].firstIndex    = rd.mesh->getFirstIndex();
         cameraIndirects[idx].vertexOffset  = rd.mesh->getVertexOffset();
         cameraIndirects[idx].firstInstance = idx;
@@ -453,7 +459,7 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
     if (m_listDirty) {
         rebuildSortedList();
         rebuildCpuInstanceData(); // встановлює m_framesDirty = {true, true, true}
-        m_listDirty = false;      // структурна зміна оброблена — більше не будуємо
+        m_listDirty = false;      // структурна зміна оброблена — більше не будемо
     }
 
     // 2. Оновити fadeProgress на боці CPU (лише незавершені fade — O(нових чанків))
@@ -476,14 +482,6 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
     }
 
     m_activeInstances = static_cast<uint32_t>(m_cpuInstanceData.size());
-
-    static int cullLogs = 0;
-    if (cullLogs < 50 && !m_sortedChunks.empty()) {
-        std::cout << "[Cull] renderData: " << m_renderData.size()
-                  << ", sorted: " << m_sortedChunks.size()
-                  << ", active: " << m_activeInstances << "\n";
-        cullLogs++;
-    }
 
     if (m_activeInstances == 0) return;
 

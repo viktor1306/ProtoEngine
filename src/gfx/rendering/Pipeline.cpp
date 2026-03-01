@@ -80,7 +80,8 @@ Pipeline::Pipeline(VulkanContext& context, const PipelineConfig& config)
     }
 
     VkPipelineColorBlendStateCreateInfo colorBlending{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-    colorBlending.attachmentCount = 1; colorBlending.pAttachments = &blendAttachment;
+    colorBlending.attachmentCount = static_cast<uint32_t>(config.colorAttachmentFormats.size());
+    colorBlending.pAttachments    = colorBlending.attachmentCount > 0 ? &blendAttachment : nullptr;
 
     VkDynamicState dynStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
     VkPipelineDynamicStateCreateInfo dynamicState{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
