@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <filesystem>
+#include <cstdio>
 #include <windows.h>
 #include <psapi.h>
 #include <timeapi.h>
@@ -103,6 +104,11 @@ static size_t getProcessRAMUsageMB() {
 }
 
 int main() {
+    // Flush stdout after every write so log files are always up-to-date
+    // even when output is redirected (full-buffering mode by default).
+    std::cout << std::unitbuf;
+    std::cerr << std::unitbuf;
+
     timeBeginPeriod(1);
 
     // Set working directory to project root (parent of bin/)
@@ -274,7 +280,6 @@ int main() {
         voxelWireConfig.polygonMode = VK_POLYGON_MODE_LINE;
         voxelWireConfig.cullMode    = VK_CULL_MODE_NONE; // show all edges
         gfx::Pipeline voxelWirePipeline(vulkanContext, voxelWireConfig);
-
 
         // ---- Wireframe toggle state ----------------------------------------
         bool wireframe = false;
@@ -533,11 +538,19 @@ int main() {
                 if (statsTimer > 500.0f) {
                     displayCPU = getProcessCPUUsage();
                     displayRAM = getProcessRAMUsageMB();
-                    std::cout << "[Metrics] FPS: " << displayFPS
-                              << " | Visible chunks: " << chunkManager.getVisibleCount()
-                              << " | Visible polys: "  << chunkManager.getVisibleVertices()
-                              << " | GPU: " << renderer.getGpuFrameTimeMs() << "ms"
-                              << " | CPU: " << displayCPU << "% | RAM: " << displayRAM << "MB\n";
+                    const std::string metricsLine =
+                        "[Metrics] FPS: " + std::to_string(displayFPS)
+                        + " | Visible chunks: " + std::to_string(chunkManager.getVisibleCount())
+                        + " | Visible polys: "  + std::to_string(chunkManager.getVisibleVertices())
+                        + " | GPU: " + std::to_string(renderer.getGpuFrameTimeMs()) + "ms"
+                        + " | CPU: " + std::to_string(displayCPU) + "%"
+                        + " | RAM: " + std::to_string(displayRAM) + "MB";
+                    std::cout << metricsLine << std::endl;
+                    // Also write to dedicated metrics file so it's readable regardless of console redirect
+                    if (FILE* f = std::fopen("log_metrics.txt", "a")) {
+                        std::fprintf(f, "%s\n", metricsLine.c_str());
+                        std::fclose(f);
+                    }
                     statsTimer = 0.0f;
                 }
 
@@ -872,7 +885,7 @@ int main() {
 
     } catch (const std::exception& e) {
         std::cerr << "Fatal Error: " << e.what() << std::endl;
-        system("pause");
+        MessageBoxA(nullptr, e.what(), "ProtoEngine — Fatal Error", MB_OK | MB_ICONERROR);
         timeEndPeriod(1);
         return EXIT_FAILURE;
     }

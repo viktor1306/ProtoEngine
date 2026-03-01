@@ -1,125 +1,58 @@
-Window created.
-Vulkan 1.3 Context Initialized Successfully (BDA & VMA Enabled)
-VulkanContext created.
-Swapchain created.
-BindlessSystem created.
-RenderPassProvider: Creating shadow resources (VMA)...
-Renderer initialized (Dynamic Rendering, Sync2, BDA).
-Renderer created.
-[GeometryManager] Allocated new buffer pool [0]: 64 MB vertex + 32 MB index buffers.
-GeometryManager created.
-Checkerboard Texture created (ID=0).
-Font SDF Atlas generated and registered. ID: 1
-TextRenderer created.
-ImGuiManager created.
-[ChunkRenderer] MeshWorker threads: 12
-[ChunkRenderer] MDI and SSBO Buffers initialized. Max visible chunks: 8192
-[ChunkStorage] Generated 441 surface chunks (21x21 grid) in 16.1338 ms (895.678 Mvox/sec). Underground chunks use Sparse Storage (deferred).
-ChunkManager created: 441 chunks, 12 worker threads.
-[ShaderHotReloader] Using compiler: glslc
-[ShaderHotReloader] Watching: shaders/simple.vert
-[ShaderHotReloader] Watching: shaders/simple.frag
-[ShaderHotReloader] Watching: shaders/shadow.vert
-[ShaderHotReloader] Watching: shaders/shadow.frag
-[ShaderHotReloader] Watching: shaders/voxel.vert
-[ShaderHotReloader] Watching: shaders/voxel.frag
-[INIT] Reloader started — building pipelines...
-[INIT] All pipelines created.
-[INIT] Waiting for mesh workers...
-[INIT] Workers done. Rebuilding dirty chunks...
-[INIT] Entering main loop.
 [Metrics] FPS: 736.673157 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.085824ms | CPU: 0.000000% | RAM: 604MB
 [Metrics] FPS: 889.922852 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.087168ms | CPU: 7.550339% | RAM: 604MB
 [Metrics] FPS: 1493.549194 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.080736ms | CPU: 7.815681% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.1094 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0645 ms
 [Metrics] FPS: 1597.366699 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076544ms | CPU: 7.810099% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0867 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0511 ms
 [Metrics] FPS: 1430.363647 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076192ms | CPU: 7.535690% | RAM: 606MB
 [Metrics] FPS: 1572.099243 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075744ms | CPU: 8.340940% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0892 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0518 ms
 [Metrics] FPS: 1567.293335 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.078432ms | CPU: 8.071890% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0946 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0575 ms
 [Metrics] FPS: 1520.307129 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076288ms | CPU: 8.307729% | RAM: 606MB
 [Metrics] FPS: 1352.254517 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076448ms | CPU: 6.249445% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0889 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0520 ms
 [Metrics] FPS: 1525.188843 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075968ms | CPU: 8.069021% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0866 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0510 ms
 [Metrics] FPS: 1511.583618 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075424ms | CPU: 8.308667% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0914 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0546 ms
 [Metrics] FPS: 1341.060425 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075040ms | CPU: 8.075691% | RAM: 606MB
 [Metrics] FPS: 1437.487183 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.073984ms | CPU: 8.327053% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0860 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0519 ms
 [Metrics] FPS: 1671.558350 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076000ms | CPU: 8.333912% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0850 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0503 ms
 [Metrics] FPS: 1627.204712 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075520ms | CPU: 8.318609% | RAM: 606MB
 [Metrics] FPS: 1387.727051 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075808ms | CPU: 8.320593% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0863 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0502 ms
 [Metrics] FPS: 1520.169312 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.074496ms | CPU: 8.352119% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0835 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0505 ms
 [Metrics] FPS: 1513.108521 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075360ms | CPU: 8.317547% | RAM: 606MB
 [Metrics] FPS: 1509.938843 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075904ms | CPU: 7.795335% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0842 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0496 ms
 [Metrics] FPS: 1484.331177 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.074624ms | CPU: 7.813750% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0946 ms | Zone 2 (Map Lookups): 0.0008 ms | Zone 3 (LOD Update): 0.0579 ms
 [Metrics] FPS: 1251.126953 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.074720ms | CPU: 7.029068% | RAM: 606MB
 [Metrics] FPS: 1367.154053 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.074560ms | CPU: 7.534352% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0962 ms | Zone 2 (Map Lookups): 0.0007 ms | Zone 3 (LOD Update): 0.0562 ms
 [Metrics] FPS: 1498.304565 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075040ms | CPU: 7.572716% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0952 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0592 ms
 [Metrics] FPS: 1259.031860 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.074624ms | CPU: 7.006735% | RAM: 606MB
 [Metrics] FPS: 1376.463135 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.074144ms | CPU: 8.088531% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.1000 ms | Zone 2 (Map Lookups): 0.0007 ms | Zone 3 (LOD Update): 0.0578 ms
 [Metrics] FPS: 1473.619019 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075040ms | CPU: 7.792152% | RAM: 606MB
 [Metrics] FPS: 1274.731689 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075424ms | CPU: 7.283361% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.1047 ms | Zone 2 (Map Lookups): 0.0007 ms | Zone 3 (LOD Update): 0.0590 ms
 [Metrics] FPS: 1364.848022 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.077696ms | CPU: 8.051154% | RAM: 606MB
 [Metrics] FPS: 1436.894165 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075296ms | CPU: 7.033668% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.1016 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0561 ms
 [Metrics] FPS: 1545.431885 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075232ms | CPU: 8.069242% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0880 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0530 ms
 [Metrics] FPS: 1601.194946 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075200ms | CPU: 8.068142% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0883 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0544 ms
 [Metrics] FPS: 1403.483276 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076960ms | CPU: 8.322930% | RAM: 606MB
 [Metrics] FPS: 1408.220093 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075520ms | CPU: 7.282108% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0957 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0569 ms
 [Metrics] FPS: 1486.959595 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075552ms | CPU: 8.070105% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.1045 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0584 ms
 [Metrics] FPS: 1168.145386 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075936ms | CPU: 7.814560% | RAM: 606MB
 [Metrics] FPS: 1571.064087 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.074688ms | CPU: 8.051511% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0907 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0554 ms
 [Metrics] FPS: 1329.400269 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.073504ms | CPU: 7.551374% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0975 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0567 ms
 [Metrics] FPS: 1458.528931 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.073920ms | CPU: 7.802500% | RAM: 606MB
 [Metrics] FPS: 1354.452515 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075200ms | CPU: 7.815858% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.1036 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0600 ms
 [Metrics] FPS: 1561.499878 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076032ms | CPU: 8.067986% | RAM: 606MB
 [Metrics] FPS: 1364.931030 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075136ms | CPU: 8.069210% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0964 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0558 ms
 [Metrics] FPS: 1391.236450 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075968ms | CPU: 7.812727% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.1061 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0589 ms
 [Metrics] FPS: 1437.660522 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.074592ms | CPU: 8.579184% | RAM: 606MB
 [Metrics] FPS: 1440.517700 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075456ms | CPU: 8.071498% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.1064 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0593 ms
 [Metrics] FPS: 1413.937866 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076128ms | CPU: 8.329135% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0991 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0575 ms
 [Metrics] FPS: 1574.962524 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075232ms | CPU: 8.319643% | RAM: 606MB
 [Metrics] FPS: 1632.233398 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075552ms | CPU: 8.069519% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0911 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0537 ms
 [Metrics] FPS: 1450.089844 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075168ms | CPU: 8.072382% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0985 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0576 ms
 [Metrics] FPS: 1435.393799 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075136ms | CPU: 8.060928% | RAM: 606MB
 [Metrics] FPS: 1608.885376 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.077536ms | CPU: 8.346467% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0960 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0554 ms
 [Metrics] FPS: 1551.752808 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075264ms | CPU: 8.327952% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0825 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0504 ms
 [Metrics] FPS: 1474.979370 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075968ms | CPU: 8.338840% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0961 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0563 ms
 [Metrics] FPS: 1468.549438 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075456ms | CPU: 7.804006% | RAM: 606MB
 [Metrics] FPS: 1535.925903 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075872ms | CPU: 8.066159% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0951 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0560 ms
 [Metrics] FPS: 1605.665894 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.075680ms | CPU: 8.322358% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0893 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0530 ms
 [Metrics] FPS: 1360.012451 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076224ms | CPU: 8.312547% | RAM: 606MB
 [Metrics] FPS: 1615.727295 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076672ms | CPU: 7.820574% | RAM: 606MB
-[ChunkManager::updateCamera (avg of 1000)] Zone 1: 0.0923 ms | Zone 2 (Map Lookups): 0.0006 ms | Zone 3 (LOD Update): 0.0542 ms
 [Metrics] FPS: 1589.218018 | Visible chunks: 576 | Visible polys: 34216 | GPU: 0.076416ms | CPU: 8.328305% | RAM: 606MB

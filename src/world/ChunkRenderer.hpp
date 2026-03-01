@@ -165,6 +165,11 @@ private:
     // Saved in rebuildIndirectBuffers(), read in cull() BEFORE overwriting.
     uint32_t m_lastDispatchCount[MAX_FRAMES_IN_FLIGHT]{};
 
+    // Throttled readback state: runs every 60 frames.
+    // m_readbackShadow is normal heap RAM — fast for sequential CPU reads.
+    uint32_t                                m_readbackTick   = 0;
+    std::vector<VkDrawIndexedIndirectCommand> m_readbackShadow;
+
     // -------------------------------------------------------------
     // Hardware resources (MDI + SSBO + Compute)
     VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;

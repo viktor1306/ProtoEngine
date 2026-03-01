@@ -496,30 +496,33 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
     }
     if (fadeUpdated) m_framesDirty[currentFrame] = true;
 
-    // 2.5 Non-blocking async GPU readback — count GPU-culled visible chunks.
+    // 2.5 Throttled GPU readback for display counters.
     // -----------------------------------------------------------------------
-    // The fence for `currentFrame` was waited on inside Renderer::beginFrame().
-    // That guarantees the GPU has FINISHED writing instanceCount (0 or 1) into
-    // m_cameraIndirectMapped[currentFrame] during the *previous* use of this
-    // slot (3 frames ago with MAX_FRAMES_IN_FLIGHT=3).  We read it BEFORE
-    // rebuildIndirectBuffers() resets every instanceCount back to 0.
-    // Memory note: VMA_MEMORY_USAGE_CPU_TO_GPU resolves to HOST_COHERENT on
-    // virtually all desktop Vulkan drivers — no vkInvalidate needed.
-    {
+    // CPU_TO_GPU (write-combined) memory is fast to write but SLOW to read:
+    // cache-bypassing reads kill performance at high FPS.
+    // Solution: copy the indirect buffer to a normal heap vector once every
+    // 60 frames via a single memcpy (sequential, cache-friendly), then count.
+    // At 1800 FPS this runs 30x/sec — invisible latency, zero FPS impact.
+    m_readbackTick = (m_readbackTick + 1) % 60;
+    if (m_readbackTick == 0) {
         const uint32_t prevCount = m_lastDispatchCount[currentFrame];
         if (prevCount > 0 && m_cameraIndirectMapped[currentFrame]) {
-            const auto* cmds = static_cast<const VkDrawIndexedIndirectCommand*>(
-                m_cameraIndirectMapped[currentFrame]);
+            // Single sequential memcpy into normal RAM — cache-friendly
+            m_readbackShadow.resize(prevCount);
+            std::memcpy(m_readbackShadow.data(),
+                        m_cameraIndirectMapped[currentFrame],
+                        prevCount * sizeof(VkDrawIndexedIndirectCommand));
+            // Count on normal heap memory — fast
             uint32_t visChunks  = 0;
             uint32_t visIndices = 0;
             for (uint32_t i = 0; i < prevCount; ++i) {
-                if (cmds[i].instanceCount > 0) {
+                if (m_readbackShadow[i].instanceCount > 0) {
                     ++visChunks;
-                    visIndices += cmds[i].indexCount;
+                    visIndices += m_readbackShadow[i].indexCount;
                 }
             }
             m_visibleCount    = visChunks;
-            m_visibleVertices = visIndices / 3; // index count → triangle count
+            m_visibleVertices = visIndices / 3;
             m_culledCount     = prevCount - visChunks;
         }
     }

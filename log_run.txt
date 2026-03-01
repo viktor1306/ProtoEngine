@@ -1,0 +1,25 @@
+Window created.
+Vulkan 1.3 Context Initialized Successfully (BDA & VMA Enabled)
+VulkanContext created.
+Swapchain created.
+BindlessSystem created.
+RenderPassProvider: Creating shadow resources (VMA)...
+Renderer initialized (Dynamic Rendering, Sync2, BDA).
+Renderer created.
+[GeometryManager] Allocated new buffer pool [0]: 64 MB vertex + 32 MB index buffers.
+GeometryManager created.
+Checkerboard Texture created (ID=0).
+Font SDF Atlas generated and registered. ID: 1
+TextRenderer created.
+ImGuiManager created.
+[ChunkRenderer] MeshWorker threads: 12
+[ChunkRenderer] MDI and SSBO Buffers initialized. Max visible chunks: 8192
+[ChunkStorage] Generated 441 surface chunks (21x21 grid) in 14.7639 ms (978.785 Mvox/sec). Underground chunks use Sparse Storage (deferred).
+ChunkManager created: 441 chunks, 12 worker threads.
+[ShaderHotReloader] Using compiler: glslc
+[ShaderHotReloader] Watching: shaders/simple.vert
+[ShaderHotReloader] Watching: shaders/simple.frag
+[ShaderHotReloader] Watching: shaders/shadow.vert
+[ShaderHotReloader] Watching: shaders/shadow.frag
+[ShaderHotReloader] Watching: shaders/voxel.vert
+[ShaderHotReloader] Watching: shaders/voxel.frag
