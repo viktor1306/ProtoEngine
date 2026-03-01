@@ -497,182 +497,206 @@ int main() {
             imguiManager.beginFrame();
             {
                 auto pos = camera.getPosition();
-                ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Once);
-                ImGui::SetNextWindowSize(ImVec2(340, 320), ImGuiCond_Once);
-                ImGui::Begin("Debug Tools");
 
-                // Smooth FPS display (EWMA filter)
-                float currentMs = timer.getDeltaTimeMs();
-                float currentFPS = (currentMs > 0.0f) ? (1000.0f / currentMs) : 0.0f;
-                float currentAcquireMs = static_cast<float>(renderer.getAcquireTimeMs());
+                // ---- Shared EWMA smoothing (runs once per frame, feeds all panels) ----
+                float currentMs        = timer.getDeltaTimeMs();
+                float currentFPS       = (currentMs > 0.0f) ? (1000.0f / currentMs) : 0.0f;
+                float currentAcquireMs   = static_cast<float>(renderer.getAcquireTimeMs());
                 float currentWaitFenceMs = static_cast<float>(renderer.getWaitFenceTimeMs());
-                float currentSubmitMs = static_cast<float>(renderer.getSubmitTimeMs());
-                float currentPresentMs = static_cast<float>(renderer.getPresentTimeMs());
-
-                float currentUpdateMs = static_cast<float>(std::chrono::duration<double, std::milli>(t4 - updateStart).count()); // Temp, wait we need to compute the rest
-
-                float currentEventsMs  = static_cast<float>(std::chrono::duration<double, std::milli>(t1 - t0).count());
-                float currentLodMs     = static_cast<float>(std::chrono::duration<double, std::milli>(t2 - t1).count());
-                float currentRebuildMs = static_cast<float>(std::chrono::duration<double, std::milli>(t3 - t2).count());
-                float currentRaycastMs = static_cast<float>(std::chrono::duration<double, std::milli>(t4 - t3).count());
+                float currentSubmitMs    = static_cast<float>(renderer.getSubmitTimeMs());
+                float currentPresentMs   = static_cast<float>(renderer.getPresentTimeMs());
+                float currentEventsMs    = static_cast<float>(std::chrono::duration<double, std::milli>(t1 - t0).count());
+                float currentLodMs       = static_cast<float>(std::chrono::duration<double, std::milli>(t2 - t1).count());
+                float currentRebuildMs   = static_cast<float>(std::chrono::duration<double, std::milli>(t3 - t2).count());
+                float currentRaycastMs   = static_cast<float>(std::chrono::duration<double, std::milli>(t4 - t3).count());
 
                 if (displayFPS == 0.0f) {
-                    displayFPS = currentFPS; displayMs = currentMs;
-                    displayAcquireMs = currentAcquireMs; displayWaitFenceMs = currentWaitFenceMs;
-                    displaySubmitMs = currentSubmitMs; displayPresentMs = currentPresentMs;
-                    displayEventsMs = currentEventsMs; displayLodMs = currentLodMs;
-                    displayRebuildMs = currentRebuildMs; displayRaycastMs = currentRaycastMs;
+                    displayFPS         = currentFPS;       displayMs          = currentMs;
+                    displayAcquireMs   = currentAcquireMs; displayWaitFenceMs = currentWaitFenceMs;
+                    displaySubmitMs    = currentSubmitMs;  displayPresentMs   = currentPresentMs;
+                    displayEventsMs    = currentEventsMs;  displayLodMs       = currentLodMs;
+                    displayRebuildMs   = currentRebuildMs; displayRaycastMs   = currentRaycastMs;
                 } else {
-                    displayFPS = displayFPS * 0.95f + currentFPS * 0.05f;
-                    displayMs  = displayMs  * 0.95f + currentMs  * 0.05f;
-                    displayAcquireMs   = displayAcquireMs * 0.95f + currentAcquireMs * 0.05f;
+                    displayFPS         = displayFPS         * 0.95f + currentFPS         * 0.05f;
+                    displayMs          = displayMs          * 0.95f + currentMs          * 0.05f;
+                    displayAcquireMs   = displayAcquireMs   * 0.95f + currentAcquireMs   * 0.05f;
                     displayWaitFenceMs = displayWaitFenceMs * 0.95f + currentWaitFenceMs * 0.05f;
-                    displaySubmitMs    = displaySubmitMs * 0.95f + currentSubmitMs * 0.05f;
-                    displayPresentMs   = displayPresentMs * 0.95f + currentPresentMs * 0.05f;
-                    displayEventsMs    = displayEventsMs * 0.95f + currentEventsMs * 0.05f;
-                    displayLodMs       = displayLodMs * 0.95f + currentLodMs * 0.05f;
-                    displayRebuildMs   = displayRebuildMs * 0.95f + currentRebuildMs * 0.05f;
-                    displayRaycastMs   = displayRaycastMs * 0.95f + currentRaycastMs * 0.05f;
+                    displaySubmitMs    = displaySubmitMs    * 0.95f + currentSubmitMs    * 0.05f;
+                    displayPresentMs   = displayPresentMs   * 0.95f + currentPresentMs   * 0.05f;
+                    displayEventsMs    = displayEventsMs    * 0.95f + currentEventsMs    * 0.05f;
+                    displayLodMs       = displayLodMs       * 0.95f + currentLodMs       * 0.05f;
+                    displayRebuildMs   = displayRebuildMs   * 0.95f + currentRebuildMs   * 0.05f;
+                    displayRaycastMs   = displayRaycastMs   * 0.95f + currentRaycastMs   * 0.05f;
                 }
 
                 statsTimer += currentMs;
                 if (statsTimer > 500.0f) {
                     displayCPU = getProcessCPUUsage();
                     displayRAM = getProcessRAMUsageMB();
-                    std::cout << "[Metrics] FPS: " << displayFPS 
-                              << " | Update: " << displayUpdateMs << "ms (Ev:" << displayEventsMs << " LOD:" << displayLodMs << " Reb:" << displayRebuildMs << " Ray:" << displayRaycastMs << " UI:" << displayUiMs << ")"
-                              << " | Record: " << displayRecordMs << "ms"
+                    std::cout << "[Metrics] FPS: " << displayFPS
+                              << " | Visible chunks: " << chunkManager.getVisibleCount()
+                              << " | Visible polys: "  << chunkManager.getVisibleVertices()
                               << " | GPU: " << renderer.getGpuFrameTimeMs() << "ms"
-                              << " | Acquire: " << displayAcquireMs << "ms"
-                              << " | WaitFence: " << displayWaitFenceMs << "ms"
-                              << " | Submit: " << displaySubmitMs << "ms"
-                              << " | Present: " << displayPresentMs << "ms"
-                              << " | Cull: " << displayCullMs << "ms"
-                              << " | Render: " << displayRenderMs << "ms"
-                              << " | CPU: " << displayCPU << "%"
-                              << " | RAM: " << displayRAM << "MB\n";
+                              << " | CPU: " << displayCPU << "% | RAM: " << displayRAM << "MB\n";
                     statsTimer = 0.0f;
                 }
 
-                // Removed FPS from text info so the GUI is cleaner
-                ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
-                ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f), "GPU Time:    %.4f ms", renderer.getGpuFrameTimeMs());
-                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "vkAcquire:   %.4f ms", displayAcquireMs);
-                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "vkWaitFence: %.4f ms", displayWaitFenceMs);
-                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "vkQueueSub:  %.4f ms", displaySubmitMs);
-                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "vkPresent:   %.4f ms", displayPresentMs);
-                ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f), "Update Logic:%.4f ms", displayUpdateMs);
-                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - Events:   %.4f ms", displayEventsMs);
-                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - LOD Cam:  %.4f ms", displayLodMs);
-                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - Rebuild:  %.4f ms", displayRebuildMs);
-                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - Raycast:  %.4f ms", displayRaycastMs);
-                ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.8f, 1.0f), " - ImGui UI: %.4f ms", displayUiMs);
-                ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f), "Render Rec:  %.4f ms", displayRecordMs);
-                ImGui::TextColored(ImVec4(0.8f, 0.4f, 1.0f, 1.0f), "Cull (CPU):  %.4f ms", displayCullMs);
-                ImGui::TextColored(ImVec4(0.8f, 0.4f, 1.0f, 1.0f), "Render(CPU): %.4f ms", displayRenderMs);
-                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "CPU Usage:   %.1f%%", displayCPU);
-                ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "RAM Usage:   %zu MB", displayRAM);
+                // ============================================================
+                // Panel 1 — Performance & Metrics
+                // ============================================================
+                ImVec2 dispSize = ImGui::GetIO().DisplaySize;
+                ImGui::SetNextWindowPos( ImVec2(10.0f, 10.0f), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImVec2(330, 510), ImGuiCond_Once);
+                ImGui::Begin("Performance & Metrics");
+
+                ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
+                    "FPS:  %.1f  (%.2f ms)", displayFPS, displayMs);
                 ImGui::Separator();
 
-                bool useVSync = swapchain.getVSync();
-                if (ImGui::Checkbox("V-Sync", &useVSync)) {
-                    swapchain.setVSync(useVSync);
-                }
-                ImGui::Separator();
-
-                // ---- Debug Camera Toggle ------------------------------------
-                if (debugCameraMode) {
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f,0.3f,0.1f,1.0f));
-                    if (ImGui::Button("[ EXIT Debug Camera ]"))
-                        debugCameraMode = false;
-                    ImGui::PopStyleColor();
-                    auto dbgPos = debugCamera.getPosition();
-                    ImGui::SameLine();
-                    ImGui::TextDisabled("Debug @ %.0f,%.0f,%.0f", dbgPos.x, dbgPos.y, dbgPos.z);
-                    // Sub-toggle: control main camera while in debug view
-                    ImGui::Checkbox("Control Main Camera (WASD)", &controlMainInDebug);
-                    if (controlMainInDebug)
-                        ImGui::TextColored(ImVec4(1,0.8f,0,1), ">> Moving MAIN camera (yellow frustum)");
-                    else
-                        ImGui::TextDisabled("Moving debug camera");
-                } else {
-                    if (ImGui::Button("Enter Debug Camera"))
-                        debugCameraMode = true;
-                    ImGui::SameLine();
-                    ImGui::TextDisabled("(view frustum from outside)");
+                if (ImGui::CollapsingHeader("GPU Times", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f),
+                        "GPU Frame:   %.4f ms", renderer.getGpuFrameTimeMs());
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                        "vkAcquire:   %.4f ms", displayAcquireMs);
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                        "vkWaitFence: %.4f ms", displayWaitFenceMs);
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                        "vkQueueSub:  %.4f ms", displaySubmitMs);
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                        "vkPresent:   %.4f ms", displayPresentMs);
                 }
 
-                ImGui::Separator();
-                ImGui::Text("Camera: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
-                ImGui::Text("Yaw: %.1f  Pitch: %.1f", camera.getYaw(), camera.getPitch());
-                ImGui::Text("Speed:  %.1f m/s  (scroll wheel)", camera.getSpeed());
-                ImGui::Separator();
+                if (ImGui::CollapsingHeader("CPU Times", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f),
+                        "Update total: %.4f ms", displayUpdateMs);
+                    ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.9f, 1.0f),
+                        "  Events:     %.4f ms", displayEventsMs);
+                    ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.9f, 1.0f),
+                        "  LOD Cam:    %.4f ms", displayLodMs);
+                    ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.9f, 1.0f),
+                        "  Rebuild:    %.4f ms", displayRebuildMs);
+                    ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.9f, 1.0f),
+                        "  Raycast:    %.4f ms", displayRaycastMs);
+                    ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.9f, 1.0f),
+                        "  ImGui UI:   %.4f ms", displayUiMs);
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 1.0f, 1.0f),
+                        "Render Rec:   %.4f ms", displayRecordMs);
+                    ImGui::TextColored(ImVec4(0.8f, 0.5f, 1.0f, 1.0f),
+                        "Cull (CPU):   %.4f ms", displayCullMs);
+                    ImGui::TextColored(ImVec4(0.8f, 0.5f, 1.0f, 1.0f),
+                        "Render (CPU): %.4f ms", displayRenderMs);
+                }
 
-                ImGui::Text("--- ChunkManager ---");
-                ImGui::Text("Chunks total:   %u", chunkManager.getChunkCount());
-                ImGui::Text("Visible:        %u", chunkManager.getVisibleCount());
-                ImGui::Text("Culled:         %u", chunkManager.getCulledCount());
-                ImGui::Text("Verts (vis):    %u", chunkManager.getVisibleVertices());
-                ImGui::Text("Verts (total):  %u", chunkManager.getTotalVertices());
-                ImGui::Text("Rebuild:        %.2f ms", chunkManager.getLastRebuildMs());
-                ImGui::Text("Worker threads: %u", chunkManager.getWorkerThreads());
-                ImGui::Text("Pending meshes: %d", chunkManager.getPendingMeshes());
-
-                ImGui::Separator();
-                ImGui::Text("--- LOD Settings ---");
-                ImGui::SliderFloat("LOD0→1 dist",  &chunkManager.getLodDist0(),      16.0f, 1024.0f, "%.0f blk");
-                ImGui::SliderFloat("LOD1→2 dist",  &chunkManager.getLodDist1(),      32.0f, 2048.0f, "%.0f blk");
-                ImGui::SliderFloat("Hysteresis",   &chunkManager.getLodHysteresis(),  0.0f,   64.0f, "%.1f blk");
-                ImGui::SliderFloat("Sphere Radius",     &chunkManager.getUnloadRadius(),  64.0f, 4096.0f, "%.0f blk");
-                ImGui::SliderFloat("Camera View Dist",  &chunkManager.getFrustumRadius(), 64.0f, 8192.0f, "%.0f blk");
-                {
-                    auto lodCounts = chunkManager.getLODCounts();
-                    ImGui::Text("LOD 0 (full):    %u chunks", lodCounts[0]);
-                    ImGui::Text("LOD 1 (half):    %u chunks", lodCounts[1]);
-                    ImGui::Text("LOD 2 (quarter): %u chunks", lodCounts[2]);
+                if (ImGui::CollapsingHeader("System", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f),
+                        "CPU Usage: %.1f%%", displayCPU);
+                    ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f),
+                        "RAM Usage: %zu MB", displayRAM);
                 }
 
                 ImGui::Separator();
-                ImGui::Text("--- World Generation ---");
-                if (ImGui::InputInt("World Radius (Size)", &worldRadius)) {
-                    if (worldRadius < 1) worldRadius = 1;
-                    if (worldRadius > 64) worldRadius = 64; // Здоровий ліміт
-                }
-                if (ImGui::Button("Rebuild World")) {
-                    world::TerrainConfig config{};
-                    config.seed = worldSeed;
-                    chunkManager.generateWorld(worldRadius, worldRadius, config);
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("New Seed")) {
-                    worldSeed = (worldSeed + 1337) % 99999;
-                    world::TerrainConfig config{};
-                    config.seed = worldSeed;
-                    chunkManager.generateWorld(worldRadius, worldRadius, config);
-                }
-
-                ImGui::Separator();
-                ImGui::Text("--- Interaction ---");
-                ImGui::SliderFloat("Reach (m)", &reachDistance, 2.0f, 50.0f);
-                ImGui::SliderInt("Brush Size", &brushSize, 1, 10);
-                ImGui::Text("Brush voxels: %d^3 = %d",
-                    brushSize, brushSize * brushSize * brushSize);
-
-                ImGui::Separator();
-                ImGui::Text("--- Raycaster ---");
-                if (lastRayHit.hit) {
+                if (ImGui::CollapsingHeader("Chunk Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    uint32_t visChunks = chunkManager.getVisibleCount();
+                    uint32_t visPolys  = chunkManager.getVisibleVertices(); // triangles
+                    ImGui::Text("Total chunks:   %u", chunkManager.getChunkCount());
                     ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
-                        "Target: %d, %d, %d",
-                        lastRayHit.voxelX, lastRayHit.voxelY, lastRayHit.voxelZ);
-                    ImGui::Text("Normal: %+d, %+d, %+d",
-                        lastRayHit.normalX, lastRayHit.normalY, lastRayHit.normalZ);
-                    ImGui::Text("Dist:   %.2f m", lastRayHit.distance);
-                    ImGui::TextDisabled("LMB=remove  MMB/F=place  RMB=look");
-                } else {
-                    ImGui::TextDisabled("Target: none (max 10m)");
+                        "Visible (GPU):  %u chunks", visChunks);
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
+                        "Visible polys:  %u tris", visPolys);
+                    ImGui::Text("Culled:         %u", chunkManager.getCulledCount());
+                    ImGui::Text("Total verts:    %u", chunkManager.getTotalVertices());
+                    ImGui::Text("Rebuild:        %.2f ms", chunkManager.getLastRebuildMs());
+                    ImGui::Text("Worker threads: %u", chunkManager.getWorkerThreads());
+                    ImGui::Text("Pending meshes: %d", chunkManager.getPendingMeshes());
+                    auto lodCounts = chunkManager.getLODCounts();
+                    ImGui::Text("  LOD0 full:    %u", lodCounts[0]);
+                    ImGui::Text("  LOD1 half:    %u", lodCounts[1]);
+                    ImGui::Text("  LOD2 quarter: %u", lodCounts[2]);
                 }
-                ImGui::Separator();
-                // Wireframe toggle button (toggles between fill and wireframe)
+
+                ImGui::End(); // Performance & Metrics
+
+                // ============================================================
+                // Panel 2 — World & Camera  (top-right corner)
+                // ============================================================
+                ImGui::SetNextWindowPos( ImVec2(dispSize.x - 340.0f, 10.0f), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImVec2(330, 530), ImGuiCond_Once);
+                ImGui::Begin("World & Camera");
+
+                if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::Text("Pos:   %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
+                    ImGui::Text("Yaw: %.1f  Pitch: %.1f", camera.getYaw(), camera.getPitch());
+                    ImGui::Text("Speed: %.1f m/s  (scroll wheel)", camera.getSpeed());
+                }
+
+                if (ImGui::CollapsingHeader("LOD Settings")) {
+                    ImGui::SliderFloat("LOD0->1 dist",  &chunkManager.getLodDist0(),       16.0f, 1024.0f, "%.0f blk");
+                    ImGui::SliderFloat("LOD1->2 dist",  &chunkManager.getLodDist1(),       32.0f, 2048.0f, "%.0f blk");
+                    ImGui::SliderFloat("Hysteresis",    &chunkManager.getLodHysteresis(),   0.0f,   64.0f, "%.1f blk");
+                    ImGui::SliderFloat("Unload Radius", &chunkManager.getUnloadRadius(),   64.0f, 4096.0f, "%.0f blk");
+                    ImGui::SliderFloat("View Dist",     &chunkManager.getFrustumRadius(),  64.0f, 8192.0f, "%.0f blk");
+                }
+
+                if (ImGui::CollapsingHeader("World Generation", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::Text("Seed: %d", worldSeed);
+                    if (ImGui::InputInt("World Radius", &worldRadius)) {
+                        worldRadius = std::clamp(worldRadius, 1, 64);
+                    }
+                    if (ImGui::Button("Rebuild World")) {
+                        world::TerrainConfig config{};
+                        config.seed = worldSeed;
+                        chunkManager.generateWorld(worldRadius, worldRadius, config);
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("New Seed")) {
+                        worldSeed = (worldSeed + 1337) % 99999;
+                        world::TerrainConfig config{};
+                        config.seed = worldSeed;
+                        chunkManager.generateWorld(worldRadius, worldRadius, config);
+                    }
+                    // --- Phase 2 placeholder ---
+                    ImGui::Spacing();
+                    ImGui::TextDisabled("[ World Scale & Biomes — Phase 2 ]");
+                }
+
+                if (ImGui::CollapsingHeader("Interaction", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::SliderFloat("Reach (m)",  &reachDistance, 2.0f, 50.0f);
+                    ImGui::SliderInt("Brush Size",   &brushSize,     1,    10);
+                    ImGui::Text("Brush voxels: %d^3 = %d",
+                        brushSize, brushSize * brushSize * brushSize);
+                }
+
+                if (ImGui::CollapsingHeader("Raycaster", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    if (lastRayHit.hit) {
+                        ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
+                            "Target: %d, %d, %d",
+                            lastRayHit.voxelX, lastRayHit.voxelY, lastRayHit.voxelZ);
+                        ImGui::Text("Normal: %+d, %+d, %+d",
+                            lastRayHit.normalX, lastRayHit.normalY, lastRayHit.normalZ);
+                        ImGui::Text("Dist:   %.2f m", lastRayHit.distance);
+                        ImGui::TextDisabled("LMB=remove  MMB/F=place  RMB=look");
+                    } else {
+                        ImGui::TextDisabled("No target in range");
+                    }
+                }
+
+                ImGui::End(); // World & Camera
+
+                // ============================================================
+                // Panel 3 — Render & Debug  (bottom-left, starts collapsed)
+                // ============================================================
+                ImGui::SetNextWindowPos( ImVec2(10.0f, dispSize.y - 26.0f), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImVec2(330, 200), ImGuiCond_Once);
+                ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
+                ImGui::Begin("Render & Debug");
+
+                // V-Sync
+                bool useVSync = swapchain.getVSync();
+                if (ImGui::Checkbox("V-Sync", &useVSync))
+                    swapchain.setVSync(useVSync);
+
+                // Wireframe
+                ImGui::SameLine(0.0f, 20.0f);
                 if (wireframe) {
                     ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.8f, 0.4f, 0.1f, 1.0f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.5f, 0.2f, 1.0f));
@@ -682,10 +706,32 @@ int main() {
                 } else {
                     if (ImGui::Button("[W] Wireframe: OFF")) wireframe = true;
                 }
-                ImGui::SameLine();
-                ImGui::TextDisabled("(fillModeNonSolid)");
 
-                ImGui::End();
+                ImGui::Separator();
+
+                // Debug Camera
+                if (debugCameraMode) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.1f, 1.0f));
+                    if (ImGui::Button("[ EXIT Debug Camera ]"))
+                        debugCameraMode = false;
+                    ImGui::PopStyleColor();
+                    auto dbgPos = debugCamera.getPosition();
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("@ %.0f,%.0f,%.0f", dbgPos.x, dbgPos.y, dbgPos.z);
+                    ImGui::Checkbox("Control Main Camera (WASD)", &controlMainInDebug);
+                    if (controlMainInDebug)
+                        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
+                            ">> Moving MAIN camera (yellow frustum)");
+                    else
+                        ImGui::TextDisabled("Moving debug camera");
+                } else {
+                    if (ImGui::Button("Enter Debug Camera"))
+                        debugCameraMode = true;
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("(view frustum from outside)");
+                }
+
+                ImGui::End(); // Render & Debug
             }
 
             // ---- Light matrices --------------------------------------------

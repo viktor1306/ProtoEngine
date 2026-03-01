@@ -21,7 +21,11 @@ struct ChunkRenderData {
     uint32_t vertexCount = 0;
     uint32_t indexCount  = 0;
     scene::AABB aabb;
-    bool valid = false;
+    bool valid     = false;
+    // isEmpty = true:  mesh task returned empty result (all-air or all-solid chunk).
+    // markDirty() silently skips these chunks to prevent cascade re-submissions.
+    // Cleared automatically by forceMarkDirty() on voxel edits.
+    bool isEmpty   = false;
     float fadeStartTime  = 0.0f;
     float fadeProgress   = 0.0f; // cached fade value (зберігається при rebuildCpuInstanceData)
 };
@@ -48,9 +52,20 @@ public:
 
     // Queue updates
     void markDirty(int cx, int cy, int cz);
+    // Same as markDirty but bypasses the isEmpty guard —
+    // must be called when voxel data actually changes (setVoxel).
+    void forceMarkDirty(int cx, int cy, int cz);
     void flushDirty();
     void submitGenerateTaskHigh(Chunk* chunk, const TerrainConfig& config);
     void submitGenerateTaskLow (Chunk* chunk, const TerrainConfig& config); // async streaming
+
+    // Returns true if the last completed mesh task for this chunk produced
+    // zero geometry (all-air / fully-occluded). Neighbour-notification code
+    // in ChunkManager uses this to skip useless cascade dirty-marks.
+    bool isChunkEmpty(const IVec3Key& key) const {
+        auto it = m_renderData.find(key);
+        return it != m_renderData.end() && it->second.isEmpty;
+    }
     
     // Block until all queued worker tasks are finished (use before first frame)
     void waitAllWorkers();
@@ -86,6 +101,9 @@ public:
     // Tier-3: frees GPU mesh only, sets LOD_EVICTED in m_chunkLOD
     // so LOD logic won't re-schedule meshing until chunk re-enters view.
     void unloadMeshOnly(const IVec3Key& key);
+    // Clears the isEmpty flag for a chunk so it will be re-meshed
+    // (used internally by forceMarkDirty).
+    void clearEmptyFlag(int cx, int cy, int cz);
 
 private:
 
@@ -142,6 +160,10 @@ private:
     uint32_t m_culledCount   = 0;
     uint32_t m_visibleVertices = 0;
     float    m_lastRebuildMs = 0.0f;
+
+    // Async GPU readback: how many draw-commands were written per frame slot.
+    // Saved in rebuildIndirectBuffers(), read in cull() BEFORE overwriting.
+    uint32_t m_lastDispatchCount[MAX_FRAMES_IN_FLIGHT]{};
 
     // -------------------------------------------------------------
     // Hardware resources (MDI + SSBO + Compute)

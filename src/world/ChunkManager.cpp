@@ -63,6 +63,10 @@ void ChunkManager::markDirty(int cx, int cy, int cz) {
     m_renderer.markDirty(cx, cy, cz);
 }
 
+void ChunkManager::forceMarkDirty(int cx, int cy, int cz) {
+    m_renderer.forceMarkDirty(cx, cy, cz);
+}
+
 void ChunkManager::flushDirty() {
     m_renderer.flushDirty();
 }
@@ -84,14 +88,17 @@ void ChunkManager::setVoxel(int wx, int wy, int wz, VoxelData v) {
     int cz = (wz >= 0) ? (wz / CHUNK_SIZE) : ((wz - CHUNK_SIZE + 1) / CHUNK_SIZE);
     int lz = wz - cz * CHUNK_SIZE;
 
-    m_renderer.markDirty(cx, cy, cz);
+    // The directly-edited chunk must be re-meshed even if it was previously empty.
+    m_renderer.forceMarkDirty(cx, cy, cz);
 
-    if (lx == 0)              m_renderer.markDirty(cx - 1, cy, cz);
-    if (lx == CHUNK_SIZE - 1) m_renderer.markDirty(cx + 1, cy, cz);
-    if (ly == 0)              m_renderer.markDirty(cx, cy - 1, cz);
-    if (ly == CHUNK_SIZE - 1) m_renderer.markDirty(cx, cy + 1, cz);
-    if (lz == 0)              m_renderer.markDirty(cx, cy, cz - 1);
-    if (lz == CHUNK_SIZE - 1) m_renderer.markDirty(cx, cy, cz + 1);
+    // Neighbours may need skirt updates; forceMarkDirty so that previously-empty
+    // neighbours adjacent to the edit boundary are also re-evaluated.
+    if (lx == 0)              m_renderer.forceMarkDirty(cx - 1, cy, cz);
+    if (lx == CHUNK_SIZE - 1) m_renderer.forceMarkDirty(cx + 1, cy, cz);
+    if (ly == 0)              m_renderer.forceMarkDirty(cx, cy - 1, cz);
+    if (ly == CHUNK_SIZE - 1) m_renderer.forceMarkDirty(cx, cy + 1, cz);
+    if (lz == 0)              m_renderer.forceMarkDirty(cx, cy, cz - 1);
+    if (lz == CHUNK_SIZE - 1) m_renderer.forceMarkDirty(cx, cy, cz + 1);
 }
 
 void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::Frustum& frustum) {
@@ -326,8 +333,9 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                 m_renderer.markDirty(key.x, key.y, key.z);
                 
                 // --- Smart Skirts: Neighbor Notification ---
-                // Коли змінюється LOD чанка, ми МАЄМО оновити сітки його 6 сусідів.
-                // Інакше вони збережуть старі "спідниці" (або дірки) і створять внутрішні стіни назавжди.
+                // When a chunk's LOD changes, neighbours need skirt updates.
+                // markDirty() automatically skips chunks tagged as isEmpty,
+                // preventing cascade re-submissions to known air/solid chunks.
                 if (m_storage.getChunk(key.x + 1, key.y, key.z)) m_renderer.markDirty(key.x + 1, key.y, key.z);
                 if (m_storage.getChunk(key.x - 1, key.y, key.z)) m_renderer.markDirty(key.x - 1, key.y, key.z);
                 if (m_storage.getChunk(key.x, key.y + 1, key.z)) m_renderer.markDirty(key.x, key.y + 1, key.z);
@@ -336,12 +344,14 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                 if (m_storage.getChunk(key.x, key.y, key.z - 1)) m_renderer.markDirty(key.x, key.y, key.z - 1);
 
             } else if (oldLOD == ChunkRenderer::LOD_UNASSIGNED) {
-                // Voxels exist but no GPU mesh — assign LOD and mesh
+                // Voxels exist but no GPU mesh — assign LOD and mesh.
                 int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
                 ac.chunk->m_currentLOD.store(lod, std::memory_order_relaxed);
                 m_renderer.markDirty(key.x, key.y, key.z);
                 
                 // --- Smart Skirts: Initial Gen Notification ---
+                // markDirty() skips isEmpty neighbours automatically, so we do
+                // NOT propagate the cascade into known air/solid underground chunks.
                 if (m_storage.getChunk(key.x + 1, key.y, key.z)) m_renderer.markDirty(key.x + 1, key.y, key.z);
                 if (m_storage.getChunk(key.x - 1, key.y, key.z)) m_renderer.markDirty(key.x - 1, key.y, key.z);
                 if (m_storage.getChunk(key.x, key.y + 1, key.z)) m_renderer.markDirty(key.x, key.y + 1, key.z);

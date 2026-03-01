@@ -266,7 +266,26 @@ void ChunkRenderer::markDirty(int cx, int cy, int cz) {
     // Guard: only mesh chunks whose voxel data is fully ready.
     // Submitting UNGENERATED or GENERATING chunks yields empty meshes.
     if (chunk->m_state.load(std::memory_order_acquire) != ChunkState::READY) return;
+    // Skip known-empty chunks (all-air / fully-occluded).
+    // These are re-enabled by forceMarkDirty() when voxel data actually changes.
+    auto rdIt = m_renderData.find({cx, cy, cz});
+    if (rdIt != m_renderData.end() && rdIt->second.isEmpty) return;
     m_dirtyPending.insert({cx, cy, cz});
+}
+
+void ChunkRenderer::forceMarkDirty(int cx, int cy, int cz) {
+    auto* chunk = m_storage.getChunk(cx, cy, cz);
+    if (!chunk) return;
+    if (chunk->m_state.load(std::memory_order_acquire) != ChunkState::READY) return;
+    // Clear the isEmpty flag so the chunk gets re-meshed after a voxel edit.
+    auto rdIt = m_renderData.find({cx, cy, cz});
+    if (rdIt != m_renderData.end()) rdIt->second.isEmpty = false;
+    m_dirtyPending.insert({cx, cy, cz});
+}
+
+void ChunkRenderer::clearEmptyFlag(int cx, int cy, int cz) {
+    auto rdIt = m_renderData.find({cx, cy, cz});
+    if (rdIt != m_renderData.end()) rdIt->second.isEmpty = false;
 }
 
 void ChunkRenderer::flushDirty() {
@@ -449,6 +468,10 @@ void ChunkRenderer::rebuildIndirectBuffers(uint32_t frame) {
     }
     m_activeBatches.push_back({currentPool, startIdx,
         static_cast<uint32_t>(m_sortedChunks.size()) - startIdx});
+
+    // Save how many draw commands this frame slot contains so cull() can
+    // read back GPU-written instanceCount values on the NEXT use of this slot.
+    m_lastDispatchCount[frame] = static_cast<uint32_t>(m_sortedChunks.size());
 }
 
 void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, float currentTime, uint32_t currentFrame) {
@@ -472,6 +495,34 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
         }
     }
     if (fadeUpdated) m_framesDirty[currentFrame] = true;
+
+    // 2.5 Non-blocking async GPU readback — count GPU-culled visible chunks.
+    // -----------------------------------------------------------------------
+    // The fence for `currentFrame` was waited on inside Renderer::beginFrame().
+    // That guarantees the GPU has FINISHED writing instanceCount (0 or 1) into
+    // m_cameraIndirectMapped[currentFrame] during the *previous* use of this
+    // slot (3 frames ago with MAX_FRAMES_IN_FLIGHT=3).  We read it BEFORE
+    // rebuildIndirectBuffers() resets every instanceCount back to 0.
+    // Memory note: VMA_MEMORY_USAGE_CPU_TO_GPU resolves to HOST_COHERENT on
+    // virtually all desktop Vulkan drivers — no vkInvalidate needed.
+    {
+        const uint32_t prevCount = m_lastDispatchCount[currentFrame];
+        if (prevCount > 0 && m_cameraIndirectMapped[currentFrame]) {
+            const auto* cmds = static_cast<const VkDrawIndexedIndirectCommand*>(
+                m_cameraIndirectMapped[currentFrame]);
+            uint32_t visChunks  = 0;
+            uint32_t visIndices = 0;
+            for (uint32_t i = 0; i < prevCount; ++i) {
+                if (cmds[i].instanceCount > 0) {
+                    ++visChunks;
+                    visIndices += cmds[i].indexCount;
+                }
+            }
+            m_visibleCount    = visChunks;
+            m_visibleVertices = visIndices / 3; // index count → triangle count
+            m_culledCount     = prevCount - visChunks;
+        }
+    }
 
     // 3. Один memcpy якщо GPU-буфер поточного кадру застарів
     if (m_framesDirty[currentFrame] && !m_cpuInstanceData.empty()) {
@@ -548,9 +599,7 @@ void ChunkRenderer::renderCamera(VkCommandBuffer cmd, VkPipelineLayout layout, u
         m_geometryManager.bindPool(cmd, batch.poolIndex);
         vkCmdDrawIndexedIndirect(cmd, indirectBuffer, batch.startIdx * stride, batch.count, stride);
     }
-
-    // Since GPU does the culling, we loosely set visibleCount
-    m_visibleCount = m_activeInstances;
+    // m_visibleCount is now populated via non-blocking GPU readback in cull().
 }
 
 void ChunkRenderer::renderShadow(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
@@ -576,12 +625,11 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     auto done = m_meshWorker.collect();
     if (done.empty()) return;
 
-    static int logged = 0;
-    if (logged < 5) {
-        std::cout << "[Rebuild] Collected " << done.size() << " tasks from workers.\n";
-    }
-
+    // Deduplicate: keep only the most-recently-completed task per chunk.
+    // This prevents uploading an outdated LOD result when the worker queue
+    // delivered multiple results for the same chunk in one collect() batch.
     std::unordered_map<IVec3Key, MeshTask, IVec3Hash> latestTasks;
+    latestTasks.reserve(done.size());
     for (auto& task : done) {
         IVec3Key key{task.cx, task.cy, task.cz};
 
@@ -592,19 +640,10 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
 
         auto chunk = m_storage.getChunk(key.x, key.y, key.z);
         int desiredLOD = chunk ? chunk->m_currentLOD.load(std::memory_order_relaxed) : 0;
-        if (logged < 5) {
-            std::cout << "[Rebuild] Task for " << key.x << "," << key.y << "," << key.z 
-                      << " lod=" << task.lod << " desired=" << desiredLOD << "\n";
-        }
         if (task.lod == desiredLOD) {
             latestTasks[key] = std::move(task);
-        } else if (logged < 5) {
-            std::cout << "[Rebuild] -> REJECTED due to LOD mismatch!\n";
         }
-    }
-
-    if (logged < 5) {
-        std::cout << "[Rebuild] " << latestTasks.size() << " latest tasks will be processed.\n";
+        // else: stale LOD result — silently discard
     }
 
     if (!latestTasks.empty() && device != VK_NULL_HANDLE) {
@@ -642,21 +681,26 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
         }
 
         if (task.type == MeshTask::Type::GENERATE) {
-            // Task already generated voxels, now we just need to queue it for meshing.
+            // Voxels are ready — queue this chunk for meshing on the next flushDirty().
+            // Do NOT submit here: we need neighbour data which may also be freshly generated.
             m_dirtyPending.insert(IVec3Key{key.x, key.y, key.z});
-            continue; // Do not build mesh right away, it needs neighbor data
+            continue;
         }
 
         if (task.result.empty()) {
-            if (logged < 5) {
-                std::cout << "[Rebuild] -> Task result EMPTY for " << key.x << "," << key.y << "," << key.z << "\n";
-            }
-            if (task.lod == 0) {
-                auto chunk = m_storage.getChunk(key.x, key.y, key.z);
-                if (chunk) chunk->markClean();
-            }
+            // Chunk is all-air or fully occluded — no geometry needed.
+            // Tag it so markDirty() silently ignores future LOD-cascade notifications.
+            rd.isEmpty = true;
+            // Always clear the dirty flag regardless of LOD level (Bug fix: previously
+            // markClean was only called for lod==0, leaving LOD1/2 chunks permanently dirty).
+            auto chunk = m_storage.getChunk(key.x, key.y, key.z);
+            if (chunk) chunk->markClean();
+            // No SSBO change needed — empty chunks don't occupy a slot.
             continue;
         }
+
+        // Non-empty result: clear any stale isEmpty flag (chunk gained geometry).
+        rd.isEmpty = false;
 
         // Voxel vertices are already generated in local chunk space [0, CHUNK_SIZE]!
         // No worldBias shifting needed. The position is sent per-chunk via PushConstants.
@@ -687,11 +731,6 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
 
     auto t1 = std::chrono::high_resolution_clock::now();
     m_lastRebuildMs = std::chrono::duration<float, std::milli>(t1 - t0).count();
-
-    if (logged < 5) {
-        std::cout << "[Rebuild] Uploaded " << requests.size() << " meshes in " << m_lastRebuildMs << " ms\n";
-        logged++;
-    }
 }
 
 

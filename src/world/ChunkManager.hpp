@@ -27,6 +27,8 @@ public:
     void renderShadow(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame);
 
     void markDirty(int cx, int cy, int cz);
+    // forceMarkDirty bypasses the isEmpty guard — use when voxel data was actually changed.
+    void forceMarkDirty(int cx, int cy, int cz);
     void flushDirty();
 
     VoxelData getVoxel(int wx, int wy, int wz) const;
