@@ -3,6 +3,7 @@
 #include <cstring>
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <span>
 #include "../vendor/FastNoiseLite.h"
 
@@ -28,85 +29,282 @@ void Chunk::fill(VoxelData v) {
     m_isDirty = true;
 }
 
-void Chunk::fillTerrain(const TerrainConfig& config, FastNoiseLite* extNoise) {
-    const VoxelData stone = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);
-    const VoxelData dirt  = VoxelData::make(2, 255, 0, VOXEL_FLAG_SOLID);
-    const VoxelData grass = VoxelData::make(3, 255, 0, VOXEL_FLAG_SOLID);
-    
-    FastNoiseLite localNoise;
-    FastNoiseLite* noise = extNoise;
-    if (!noise) {
-        localNoise.SetSeed(config.seed);
-        localNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-        localNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        localNoise.SetFractalOctaves(config.octaves);
-        localNoise.SetFrequency(config.frequency);
-        noise = &localNoise;
-    }
+// ---------------------------------------------------------------------------
+// Island Generation Helpers
+// ---------------------------------------------------------------------------
 
-    int worldBaseX = m_cx * CHUNK_SIZE;
-    int worldBaseY = m_cy * CHUNK_SIZE;
-    int worldBaseZ = m_cz * CHUNK_SIZE;
+// Smooth hermite blend (C1 continuity): 0 at t=0, 1 at t=1
+static inline float smoothstep01(float t) {
+    t = std::clamp(t, 0.0f, 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
 
-    int heightmap[CHUNK_SIZE][CHUNK_SIZE];
-    
-    constexpr int STEP = 4;
-    constexpr int SAMPLES = (CHUNK_SIZE / STEP) + 1; // 9
-    float sampled[SAMPLES][SAMPLES];
+// Returns [0,1]: 1.0 = centre of island, 0.0 = ocean edge.
+// Uses a low-frequency noise offset so the coastline is organic/ragged.
+static float computeIslandMask(float wx, float wz,
+                                const TerrainConfig& cfg,
+                                FastNoiseLite& maskNoise)
+{
+    const float rBlks = static_cast<float>(cfg.worldRadiusBlks);
+    // Normalised distance from world centre: 0 at centre, 1 at edge
+    float nx   = wx / rBlks;
+    float nz   = wz / rBlks;
+    float dist = std::sqrt(nx * nx + nz * nz);
+
+    // Low-frequency warp makes the shoreline non-circular
+    float warp = maskNoise.GetNoise(wx, wz);  // maskNoise freq ≈ 0.003
+    float raggedDist = dist - warp * cfg.islandEdgeNoise;
+
+    // Smooth falloff: full land inside falloff, ocean beyond 1.1
+    float t = (raggedDist - cfg.islandFalloff) / (1.1f - cfg.islandFalloff);
+    return 1.0f - smoothstep01(t);
+}
+
+// (getBaseHeight removed — height formula is now inlined in fillTerrain
+//  as a blend of plainH and mountH, controlled by erosion noise.)
+
+// ---------------------------------------------------------------------------
+// fillTerrain — island + biomes (erosion / rivers / moisture) + water
+// ---------------------------------------------------------------------------
+void Chunk::fillTerrain(const TerrainConfig& config, FastNoiseLite* /*extNoise*/) {
+
+    // ---- Voxel constants ---------------------------------------------------
+    const VoxelData vStone = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);
+    const VoxelData vGrass = VoxelData::make(2, 255, 0, VOXEL_FLAG_SOLID);
+    const VoxelData vDirt  = VoxelData::make(3, 255, 0, VOXEL_FLAG_SOLID);
+    const VoxelData vSand  = VoxelData::make(4, 255, 0, VOXEL_FLAG_SOLID);
+    const VoxelData vSnow  = VoxelData::make(5, 255, 0, VOXEL_FLAG_SOLID);
+    const VoxelData vWater = VoxelData::make(6, 255, 0, VOXEL_FLAG_SOLID | VOXEL_FLAG_LIQUID);
+
+    // ---- Noise layer 1: Base terrain (FBm) ---------------------------------
+    FastNoiseLite terrainNoise;
+    terrainNoise.SetSeed(config.seed);
+    terrainNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    terrainNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    terrainNoise.SetFractalOctaves(config.octaves);
+    terrainNoise.SetFrequency(config.frequency);
+
+    // ---- Noise layer 2: Island mask warp (very low frequency) ---------------
+    FastNoiseLite maskNoise;
+    maskNoise.SetSeed(config.seed + 1);
+    maskNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    maskNoise.SetFrequency(0.003f);
+
+    // ---- Noise layer 3: Erosion — flat plains vs sharp mountains (medium freq) --
+    FastNoiseLite erosionNoise;
+    erosionNoise.SetSeed(config.seed + 2);
+    erosionNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    erosionNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    erosionNoise.SetFractalOctaves(4);
+    erosionNoise.SetFrequency(0.006f); // large-scale mountain/plain zones
+
+    // ---- Noise layer 4: River carving (ridged — trench where |n| < riverWidth) --
+    FastNoiseLite riverNoise;
+    riverNoise.SetSeed(config.seed + 3);
+    riverNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    riverNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    riverNoise.SetFractalOctaves(3);
+    riverNoise.SetFrequency(0.004f);
+
+    // ---- Noise layer 5: Moisture — desert (dry) vs forest/plains (wet) ------
+    FastNoiseLite moistureNoise;
+    moistureNoise.SetSeed(config.seed + 4);
+    moistureNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    moistureNoise.SetFrequency(0.005f);
+
+    // ---- World-space origins of this chunk ---------------------------------
+    const int worldBaseX = m_cx * CHUNK_SIZE;
+    const int worldBaseY = m_cy * CHUNK_SIZE;
+    const int worldBaseZ = m_cz * CHUNK_SIZE;
+
+    // ---- Sample all noise layers at low-res grid (STEP=4, SAMPLES=9) -------
+    constexpr int STEP    = 4;
+    constexpr int SAMPLES = CHUNK_SIZE / STEP + 1; // 9×9 sample grid
+
+    float sH[SAMPLES][SAMPLES]; // final terrain height
+    float sE[SAMPLES][SAMPLES]; // erosion [0,1]:  0=plain, 1=mountain
+    float sR[SAMPLES][SAMPLES]; // river carve [0,1]: 1=deepest trench
+    float sM[SAMPLES][SAMPLES]; // moisture [-1,1]: -1=desert, +1=tropical
+
+    const float riverFloor = (float)(config.seaLevel - config.riverDepth);
+    const float rWidth     = std::max(config.riverWidth, 0.005f);
+    const float oceanFloor = (float)(config.seaLevel - 20);
 
     for (int sz = 0; sz < SAMPLES; ++sz) {
         for (int sx = 0; sx < SAMPLES; ++sx) {
-            float nx = static_cast<float>(worldBaseX + sx * STEP);
-            float nz = static_cast<float>(worldBaseZ + sz * STEP);
-            sampled[sz][sx] = noise->GetNoise(nx, nz);
+            const float wx = (float)(worldBaseX + sx * STEP);
+            const float wz = (float)(worldBaseZ + sz * STEP);
+            const float qx = wx / config.worldScale; // scaled coords for terrain
+            const float qz = wz / config.worldScale;
+
+            // Island mask [0,1] — 1=island interior, 0=open ocean
+            const float mask   = computeIslandMask(wx, wz, config, maskNoise);
+
+            // Base terrain noise in [-1, 1]
+            const float terrN  = terrainNoise.GetNoise(qx, qz);
+
+            // Erosion [0,1]: capped at island edges so coast is always flat
+            const float rawE   = (erosionNoise.GetNoise(qx, qz) + 1.0f) * 0.5f;
+            const float erode  = rawE * smoothstep01(mask * 1.6f);
+
+            // Moisture [-1, 1]
+            const float moist  = moistureNoise.GetNoise(wx, wz);
+
+            // --- Height formula ---
+            // Plains contribution: gentle hills (40% amplitude)
+            const float plainH = (float)config.baseHeight + terrN * config.amplitude * 0.40f;
+
+            // Mountain contribution: squared noise → sharp peaks
+            // absN²*2.2 reaches ~2.2 at |terrN|=1; subtract 0.25 to keep low
+            // areas from also rising
+            const float absN   = std::abs(terrN);
+            const float mountH = (float)config.baseHeight
+                                 + (absN * absN * 2.2f - 0.25f)
+                                 * config.amplitude * config.mountainStrength;
+
+            // Blend plains↔mountains by erosion
+            const float blendH = plainH + (mountH - plainH) * erode;
+
+            // Apply island mask → lerp toward ocean floor at edges
+            float finalH = oceanFloor + (blendH - oceanFloor) * mask;
+
+            // --- River carving ---
+            // Ridged: |riverNoise| is small near river centrelines
+            const float rn     = std::abs(riverNoise.GetNoise(qx, qz));
+            float rAmt         = std::max(0.0f, 1.0f - rn / rWidth); // 0→1
+            rAmt               = rAmt * rAmt; // sharpen profile
+            // Only carve rivers where island exists (not in city ocean zone)
+            const float coastBlend = std::clamp((mask - 0.25f) / 0.35f, 0.0f, 1.0f);
+            rAmt                  *= coastBlend;
+            // Pull height toward river floor
+            finalH = finalH + (riverFloor - finalH) * rAmt;
+
+            sH[sz][sx] = finalH;
+            sE[sz][sx] = erode;
+            sR[sz][sx] = rAmt;
+            sM[sz][sx] = moist;
         }
     }
 
+    // ---- Bilinear interpolation into full-res chunk maps -------------------
+    float heightmap[CHUNK_SIZE][CHUNK_SIZE];
+    float erodemap [CHUNK_SIZE][CHUNK_SIZE];
+    float rivermap [CHUNK_SIZE][CHUNK_SIZE];
+    float moistmap [CHUNK_SIZE][CHUNK_SIZE];
+
     for (int sz = 0; sz < SAMPLES - 1; ++sz) {
         for (int sx = 0; sx < SAMPLES - 1; ++sx) {
-            float h00 = sampled[sz][sx];
-            float h10 = sampled[sz][sx + 1];
-            float h01 = sampled[sz + 1][sx];
-            float h11 = sampled[sz + 1][sx + 1];
+            // Cache the 4 corners for each field once
+            const float H00=sH[sz][sx], H10=sH[sz][sx+1], H01=sH[sz+1][sx], H11=sH[sz+1][sx+1];
+            const float E00=sE[sz][sx], E10=sE[sz][sx+1], E01=sE[sz+1][sx], E11=sE[sz+1][sx+1];
+            const float R00=sR[sz][sx], R10=sR[sz][sx+1], R01=sR[sz+1][sx], R11=sR[sz+1][sx+1];
+            const float M00=sM[sz][sx], M10=sM[sz][sx+1], M01=sM[sz+1][sx], M11=sM[sz+1][sx+1];
 
             for (int dz = 0; dz < STEP; ++dz) {
-                float tz = static_cast<float>(dz) / STEP;
-                float h0 = h00 + (h01 - h00) * tz;
-                float h1 = h10 + (h11 - h10) * tz;
+                const float tz = (float)dz / STEP;
+                // Lerp along Z for each field
+                const float hH0 = H00 + (H01-H00)*tz,  hH1 = H10 + (H11-H10)*tz;
+                const float hE0 = E00 + (E01-E00)*tz,  hE1 = E10 + (E11-E10)*tz;
+                const float hR0 = R00 + (R01-R00)*tz,  hR1 = R10 + (R11-R10)*tz;
+                const float hM0 = M00 + (M01-M00)*tz,  hM1 = M10 + (M11-M10)*tz;
 
                 for (int dx = 0; dx < STEP; ++dx) {
-                    float tx = static_cast<float>(dx) / STEP;
-                    float final_n = h0 + (h1 - h0) * tx;
-                    heightmap[sz * STEP + dz][sx * STEP + dx] = config.baseHeight + static_cast<int>(final_n * config.amplitude);
+                    const int gx = sx * STEP + dx;
+                    const int gz = sz * STEP + dz;
+                    if (gx >= CHUNK_SIZE || gz >= CHUNK_SIZE) continue;
+                    const float tx = (float)dx / STEP;
+                    heightmap[gz][gx] = hH0 + (hH1-hH0)*tx;
+                    erodemap [gz][gx] = hE0 + (hE1-hE0)*tx;
+                    rivermap [gz][gx] = hR0 + (hR1-hR0)*tx;
+                    moistmap [gz][gx] = hM0 + (hM1-hM0)*tx;
                 }
             }
         }
     }
 
+    // ---- Fill voxels -------------------------------------------------------
     std::ranges::fill(m_voxels, VOXEL_AIR);
 
     for (int z = 0; z < CHUNK_SIZE; ++z) {
         for (int x = 0; x < CHUNK_SIZE; ++x) {
-            int terrainH = heightmap[z][x];
-            
-            // Вираховуємо локальну максимальну висоту землі для цього чанка
-            int localMaxY = terrainH - worldBaseY;
-            if (localMaxY <= 0) continue; // Увесь стовпець вище рівня землі (тільки повітря)
-            if (localMaxY > CHUNK_SIZE) localMaxY = CHUNK_SIZE; // Земля повністю заповнює цей стовпець
-            
-            for (int y = 0; y < localMaxY; ++y) {
-                int wy = worldBaseY + y;
-                VoxelData v;
-                if      (wy < terrainH - 3)  v = stone;
-                else if (wy < terrainH - 1)  v = dirt;
-                else                         v = grass;
-                
+            const int   terrainH = (int)heightmap[z][x];
+            const float erode01  = erodemap[z][x];    // [0,1]: 0=flat plain, 1=sharp mountain
+            [[maybe_unused]]
+            const float rAmt     = rivermap[z][x];    // river carve strength
+            const float moist    = moistmap[z][x];    // [-1,1]: -1=dry, +1=wet
+
+            // ---------------------------------------------------------------
+            // Biome flags  (in priority order)
+            // ---------------------------------------------------------------
+
+            // Rocky cliff: very high erosion → bare stone face, grass cannot grip
+            const bool isRockyCliff = (erode01 > config.stoneErosionThresh);
+
+            // Desert: dry moisture AND not too high (low-elevation sandy zone)
+            const bool isDesert = (moist < config.desertMoistureThresh)
+                               && (terrainH < config.seaLevel + 50);
+
+            // Beach: within sandMargin blocks of sea level
+            const bool isBeach = (terrainH <= config.seaLevel + config.sandMargin);
+
+            // Snow cap: surface is above snowHeight
+            const bool isSnowCap = (terrainH > config.snowHeight);
+
+            // ---------------------------------------------------------------
+            // 4-level column layering:
+            //
+            //  Plain / grassy mountain          Rocky cliff      Desert / Beach
+            //  ─────────────────────────        ─────────────    ──────────────
+            //  depth 1 : GRASS (or SNOW cap)    STONE            SAND
+            //  depth 2-4: DIRT  (or STONE cap)  STONE            SAND
+            //  depth 5+: STONE                  STONE            STONE
+            //
+            //  Snow cap override (terrainH > snowHeight):
+            //    depth 1   → SNOW
+            //    depth 2-3 → STONE  (rock just below snowfield, no dirt)
+            //    depth 4+  → STONE
+            // ---------------------------------------------------------------
+
+            for (int y = 0; y < CHUNK_SIZE; ++y) {
+                const int wy    = worldBaseY + y;
+                VoxelData v     = VOXEL_AIR;
+
+                if (wy < terrainH) {
+                    const int depth = terrainH - wy;  // 1=surface, 2=one below, …
+
+                    if (isSnowCap) {
+                        // Snow cap: SNOW on top, immediate stone underneath
+                        if      (depth == 1) v = vSnow;
+                        else                 v = vStone;
+
+                    } else if (isRockyCliff) {
+                        // Bare cliff: all stone
+                        v = vStone;
+
+                    } else if (isDesert || isBeach) {
+                        // Sandy biome: sand surface + sand subsurface, then stone
+                        if   (depth <= 4) v = vSand;
+                        else              v = vStone;
+
+                    } else {
+                        // Normal grassy land (plains AND grassy mountain slopes):
+                        // GRASS → DIRT (4 blocks) → STONE
+                        if      (depth == 1) v = vGrass;
+                        else if (depth <= 5) v = vDirt;
+                        else                 v = vStone;
+                    }
+
+                } else if (wy < config.seaLevel) {
+                    v = vWater;
+                }
+
                 m_voxels[idx(x, y, z)] = v;
             }
         }
     }
     m_isDirty = true;
 }
+
 
 void Chunk::fillRandom(int seed) {
     const VoxelData stone = VoxelData::make(1, 255, 0, VOXEL_FLAG_SOLID);

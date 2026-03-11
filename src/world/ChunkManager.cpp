@@ -16,19 +16,19 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, const TerrainConfig& 
     m_renderer.clear();
     m_storage.generateWorld(radiusX, radiusZ, config);
 
-    auto& chunks = m_storage.getChunks();
+    const auto& chunks = m_storage.getChunks();
 
-    // Only immediately mesh chunks within the initial view radius.
-    // Distant chunks have voxel data but no mesh yet — the streaming
-    // system (updateCamera) will schedule them as the player approaches.
-    // This prevents OOM when generating large worlds (e.g. radius 64).
+    // generateWorld() now produces voxel payload for the full occupied chunk set.
+    // Only chunks inside the initial view radius are meshed immediately; the rest stay READY
+    // with LOD_UNASSIGNED until updateCamera() assigns render work.
     const float meshRadius = std::min(m_lodCtrl.m_lodDist1,
                                       static_cast<float>(radiusX * CHUNK_SIZE));
 
     for (size_t i = 0; i < chunks.size(); ++i) {
         const auto& ac = chunks[i];
-        if (!ac.chunk) continue;
         IVec3Key key{ac.cx, ac.cy, ac.cz};
+        Chunk* chunk = m_storage.getChunk(key.x, key.y, key.z);
+        if (!chunk) continue;
 
         float cx_center = key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
         float cz_center = key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
@@ -37,7 +37,7 @@ void ChunkManager::generateWorld(int radiusX, int radiusZ, const TerrainConfig& 
         if (distSq > meshRadius * meshRadius) continue; // let streaming handle it
 
         int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
-        ac.chunk->m_currentLOD.store(lod, std::memory_order_relaxed);
+        chunk->m_currentLOD.store(lod, std::memory_order_relaxed);
         m_renderer.markDirty(key.x, key.y, key.z);
     }
     m_renderer.flushDirty();
@@ -104,9 +104,9 @@ void ChunkManager::setVoxel(int wx, int wy, int wz, VoxelData v) {
 void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::Frustum& frustum) {
     m_lodCtrl.setCameraPosition(cameraPos);
 
-    // --- PROGRESSIVE GENERATION: fill UNGENERATED underground chunks near camera ---
-    // generateWorld creates surface stubs only (Sparse Storage). This pass picks the closest
-    // missing/UNGENERATED chunks (up to maxPerFrame) and starts async fillTerrain.
+    // --- Placeholder Rehydration Near Camera ---
+    // generateWorld() preallocates the initial world, but streamed-out chunks can later come back as
+    // UNGENERATED placeholders. This pass prioritizes the nearest placeholders and restores voxel data.
     {
         constexpr int maxPerFrame = 24;
         struct Candidate { float distSq; int cx, cy, cz; };
@@ -133,8 +133,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                 auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz);
                 int worldMinY = m_storage.getMinY();
 
-                // Check all layers for this column — including surface (maxCY)
-                // so that streaming-created surface chunks also get picked up.
+                // Check the full occupied Y span for this column. Any placeholder in this range can be rehydrated.
                 for (int cy = maxCY; cy >= worldMinY; --cy) {
                     float cy_center = cy * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
                     float dy = cameraPos.y - cy_center;
@@ -158,7 +157,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             
             Chunk* chunk = m_storage.getChunk(c.cx, c.cy, c.cz);
             if (!chunk) {
-                // Sparse allocation on the fly
+                // Tier-4 may have removed the chunk object entirely; recreate a placeholder first.
                 m_storage.createChunkIfMissing(c.cx, c.cy, c.cz, m_terrainConfig, m_renderer, true);
                 chunk = m_storage.getChunk(c.cx, c.cy, c.cz);
             }
@@ -201,7 +200,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                     for (int cy = minCY; cy <= maxCY; ++cy)
                         m_storage.createChunkIfMissing(cx, cy, cz, m_terrainConfig, m_renderer);
                     
-                    // Progressive underground allocation
+                    // Recreate any evicted slices below the current occupied span as placeholders.
                     for (int cy = m_storage.getMinY(); cy < minCY; ++cy)
                         m_storage.createChunkIfMissing(cx, cy, cz, m_terrainConfig, m_renderer, true);
                 }
@@ -244,12 +243,12 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
                 };
                 if (!frustum.isVisible(aabb)) continue;
 
-                // Camera is looking at this column — ensure all Y layers are loaded & meshed
+                // Camera is looking at this column — ensure the occupied span exists in storage.
                 auto [minCY, maxCY] = m_storage.getSurfaceBounds(cx, cz);
                 for (int cy = minCY; cy <= maxCY; ++cy)
                     m_storage.createChunkIfMissing(cx, cy, cz, m_terrainConfig, m_renderer);
                 
-                // Progressive underground allocation
+                // Also recreate lower slices that may have been fully evicted before.
                 for (int cy = m_storage.getMinY(); cy < minCY; ++cy)
                     m_storage.createChunkIfMissing(cx, cy, cz, m_terrainConfig, m_renderer, true);
             }
@@ -273,11 +272,12 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
         const float frustumMaxDistSq = m_frustumRadius * m_frustumRadius;
 
         std::vector<IVec3Key> chunksToFullyRemove;  // voxels + GPU
-        std::vector<IVec3Key> chunksMeshOnly;        // GPU mesh only (keep voxels)
+        std::vector<IVec3Key> chunksMeshOnly;       // GPU mesh only (keep voxels)
 
         for (const auto& ac : m_storage.getChunks()) {
-            if (!ac.chunk) continue;
             IVec3Key key{ac.cx, ac.cy, ac.cz};
+            Chunk* chunk = m_storage.getChunk(key.x, key.y, key.z);
+            if (!chunk) continue;
 
             float cx_center = key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
             float cz_center = key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
@@ -313,12 +313,10 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             // Tier 1 or 2: keep chunk — update LOD / schedule meshing
             // Guard: skip chunks that are not yet fully generated.
             // Meshing UNGENERATED/GENERATING yields empty meshes and wastes worker time.
-            {
-                if (ac.chunk->m_state.load(std::memory_order_acquire) != ChunkState::READY)
-                    continue;
-            }
+            if (chunk->m_state.load(std::memory_order_acquire) != ChunkState::READY)
+                continue;
 
-            int oldLOD = ac.chunk->m_currentLOD.load(std::memory_order_relaxed);
+            int oldLOD = chunk->m_currentLOD.load(std::memory_order_relaxed);
 
             // LOD_EVICTED = chunk was intentionally unloaded by Tier-3.
             // It's re-entering the visible zone now, so treat it as unassigned
@@ -329,7 +327,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
 
             int newLOD = m_lodCtrl.calculateLOD(key.x, key.y, key.z, oldLOD);
             if (newLOD != oldLOD) {
-                ac.chunk->m_currentLOD.store(newLOD, std::memory_order_relaxed);
+                chunk->m_currentLOD.store(newLOD, std::memory_order_relaxed);
                 m_renderer.markDirty(key.x, key.y, key.z);
                 
                 // --- Smart Skirts: Neighbor Notification ---
@@ -346,7 +344,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             } else if (oldLOD == ChunkRenderer::LOD_UNASSIGNED) {
                 // Voxels exist but no GPU mesh — assign LOD and mesh.
                 int lod = m_lodCtrl.calculateLOD(key.x, key.y, key.z);
-                ac.chunk->m_currentLOD.store(lod, std::memory_order_relaxed);
+                chunk->m_currentLOD.store(lod, std::memory_order_relaxed);
                 m_renderer.markDirty(key.x, key.y, key.z);
                 
                 // --- Smart Skirts: Initial Gen Notification ---
@@ -371,7 +369,7 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
         }
 
 
-        // Vertical Streaming Boost
+        // Vertical streaming boost: if the player approaches the chunk floor, prioritize the slice below.
         int playerWX = static_cast<int>(std::floor(cameraPos.x));
         int playerWY = static_cast<int>(std::floor(cameraPos.y));
         int playerWZ = static_cast<int>(std::floor(cameraPos.z));
@@ -409,6 +407,41 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
 
 int ChunkManager::calculateLOD(int cx, int cy, int cz, int currentLOD) const {
     return m_lodCtrl.calculateLOD(cx, cy, cz, currentLOD);
+}
+
+ChunkLifecycleStats ChunkManager::getLifecycleStats() const {
+    ChunkLifecycleStats stats{};
+    stats.cachedModified = static_cast<uint32_t>(m_storage.getDirtyCacheCount());
+
+    for (const auto& ac : m_storage.getChunks()) {
+        const Chunk* chunk = m_storage.getChunk(ac.cx, ac.cy, ac.cz);
+        if (!chunk) {
+            continue;
+        }
+
+        ++stats.active;
+
+        switch (chunk->m_state.load(std::memory_order_acquire)) {
+        case ChunkState::UNGENERATED:
+            ++stats.placeholders;
+            break;
+        case ChunkState::GENERATING:
+            ++stats.generating;
+            break;
+        case ChunkState::READY:
+            ++stats.ready;
+            break;
+        }
+
+        const int lodState = chunk->m_currentLOD.load(std::memory_order_relaxed);
+        if (lodState == ChunkRenderer::LOD_UNASSIGNED) {
+            ++stats.meshUnassigned;
+        } else if (lodState == ChunkRenderer::LOD_EVICTED) {
+            ++stats.meshEvicted;
+        }
+    }
+
+    return stats;
 }
 
 } // namespace world

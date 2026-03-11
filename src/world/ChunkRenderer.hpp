@@ -30,6 +30,17 @@ struct ChunkRenderData {
     float fadeProgress   = 0.0f; // cached fade value (зберігається при rebuildCpuInstanceData)
 };
 
+struct RenderChunkSnapshot {
+    IVec3Key key;
+    uint32_t poolIndex    = 0;
+    uint32_t indexCount   = 0;
+    uint32_t firstIndex   = 0;
+    int32_t  vertexOffset = 0;
+    int      lod          = -1;
+    float    fadeStartTime = 0.0f;
+    float    fadeProgress  = 0.0f;
+};
+
 // SSBO layout for chunk instance data
 struct alignas(16) ChunkInstanceData {
     float posX, posY, posZ;
@@ -110,7 +121,9 @@ private:
     scene::AABB buildAABB(int cx, int cy, int cz) const;
     void createDescriptorSetLayout();
     void createBuffers();
-    void createComputePipeline();
+    void upsertRenderSnapshot(const IVec3Key& key, const ChunkRenderData& rd, int lod);
+    void eraseRenderSnapshot(const IVec3Key& key);
+    bool isSnapshotVisibleInFrustum(const RenderChunkSnapshot& snapshot, const scene::Frustum& frustum) const;
 
     // Persistent SSBO helpers (викликаються рідко — лише при load/unload)
     void rebuildSortedList();                    // сортує m_sortedChunks
@@ -128,10 +141,13 @@ private:
     // -------------------------------------------------------------
     std::unordered_map<IVec3Key, ChunkRenderData, IVec3Hash> m_renderData;
     std::unordered_set<IVec3Key, IVec3Hash>                  m_dirtyPending;
+    // Compact renderer-owned mesh residency snapshot used by culling, indirect generation, and LOD stats.
+    std::vector<RenderChunkSnapshot>                         m_renderSnapshot;
+    std::unordered_map<IVec3Key, size_t, IVec3Hash>         m_renderSnapshotIndices;
 
-    // GPU Culling State (Front-to-Back sorting + Persistent MDI generation)
+    // Renderer-owned culling/draw-prep state (Front-to-Back sorting + persistent MDI generation)
     struct ChunkDrawCmd {
-        IVec3Key key;
+        uint32_t snapshotIndex;
         uint32_t poolIndex;
         int lod;
     };
@@ -161,24 +177,12 @@ private:
     uint32_t m_visibleVertices = 0;
     float    m_lastRebuildMs = 0.0f;
 
-    // Async GPU readback: how many draw-commands were written per frame slot.
-    // Saved in rebuildIndirectBuffers(), read in cull() BEFORE overwriting.
-    uint32_t m_lastDispatchCount[MAX_FRAMES_IN_FLIGHT]{};
-
-    // Throttled readback state: runs every 60 frames.
-    // m_readbackShadow is normal heap RAM — fast for sequential CPU reads.
-    uint32_t                                m_readbackTick   = 0;
-    std::vector<VkDrawIndexedIndirectCommand> m_readbackShadow;
-
     // -------------------------------------------------------------
-    // Hardware resources (MDI + SSBO + Compute)
+    // Hardware resources (MDI + instance SSBO)
     VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     VkDescriptorPool      m_descriptorPool      = VK_NULL_HANDLE;
     VkDescriptorSet       m_cameraDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
     VkDescriptorSet       m_shadowDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
-
-    VkPipelineLayout      m_computePipelineLayout = VK_NULL_HANDLE;
-    VkPipeline            m_computePipeline       = VK_NULL_HANDLE;
 
     std::unique_ptr<gfx::Buffer> m_instanceBuffers[MAX_FRAMES_IN_FLIGHT];
     std::unique_ptr<gfx::Buffer> m_cameraIndirectBuffers[MAX_FRAMES_IN_FLIGHT];

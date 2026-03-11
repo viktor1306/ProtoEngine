@@ -40,10 +40,13 @@ public:
 
     // Register the built-in block types.
     static void registerDefaults() {
-        registerBlock({0, "air",   false, {0.0f, 0.0f, 0.0f, 0.0f}});
-        registerBlock({1, "stone", true,  {0.5f, 0.5f, 0.5f, 1.0f}});
-        registerBlock({2, "grass", true,  {0.3f, 0.7f, 0.2f, 1.0f}});
-        registerBlock({3, "dirt",  true,  {0.5f, 0.3f, 0.1f, 1.0f}});
+        registerBlock({0, "air",   false, {0.00f, 0.00f, 0.00f, 0.0f}});
+        registerBlock({1, "stone", true,  {0.50f, 0.50f, 0.50f, 1.0f}});
+        registerBlock({2, "grass", true,  {0.30f, 0.70f, 0.20f, 1.0f}});
+        registerBlock({3, "dirt",  true,  {0.50f, 0.30f, 0.10f, 1.0f}});
+        registerBlock({4, "sand",  true,  {0.85f, 0.80f, 0.55f, 1.0f}});
+        registerBlock({5, "snow",  true,  {0.92f, 0.95f, 1.00f, 1.0f}});
+        registerBlock({6, "water", true,  {0.10f, 0.35f, 0.80f, 1.0f}});
     }
 
     static const std::unordered_map<BlockID, BlockInfo>& all() { return s_blocks; }

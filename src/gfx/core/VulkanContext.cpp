@@ -267,12 +267,34 @@ VkCommandBuffer VulkanContext::beginSingleTimeCommands() {
 
 void VulkanContext::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
     vkEndCommandBuffer(commandBuffer);
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+    VkFence submitFence = VK_NULL_HANDLE;
+    if (vkCreateFence(m_device, &fenceInfo, nullptr, &submitFence) != VK_SUCCESS) {
+        vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+        throw std::runtime_error("failed to create one-shot upload fence!");
+    }
+
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
-    vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(m_graphicsQueue);
+
+    if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, submitFence) != VK_SUCCESS) {
+        vkDestroyFence(m_device, submitFence, nullptr);
+        vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+        throw std::runtime_error("failed to submit one-shot command buffer!");
+    }
+
+    if (vkWaitForFences(m_device, 1, &submitFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+        vkDestroyFence(m_device, submitFence, nullptr);
+        vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+        throw std::runtime_error("failed to wait for one-shot command buffer completion!");
+    }
+
+    vkDestroyFence(m_device, submitFence, nullptr);
     vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
 }
 

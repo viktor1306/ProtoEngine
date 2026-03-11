@@ -103,6 +103,29 @@ static size_t getProcessRAMUsageMB() {
     return 0;
 }
 
+static std::string resolveShaderBinaryPath(const char* shaderFileName) {
+    const std::filesystem::path shaderPath = std::filesystem::path("bin") / "shaders" / shaderFileName;
+    if (std::filesystem::exists(shaderPath)) {
+        return shaderPath.generic_string();
+    }
+
+    throw std::runtime_error(
+        "Missing compiled shader binary: " + shaderPath.generic_string() +
+        ". Run 'mingw32-make shaders' before launching the engine.");
+}
+
+static std::string prepareMetricsLogPath() {
+    const std::filesystem::path logDir = "logs";
+    std::filesystem::create_directories(logDir);
+
+    const std::filesystem::path metricsPath = logDir / "metrics_latest.txt";
+    if (FILE* file = std::fopen(metricsPath.string().c_str(), "w")) {
+        std::fclose(file);
+    }
+
+    return metricsPath.generic_string();
+}
+
 int main() {
     // Flush stdout after every write so log files are always up-to-date
     // even when output is redirected (full-buffering mode by default).
@@ -123,6 +146,8 @@ int main() {
     }
 
     try {
+        const std::string metricsLogPath = prepareMetricsLogPath();
+
         const uint32_t WIDTH  = 1280;
         const uint32_t HEIGHT = 720;
 
@@ -158,11 +183,13 @@ int main() {
         // MeshWorker uses hardware_concurrency() threads by default
         world::ChunkManager chunkManager(vulkanContext, geometryManager);
         int initialWorldRadius = 10;
-        chunkManager.setRenderRadius(initialWorldRadius); 
-        int worldSeed   = 42;
-        world::TerrainConfig worldConfig{};
-        worldConfig.seed = worldSeed;
-        chunkManager.generateWorld(chunkManager.getRenderRadius(), chunkManager.getRenderRadius(), worldConfig);
+        chunkManager.setRenderRadius(initialWorldRadius);
+        int worldSeed = 42;
+        // Initial generation with island defaults
+        world::TerrainConfig initCfg;
+        initCfg.seed            = worldSeed;
+        initCfg.worldRadiusBlks = initialWorldRadius * world::CHUNK_SIZE;
+        chunkManager.generateWorld(initialWorldRadius, initialWorldRadius, initCfg);
         // Wait for all async meshing to complete before first frame
         chunkManager.rebuildDirtyChunks(vulkanContext.getDevice(), 0.0f);
         std::cout << "ChunkManager created: " << chunkManager.getChunkCount()
@@ -172,21 +199,12 @@ int main() {
         world::BlockRegistry::registerDefaults();
 
         // ---- Shader paths --------------------------------------------------
-        std::string vertPath       = "bin/shaders/simple.vert.spv";
-        std::string fragPath       = "bin/shaders/simple.frag.spv";
-        std::string shadowVertPath = "bin/shaders/shadow.vert.spv";
-        std::string shadowFragPath = "bin/shaders/shadow.frag.spv";
-        std::string voxelVertPath  = "bin/shaders/voxel.vert.spv";
-        std::string voxelFragPath  = "bin/shaders/voxel.frag.spv";
-
-        if (!std::filesystem::exists(vertPath)) {
-            vertPath       = "shaders/simple.vert.spv";
-            fragPath       = "shaders/simple.frag.spv";
-            shadowVertPath = "shaders/shadow.vert.spv";
-            shadowFragPath = "shaders/shadow.frag.spv";
-            voxelVertPath  = "shaders/voxel.vert.spv";
-            voxelFragPath  = "shaders/voxel.frag.spv";
-        }
+        std::string vertPath       = resolveShaderBinaryPath("simple.vert.spv");
+        std::string fragPath       = resolveShaderBinaryPath("simple.frag.spv");
+        std::string shadowVertPath = resolveShaderBinaryPath("shadow.vert.spv");
+        std::string shadowFragPath = resolveShaderBinaryPath("shadow.frag.spv");
+        std::string voxelVertPath  = resolveShaderBinaryPath("voxel.vert.spv");
+        std::string voxelFragPath  = resolveShaderBinaryPath("voxel.frag.spv");
 
         // ---- Hot Reloader --------------------------------------------------
         core::ShaderHotReloader reloader;
@@ -284,24 +302,19 @@ int main() {
         // ---- Wireframe toggle state ----------------------------------------
         bool wireframe = false;
 
-        // ---- Camera --------------------------------------------------------
         // Камера над центром світу, дивиться вперед (+Z напрямок)
-        // Чанки від (-48,0,-48) до (48,16,48) у world space
-        // Yaw=0 → front=(1,0,0); Yaw=90 → front=(0,0,1)
-        // Стартова позиція: над центром, дивимось на -Z (yaw=-90 за замовчуванням)
-        // Але чанки є і в +Z і в -Z, тому ставимо камеру вище і дивимось вниз
-        // Камера над центром, дивиться вниз під кутом 45°
-        // Чанки: cx=-3..3, cz=-3..3 → world coords -48..48 (без bias)
-        scene::Camera camera({0.0f, 80.0f, 80.0f}, 60.0f, renderer.getAspectRatio());
-        camera.setPitch(-45.0f);
+        // З новою генерацією: baseHeight=64, amplitude=60 → max terrain ~124
+        // Камера вище рівня гір, дивиться вниз під кутом 40°
+        scene::Camera camera({0.0f, 200.0f, 250.0f}, 60.0f, renderer.getAspectRatio());
+        camera.setPitch(-40.0f);
         camera.adjustSpeed(20.0f / 5.0f);
 
-        // ---- Debug Camera (orbits around world for frustum debugging) -------
+        // ---- Debug Camera
         scene::Camera debugCamera({0.0f, 200.0f, 300.0f}, 60.0f, renderer.getAspectRatio());
         debugCamera.setPitch(-30.0f);
         debugCamera.adjustSpeed(20.0f / 5.0f);
-        bool debugCameraMode    = false; // false = normal camera
-        bool controlMainInDebug = false; // when true: WASD controls main camera while in debug view
+        bool debugCameraMode    = false;
+        bool controlMainInDebug = false;
 
         // ---- Debug Renderer (lines: frustum, camera marker) -----------------
         gfx::DebugRenderer debugRenderer(vulkanContext, nullptr,
@@ -318,6 +331,11 @@ int main() {
         bool  autoLOD       = true;  // автоматично перемешувати чанки при зміні LOD
         int   worldRadius   = 10;    // Бажаний розмір світу в радіусі чанків (10 = 21x21 чанків)
 
+        // ---- Persistent terrain generation config (editable via ImGui) ----
+        world::TerrainConfig terrainCfg;
+        terrainCfg.seed            = worldSeed;
+        terrainCfg.worldRadiusBlks = worldRadius * world::CHUNK_SIZE;
+
         // ---- Raycast state (persistent across frames for ImGui display) ----
         world::RayResult lastRayHit{};
 
@@ -333,16 +351,18 @@ int main() {
         float statsTimer = 0.0f;
 
         // ---- Palette Data --------------------------------------------------
+        // Must match VoxelData palette indices used in Chunk::fillTerrain:
+        //   0=air  1=stone  2=grass  3=dirt  4=sand  5=snow  6=water
         gfx::BindlessSystem::PaletteUBO paletteData{};
-        paletteData.colors[0]  = {0.0f,  0.0f,  0.0f,  1.f}; // 0  AIR
+        paletteData.colors[0]  = {0.0f,  0.0f,  0.0f,  0.f}; // 0  AIR       (transparent)
         paletteData.colors[1]  = {0.50f, 0.50f, 0.50f, 1.f}; // 1  Stone
-        paletteData.colors[2]  = {0.55f, 0.35f, 0.18f, 1.f}; // 2  Dirt
-        paletteData.colors[3]  = {0.30f, 0.65f, 0.20f, 1.f}; // 3  Grass
+        paletteData.colors[2]  = {0.30f, 0.65f, 0.20f, 1.f}; // 2  Grass     (green)
+        paletteData.colors[3]  = {0.52f, 0.33f, 0.16f, 1.f}; // 3  Dirt      (brown)
         paletteData.colors[4]  = {0.85f, 0.80f, 0.50f, 1.f}; // 4  Sand
-        paletteData.colors[5]  = {0.20f, 0.40f, 0.80f, 1.f}; // 5  Water
-        paletteData.colors[6]  = {0.40f, 0.25f, 0.10f, 1.f}; // 6  Wood
-        paletteData.colors[7]  = {0.15f, 0.45f, 0.10f, 1.f}; // 7  Leaves
-        paletteData.colors[8]  = {0.90f, 0.92f, 0.95f, 1.f}; // 8  Snow
+        paletteData.colors[5]  = {0.90f, 0.93f, 0.97f, 1.f}; // 5  Snow
+        paletteData.colors[6]  = {0.18f, 0.40f, 0.82f, 1.f}; // 6  Water
+        paletteData.colors[7]  = {0.40f, 0.25f, 0.10f, 1.f}; // 7  Wood
+        paletteData.colors[8]  = {0.15f, 0.45f, 0.10f, 1.f}; // 8  Leaves
         paletteData.colors[9]  = {0.90f, 0.30f, 0.05f, 1.f}; // 9  Lava
         paletteData.colors[10] = {0.70f, 0.70f, 0.70f, 1.f}; // 10 Cobblestone
         paletteData.colors[11] = {0.95f, 0.90f, 0.60f, 1.f}; // 11 Sandstone
@@ -538,16 +558,22 @@ int main() {
                 if (statsTimer > 500.0f) {
                     displayCPU = getProcessCPUUsage();
                     displayRAM = getProcessRAMUsageMB();
+                    const auto lifecycleStats = chunkManager.getLifecycleStats();
                     const std::string metricsLine =
                         "[Metrics] FPS: " + std::to_string(displayFPS)
                         + " | Visible chunks: " + std::to_string(chunkManager.getVisibleCount())
                         + " | Visible polys: "  + std::to_string(chunkManager.getVisibleVertices())
                         + " | GPU: " + std::to_string(renderer.getGpuFrameTimeMs()) + "ms"
                         + " | CPU: " + std::to_string(displayCPU) + "%"
-                        + " | RAM: " + std::to_string(displayRAM) + "MB";
+                        + " | RAM: " + std::to_string(displayRAM) + "MB"
+                        + " | Ready: " + std::to_string(lifecycleStats.ready)
+                        + " | Generating: " + std::to_string(lifecycleStats.generating)
+                        + " | Placeholders: " + std::to_string(lifecycleStats.placeholders)
+                        + " | MeshUnassigned: " + std::to_string(lifecycleStats.meshUnassigned)
+                        + " | MeshEvicted: " + std::to_string(lifecycleStats.meshEvicted)
+                        + " | CachedModified: " + std::to_string(lifecycleStats.cachedModified);
                     std::cout << metricsLine << std::endl;
-                    // Also write to dedicated metrics file so it's readable regardless of console redirect
-                    if (FILE* f = std::fopen("log_metrics.txt", "a")) {
+                    if (FILE* f = std::fopen(metricsLogPath.c_str(), "a")) {
                         std::fprintf(f, "%s\n", metricsLine.c_str());
                         std::fclose(f);
                     }
@@ -611,6 +637,7 @@ int main() {
                 if (ImGui::CollapsingHeader("Chunk Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
                     uint32_t visChunks = chunkManager.getVisibleCount();
                     uint32_t visPolys  = chunkManager.getVisibleVertices(); // triangles
+                    auto lifecycleStats = chunkManager.getLifecycleStats();
                     ImGui::Text("Total chunks:   %u", chunkManager.getChunkCount());
                     ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
                         "Visible (GPU):  %u chunks", visChunks);
@@ -621,6 +648,13 @@ int main() {
                     ImGui::Text("Rebuild:        %.2f ms", chunkManager.getLastRebuildMs());
                     ImGui::Text("Worker threads: %u", chunkManager.getWorkerThreads());
                     ImGui::Text("Pending meshes: %d", chunkManager.getPendingMeshes());
+                    ImGui::SeparatorText("Lifecycle");
+                    ImGui::Text("Ready:          %u", lifecycleStats.ready);
+                    ImGui::Text("Generating:     %u", lifecycleStats.generating);
+                    ImGui::Text("Placeholders:   %u", lifecycleStats.placeholders);
+                    ImGui::Text("Mesh unassigned:%u", lifecycleStats.meshUnassigned);
+                    ImGui::Text("Mesh evicted:   %u", lifecycleStats.meshEvicted);
+                    ImGui::Text("Cached modified:%u", lifecycleStats.cachedModified);
                     auto lodCounts = chunkManager.getLODCounts();
                     ImGui::Text("  LOD0 full:    %u", lodCounts[0]);
                     ImGui::Text("  LOD1 half:    %u", lodCounts[1]);
@@ -655,21 +689,59 @@ int main() {
                     if (ImGui::InputInt("World Radius", &worldRadius)) {
                         worldRadius = std::clamp(worldRadius, 1, 64);
                     }
+
+                    // --- Phase 2: World Scale & Biome ---
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(0.4f,0.9f,0.4f,1.f), "Island & Biomes");
+
+                    ImGui::SliderFloat("World Scale",  &terrainCfg.worldScale,   0.25f, 4.0f,  "%.2fx");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Higher = wider / gentler terrain features");
+
+                    ImGui::SliderInt(  "Base Height",  &terrainCfg.baseHeight,   10,   120,   "%d blk");
+                    ImGui::SliderFloat("Amplitude",    &terrainCfg.amplitude,    10.f, 120.f, "%.0f blk");
+                    ImGui::SliderInt(  "Sea Level",    &terrainCfg.seaLevel,      0,   100,   "%d blk");
+                    ImGui::SliderInt(  "Sand Margin",  &terrainCfg.sandMargin,    0,    20,   "%d blk");
+                    ImGui::SliderInt(  "Snow Height",  &terrainCfg.snowHeight,   60,   200,   "%d blk");
+
+                    ImGui::Spacing();
+                    ImGui::TextColored(ImVec4(0.7f,0.85f,1.0f,1.f), "Mountains & Rivers");
+                    ImGui::SliderFloat("Mountain Str.",&terrainCfg.mountainStrength,0.0f,1.5f,"%.2f");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("0=flat plains  1=dramatic sharp peaks");
+                    ImGui::SliderFloat("Grass Cover",  &terrainCfg.stoneErosionThresh,0.3f,1.0f,"%.2f");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Erosion threshold for bare rock cliffs.\nHigher = more grass coverage on mountain slopes.");
+                    ImGui::SliderFloat("Desert Thresh",&terrainCfg.desertMoistureThresh,-0.8f,0.2f,"%.2f");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Moisture below this value becomes desert/sand.\nMore negative = less desert.");
+                    ImGui::SliderInt(  "River Depth",  &terrainCfg.riverDepth,    0,    50,   "%d blk");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("How deep rivers carve below sea level");
+                    ImGui::SliderFloat("River Width",  &terrainCfg.riverWidth,  0.02f,0.35f,"%.3f");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Ridged threshold: lower = narrower rivers");
+
+                    ImGui::Spacing();
+                    ImGui::TextColored(ImVec4(0.7f,0.85f,1.0f,1.f), "Island Shape");
+                    ImGui::SliderFloat("Island Falloff",&terrainCfg.islandFalloff,0.2f,  0.9f, "%.2f");
+                    ImGui::SliderFloat("Coast Noise",  &terrainCfg.islandEdgeNoise,0.0f,0.6f, "%.2f");
+                    ImGui::Checkbox("Island Mode", &terrainCfg.islandMode);
+
+                    ImGui::Spacing();
                     if (ImGui::Button("Rebuild World")) {
-                        world::TerrainConfig config{};
-                        config.seed = worldSeed;
-                        chunkManager.generateWorld(worldRadius, worldRadius, config);
+                        terrainCfg.seed            = worldSeed;
+                        terrainCfg.worldRadiusBlks = worldRadius * world::CHUNK_SIZE;
+                        chunkManager.generateWorld(worldRadius, worldRadius, terrainCfg);
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("New Seed")) {
                         worldSeed = (worldSeed + 1337) % 99999;
-                        world::TerrainConfig config{};
-                        config.seed = worldSeed;
-                        chunkManager.generateWorld(worldRadius, worldRadius, config);
+                        terrainCfg.seed            = worldSeed;
+                        terrainCfg.worldRadiusBlks = worldRadius * world::CHUNK_SIZE;
+                        chunkManager.generateWorld(worldRadius, worldRadius, terrainCfg);
                     }
-                    // --- Phase 2 placeholder ---
-                    ImGui::Spacing();
-                    ImGui::TextDisabled("[ World Scale & Biomes — Phase 2 ]");
                 }
 
                 if (ImGui::CollapsingHeader("Interaction", ImGuiTreeNodeFlags_DefaultOpen)) {

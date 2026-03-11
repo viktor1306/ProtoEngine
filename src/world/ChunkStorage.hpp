@@ -43,20 +43,24 @@ public:
     const Chunk* getChunk(int cx, int cy, int cz) const;
     Chunk*       getChunk(int cx, int cy, int cz);
 
-    // Використовують кешований noise (ініціалізований у generateWorld)
+    // Legacy name: returns the occupied Y-range for a chunk column, not only the visible surface slice.
+    // Uses cached terrain config captured by generateWorld().
     std::pair<int, int> getSurfaceBounds(int cx, int cz) const;
     int                 getSurfaceMidY  (int cx, int cz) const;
 
-    // Доступ до кешованого конфігу (потрібен ChunkManager для передачі в createChunkIfMissing)
+    // Access to the terrain config captured by the last generateWorld() call.
     const TerrainConfig& getCachedConfig() const { return m_cachedConfig; }
 
     struct ActiveChunk {
         int cx, cy, cz;
-        std::unique_ptr<Chunk> chunk;
     };
 
     const std::vector<ActiveChunk>& getChunks() const { return m_activeChunks; }
     std::vector<ActiveChunk>&       getChunks()       { return m_activeChunks; }
+    size_t getDirtyCacheCount() const {
+        std::lock_guard<std::mutex> lock(m_cacheMutex);
+        return m_dirtyCache.size();
+    }
 
     // World grid bounds (in chunk coords)
     int getMinX() const { return m_minX; }
@@ -67,23 +71,33 @@ public:
     int getMaxZ() const { return m_maxZ; }
 
 private:
+    using ChunkRegistry = std::unordered_map<IVec3Key, std::unique_ptr<Chunk>, IVec3Hash>;
+
+    void addActiveChunk(int cx, int cy, int cz);
+    void eraseActiveChunk(const IVec3Key& key);
+
+    // Lightweight iteration list for streaming / LOD passes.
     std::vector<ActiveChunk> m_activeChunks;
+    // Coordinate -> index mapping for O(1) swap-pop removal from m_activeChunks.
+    std::unordered_map<IVec3Key, size_t, IVec3Hash> m_activeChunkIndices;
+    // Authoritative ownership of active chunk objects.
+    ChunkRegistry m_chunkRegistry;
     std::vector<Chunk*> m_chunkGrid;
     
-    // --- RAM Cache for modified chunks ---
-    std::unordered_map<IVec3Key, std::unique_ptr<Chunk>, IVec3Hash> m_dirtyCache;
-    std::mutex m_cacheMutex;
+    // Tier-4 eviction cache: modified chunks are parked here so stream-out does not lose player edits.
+    ChunkRegistry m_dirtyCache;
+    mutable std::mutex m_cacheMutex;
     
     int m_minX = 0, m_maxX = 0;
     int m_minY = 0, m_maxY = 0;
     int m_minZ = 0, m_maxZ = 0;
     int m_width = 0, m_height = 0, m_depth = 0;
 
-    // Cached config — set once in generateWorld, used by getSurfaceBounds.
+    // Cached config from the current world instance. Used by lazy column-bound queries and rehydration.
     TerrainConfig m_cachedConfig;
 
-    // Lazy surface-bounds cache: each column (cx,cz) computed at most once per session.
-    // Terrain is deterministic, so bounds never change after generateWorld.
+    // Lazy column-bounds cache: each (cx,cz) column is computed at most once per world instance.
+    // Terrain is deterministic for a fixed TerrainConfig, so these bounds stay immutable until generateWorld().
     // Key = (uint32(cx) << 32) | uint32(cz).
     mutable std::unordered_map<uint64_t, std::pair<int, int>> m_boundsCache;
 

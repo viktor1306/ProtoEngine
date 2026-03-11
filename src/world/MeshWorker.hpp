@@ -73,7 +73,6 @@ public:
     // Submit a batch of high priority tasks lock-free
     void submitBatchHigh(std::vector<MeshTask>& batch) {
         if (batch.empty()) return;
-
         m_activeTasks.fetch_add(batch.size(), std::memory_order_relaxed);
         size_t t = m_tailHigh.load(std::memory_order_relaxed);
 

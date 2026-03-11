@@ -9,6 +9,16 @@
 
 namespace world {
 
+struct ChunkLifecycleStats {
+    uint32_t active         = 0;
+    uint32_t placeholders   = 0;
+    uint32_t generating     = 0;
+    uint32_t ready          = 0;
+    uint32_t meshUnassigned = 0;
+    uint32_t meshEvicted    = 0;
+    uint32_t cachedModified = 0;
+};
+
 // ---------------------------------------------------------------------------
 // ChunkManager (Facade)
 // ---------------------------------------------------------------------------
@@ -59,6 +69,7 @@ public:
     
     uint32_t getWorkerThreads() const { return m_renderer.getWorkerThreads(); }
     int      getPendingMeshes() const { return m_renderer.getPendingMeshes(); }
+    ChunkLifecycleStats getLifecycleStats() const;
 
     const ChunkRenderer& getRenderer() const { return m_renderer; }
 

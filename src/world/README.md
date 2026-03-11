@@ -13,15 +13,17 @@
 
 ### `ChunkStorage` (`ChunkStorage.hpp/cpp`)
 - Зберігає воксельні дані для **всіх** чанків світу у плоскому масиві (пам'ять виділяється паралельно багатопотоково для пришвидшення Zero-Page Faults в ОС).
-- **Progressive Generation**: Ініціалізація світу виділяє лише "поверхневі" чанки (Surface Chunks). Підземні чанки генеруються на вимогу.
+- Поточна модель: `generateWorld()` одразу виділяє та заповнює **всі зайняті Y-slices** у межах кожної `(cx, cz)` колонки. Це не surface-only sparse storage.
+- Після Tier-4 eviction чанки можуть бути відновлені як `UNGENERATED` placeholders і догенеровуватись асинхронно під час повторного входу в зону стрімінгу.
 - `generateWorld(radiusX, radiusZ, seed)` — заповнює фіксовану сітку `m_chunkGrid`.
-- `createChunkIfMissing(cx, cy, cz, seed, renderer)` — re-creates чанки видалені стрімінгом.
-- `getSurfaceBounds(cx, cz)` / `getSurfaceMidY(cx, cz)` — обчислюють Y-межі стовпця чанків (Heightmap Pre-pass).
+- `createChunkIfMissing(cx, cy, cz, seed, renderer)` — re-creates повністю видалені чанки або відновлює modified чанки з RAM cache.
+- `getSurfaceBounds(cx, cz)` / `getSurfaceMidY(cx, cz)` — історична назва; фактично це межі **зайнятого chunk-column span**, а не лише поверхні.
 - Надає геттери меж світу: `getMinX/MaxX/MinZ/MaxZ`.
 
 ### `ChunkManager` (`ChunkManager.hpp/cpp`)
 - Координує streaming, LOD, Progressive Generation та рендеринг.
-- **Demand-Driven Fetching**: Слідкує за Y-координатою гравця під час копання. Якщо гравець наближається до дна поточного чанка, створюється Lock-Free Boost запит до пулу потоків для генерації підземних чанків.
+- Координує два окремі життєві цикли: CPU voxel storage (`ChunkState`) та GPU mesh residency (`m_currentLOD`, `LOD_EVICTED`).
+- **Demand-Driven Rehydration**: Слідкує за chunk placeholders, які повертаються після стрімінгу, і пріоритизує їх генерацію біля камери або під гравцем.
 - **Два незалежні параметри (ImGui слайдери):**
   - **Sphere Radius** (`m_unloadRadius`) — сфера навколо камери, де чанки завжди завантажені.
   - **Camera View Dist** (`m_frustumRadius`) — дальність завантаження чанків у напрямку погляду камери.
@@ -37,12 +39,17 @@
   | 3 | `dist ≤ frustumRadius` NOT у frustum | вокселі в RAM, GPU меш звільнено |
   | 4 | `dist > frustumRadius` | вокселі + GPU меш звільнено |
 
+- Tier 3 звільняє лише GPU mesh і ставить `LOD_EVICTED`.
+- Tier 4 видаляє chunk object зі storage; modified chunks перед цим перехоплюються в `m_dirtyCache`.
+
 ### `ChunkRenderer` (`ChunkRenderer.hpp/cpp`)
 - Асинхронна побудова GPU мешів через `MeshWorker` (N потоків).
+- Тримає власний компактний `render snapshot` для mesh-resident чанків; culling, indirect draw prep і renderer-side LOD stats більше не ітерують storage-owned `m_activeChunks`.
 - `markDirty(cx, cy, cz)` → `flushDirty()` → `rebuildDirtyChunks()` — pipeline побудови.
-- `setLOD` / `getLOD` — управління LOD-рівнем per chunk.
 - `removeChunk(key)` — звільняє лише GPU меш (GeometryManager free-list), не торкається ChunkStorage.
-- `render(cmd, layout, frustum)` — AABB frustum culling під час рендерингу (окрема логіка від стрімінгу!).
+- `cull(...)` — CPU-driven frustum filtering і підготовка indirect draw команд з renderer-owned snapshot.
+- `renderCamera(...)` / `renderShadow(...)` — виконують MDI draw calls для camera/shadow pass.
+- Видимість для metrics тепер рахується з renderer-owned snapshot, а не через CPU readback indirect command buffer.
 
 ### `LODController` (`LODController.hpp/cpp`)
 - Обчислює LOD `0/1/2` для кожного чанку за Евклідовою дистанцією до камери.

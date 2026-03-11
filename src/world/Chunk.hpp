@@ -12,8 +12,11 @@ class FastNoiseLite;
 namespace world {
 
 enum class ChunkState : uint8_t {
+    // Placeholder chunk exists in storage but voxel payload is not ready yet.
     UNGENERATED = 0,
+    // A worker task owns fillTerrain() for this chunk right now.
     GENERATING  = 1,
+    // Voxel payload is ready for meshing / neighbour queries.
     READY       = 2
 };
 
@@ -27,11 +30,46 @@ struct VoxelMeshData {
 };
 
 struct TerrainConfig {
-    int seed = 0;
-    int baseHeight = 14;
-    float amplitude = 10.0f;
-    int octaves = 3;
-    float frequency = 0.03f;
+    // --- Core noise ---
+    int   seed          = 42;
+    int   baseHeight    = 64;    // mean land height in blocks
+    float amplitude     = 60.0f; // max height variation above baseHeight
+    int   octaves       = 6;
+    float frequency     = 0.015f; // base noise frequency
+
+    // --- World Scale ---
+    // worldScale > 1 → wider/larger features (lower effective frequency)
+    // worldScale < 1 → tighter/smaller features (higher effective frequency)
+    float worldScale    = 1.0f;
+
+    // --- Island mask ---
+    bool  islandMode      = true;
+    float islandFalloff   = 0.60f; // fraction of worldRadius where falloff begins
+    float islandEdgeNoise = 0.28f; // raggedness of the coastline (0=circle, 1=very jagged)
+    int   worldRadiusBlks = 320;   // world half-width in blocks (set by generateWorld)
+
+    // --- Water / Sea level ---
+    int   seaLevel    = 52; // Y below which open voxels become WATER
+    int   sandMargin  = 5;  // blocks above seaLevel that become SAND
+
+    // --- Snow caps ---
+    int   snowHeight  = 115; // Y above which the surface becomes SNOW
+
+    // --- Mountain / Erosion ---
+    // mountainStrength: 0=all flat plains, 1=dramatic sharp peaks
+    float mountainStrength    = 0.70f;
+    // stoneErosionThresh: erosion above this → bare rock cliff (no grass/dirt)
+    // Lower = more bare stone, Higher = more grass coverage on slopes
+    float stoneErosionThresh  = 0.72f;
+
+    // --- Desert / Moisture ---
+    // desertMoistureThresh: moisture below this → sand/desert biome
+    // Lower (more negative) = less desert, Higher (toward 0) = more desert
+    float desertMoistureThresh = -0.15f;
+
+    // --- Rivers ---
+    int   riverDepth  = 18;   // blocks below seaLevel that river trenches carve
+    float riverWidth  = 0.10f; // ridged-noise threshold: lower = narrower rivers
 };
 
 class Chunk {
@@ -80,14 +118,14 @@ public:
     int getCY() const { return m_cy; }
     int getCZ() const { return m_cz; }
 
-    // State for progressive generation
+    // Storage lifecycle state. This tracks voxel readiness only; GPU mesh state lives in ChunkRenderer.
     std::atomic<ChunkState> m_state{ChunkState::READY};
 
     // Tracks player edits to avoid destroying chunk data during Tier-4 stream unloads
     std::atomic<bool> m_isModified{false};
 
-    // Current Level of Detail (LOD) assigned by ChunkManager (LODController)
-    // Values: -1 (UNASSIGNED), -2 (EVICTED), or 0, 1, 2...
+    // Current render lifecycle marker assigned by ChunkManager / ChunkRenderer.
+    // Values: -1 (voxel data ready but no GPU mesh assigned yet), -2 (mesh evicted, voxels kept), or 0,1,2...
     std::atomic<int> m_currentLOD{-1};
 
     // World-space offset of this chunk's (0,0,0) corner (in block units)

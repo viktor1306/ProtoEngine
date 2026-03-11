@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 namespace world {
 
@@ -13,14 +14,11 @@ ChunkRenderer::ChunkRenderer(gfx::VulkanContext& context, gfx::GeometryManager& 
               << m_meshWorker.getThreadCount() << "\n" << std::flush;
               
     createDescriptorSetLayout();
-    createComputePipeline();
     createBuffers();
 }
 
 ChunkRenderer::~ChunkRenderer() {
     VkDevice device = m_context.getDevice();
-    if (m_computePipeline != VK_NULL_HANDLE) vkDestroyPipeline(device, m_computePipeline, nullptr);
-    if (m_computePipelineLayout != VK_NULL_HANDLE) vkDestroyPipelineLayout(device, m_computePipelineLayout, nullptr);
     
     vkDestroyDescriptorPool(device, m_descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
@@ -33,39 +31,30 @@ ChunkRenderer::~ChunkRenderer() {
 }
 
 void ChunkRenderer::createDescriptorSetLayout() {
-    VkDescriptorSetLayoutBinding bindings[2]{};
+    VkDescriptorSetLayoutBinding bindings[1]{};
     
     // Binding 0: SSBO (InstanceData)
     bindings[0].binding = 0;
     bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bindings[0].descriptorCount = 1;
-    bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-    // Binding 1: SSBO (IndirectCmds)
-    bindings[1].binding = 1;
-    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    bindings[1].descriptorCount = 1;
-    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 2;
+    layoutInfo.bindingCount = 1;
     layoutInfo.pBindings = bindings;
 
     if (vkCreateDescriptorSetLayout(m_context.getDevice(), &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("ChunkRenderer: Failed to create SSBO descriptor set layout!");
     }
 
-    VkDescriptorPoolSize poolSizes[2]{};
+    VkDescriptorPoolSize poolSizes[1]{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT * 2; // Для InstanceBuffer (Camera + Shadow)
-    
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[1].descriptorCount = MAX_FRAMES_IN_FLIGHT * 2; // Для IndirectBuffer (Camera + Shadow)
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 2;
+    poolInfo.poolSizeCount = 1;
     poolInfo.pPoolSizes = poolSizes;
     poolInfo.maxSets = MAX_FRAMES_IN_FLIGHT * 2;
 
@@ -86,62 +75,6 @@ void ChunkRenderer::createDescriptorSetLayout() {
     if (vkAllocateDescriptorSets(m_context.getDevice(), &allocInfo, m_shadowDescriptorSets) != VK_SUCCESS) {
         throw std::runtime_error("ChunkRenderer: Failed to allocate Shadow SSBO descriptor sets!");
     }
-}
-
-static std::vector<char> readShaderFile(const std::string& filename) {
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) throw std::runtime_error("failed to open " + filename);
-    size_t fileSize = (size_t) file.tellg();
-    std::vector<char> buffer(fileSize);
-    file.seekg(0); file.read(buffer.data(), fileSize);
-    return buffer;
-}
-
-void ChunkRenderer::createComputePipeline() {
-    auto compCode = readShaderFile("bin/shaders/culling.comp.spv");
-    
-    VkShaderModuleCreateInfo moduleInfo{};
-    moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    moduleInfo.codeSize = compCode.size();
-    moduleInfo.pCode = reinterpret_cast<const uint32_t*>(compCode.data());
-    
-    VkShaderModule compModule;
-    if (vkCreateShaderModule(m_context.getDevice(), &moduleInfo, nullptr, &compModule) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create compute shader module!");
-    }
-    
-    VkPipelineShaderStageCreateInfo shaderStage{};
-    shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    shaderStage.module = compModule;
-    shaderStage.pName = "main";
-    
-    VkPushConstantRange pushRange{};
-    pushRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    pushRange.offset = 0;
-    pushRange.size = 128; // 6 planes + maxDist/pos + count aligned to 16 bytes (128 bytes total)
-    
-    VkPipelineLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutInfo.setLayoutCount = 1;
-    layoutInfo.pSetLayouts = &m_descriptorSetLayout;
-    layoutInfo.pushConstantRangeCount = 1;
-    layoutInfo.pPushConstantRanges = &pushRange;
-    
-    if (vkCreatePipelineLayout(m_context.getDevice(), &layoutInfo, nullptr, &m_computePipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create compute pipeline layout!");
-    }
-    
-    VkComputePipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipelineInfo.stage = shaderStage;
-    pipelineInfo.layout = m_computePipelineLayout;
-    
-    if (vkCreateComputePipelines(m_context.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_computePipeline) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create compute pipeline!");
-    }
-    
-    vkDestroyShaderModule(m_context.getDevice(), compModule, nullptr);
 }
 
 void ChunkRenderer::createBuffers() {
@@ -178,17 +111,7 @@ void ChunkRenderer::createBuffers() {
         instanceInfo.offset = 0;
         instanceInfo.range = instanceBufferSize;
 
-        VkDescriptorBufferInfo cameraIndirectInfo{};
-        cameraIndirectInfo.buffer = m_cameraIndirectBuffers[i]->getBuffer();
-        cameraIndirectInfo.offset = 0;
-        cameraIndirectInfo.range = indirectBufferSize;
-
-        VkDescriptorBufferInfo shadowIndirectInfo{};
-        shadowIndirectInfo.buffer = m_shadowIndirectBuffers[i]->getBuffer();
-        shadowIndirectInfo.offset = 0;
-        shadowIndirectInfo.range = indirectBufferSize;
-
-        VkWriteDescriptorSet writes[4]{};
+        VkWriteDescriptorSet writes[2]{};
         // Camera Set
         writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[0].dstSet = m_cameraDescriptorSets[i];
@@ -198,32 +121,16 @@ void ChunkRenderer::createBuffers() {
         writes[0].descriptorCount = 1;
         writes[0].pBufferInfo = &instanceInfo;
 
+        // Shadow Set reuses the same instance buffer layout.
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[1].dstSet = m_cameraDescriptorSets[i];
-        writes[1].dstBinding = 1;
+        writes[1].dstSet = m_shadowDescriptorSets[i];
+        writes[1].dstBinding = 0;
         writes[1].dstArrayElement = 0;
         writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         writes[1].descriptorCount = 1;
-        writes[1].pBufferInfo = &cameraIndirectInfo;
+        writes[1].pBufferInfo = &instanceInfo;
 
-        // Shadow Set (Uses SAME instance buffer, different indirect buffer)
-        writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[2].dstSet = m_shadowDescriptorSets[i];
-        writes[2].dstBinding = 0;
-        writes[2].dstArrayElement = 0;
-        writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        writes[2].descriptorCount = 1;
-        writes[2].pBufferInfo = &instanceInfo;
-
-        writes[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[3].dstSet = m_shadowDescriptorSets[i];
-        writes[3].dstBinding = 1;
-        writes[3].dstArrayElement = 0;
-        writes[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        writes[3].descriptorCount = 1;
-        writes[3].pBufferInfo = &shadowIndirectInfo;
-
-        vkUpdateDescriptorSets(m_context.getDevice(), 4, writes, 0, nullptr);
+        vkUpdateDescriptorSets(m_context.getDevice(), 2, writes, 0, nullptr);
     }
     std::cout << "[ChunkRenderer] MDI and SSBO Buffers initialized. Max visible chunks: " << MAX_VISIBLE_CHUNKS << "\n";
 
@@ -240,6 +147,8 @@ void ChunkRenderer::clear() {
     m_dirtyPending.clear();
     m_cpuInstanceData.clear();
     m_fadeStartTimes.clear();
+    m_renderSnapshot.clear();
+    m_renderSnapshotIndices.clear();
     m_sortedChunks.clear();
     m_listDirty = true;
     m_framesDirty = {true, true, true};
@@ -248,6 +157,55 @@ void ChunkRenderer::clear() {
     m_visibleCount = 0;
     m_culledCount = 0;
     m_visibleVertices = 0;
+}
+
+void ChunkRenderer::upsertRenderSnapshot(const IVec3Key& key, const ChunkRenderData& rd, int lod) {
+    if (!rd.mesh || !rd.valid) {
+        eraseRenderSnapshot(key);
+        return;
+    }
+
+    RenderChunkSnapshot snapshot{};
+    snapshot.key = key;
+    snapshot.poolIndex = rd.mesh->getBufferIndex();
+    snapshot.indexCount = rd.indexCount;
+    snapshot.firstIndex = rd.mesh->getFirstIndex();
+    snapshot.vertexOffset = rd.mesh->getVertexOffset();
+    snapshot.lod = lod;
+    snapshot.fadeStartTime = rd.fadeStartTime;
+    snapshot.fadeProgress = rd.fadeProgress;
+
+    auto indexIt = m_renderSnapshotIndices.find(key);
+    if (indexIt == m_renderSnapshotIndices.end()) {
+        const size_t newIndex = m_renderSnapshot.size();
+        m_renderSnapshot.push_back(snapshot);
+        m_renderSnapshotIndices.emplace(key, newIndex);
+    } else {
+        m_renderSnapshot[indexIt->second] = snapshot;
+    }
+}
+
+void ChunkRenderer::eraseRenderSnapshot(const IVec3Key& key) {
+    auto indexIt = m_renderSnapshotIndices.find(key);
+    if (indexIt == m_renderSnapshotIndices.end()) {
+        return;
+    }
+
+    const size_t removeIndex = indexIt->second;
+    const size_t lastIndex = m_renderSnapshot.size() - 1;
+    if (removeIndex != lastIndex) {
+        const RenderChunkSnapshot moved = m_renderSnapshot[lastIndex];
+        m_renderSnapshot[removeIndex] = moved;
+        m_renderSnapshotIndices[moved.key] = removeIndex;
+    }
+
+    m_renderSnapshot.pop_back();
+    m_renderSnapshotIndices.erase(indexIt);
+}
+
+bool ChunkRenderer::isSnapshotVisibleInFrustum(const RenderChunkSnapshot& snapshot, const scene::Frustum& frustum) const {
+    const auto aabb = buildAABB(snapshot.key.x, snapshot.key.y, snapshot.key.z);
+    return frustum.isVisible(aabb);
 }
 
 
@@ -374,9 +332,8 @@ void ChunkRenderer::waitAllWorkers() {
 
 std::array<uint32_t, 3> ChunkRenderer::getLODCounts() const {
     std::array<uint32_t, 3> out{0, 0, 0};
-    for (const auto& ac : m_storage.getChunks()) {
-        if (!ac.chunk) continue;
-        int lod = ac.chunk->m_currentLOD.load(std::memory_order_relaxed);
+    for (const auto& snapshot : m_renderSnapshot) {
+        int lod = snapshot.lod;
         if (lod >= 0 && lod <= 2) out[static_cast<size_t>(lod)]++;
     }
     return out;
@@ -395,12 +352,10 @@ bool ChunkRenderer::hasMesh() const {
 
 void ChunkRenderer::rebuildSortedList() {
     m_sortedChunks.clear();
-    for (const auto& [key, rd] : m_renderData) {
-        if (!rd.valid || !rd.mesh) continue;
-        Chunk* chunk = m_storage.getChunk(key.x, key.y, key.z);
-        if (!chunk) continue;
-        int lod = chunk->m_currentLOD.load(std::memory_order_relaxed);
-        m_sortedChunks.push_back({key, rd.mesh->getBufferIndex(), lod});
+    m_sortedChunks.reserve(m_renderSnapshot.size());
+    for (uint32_t i = 0; i < static_cast<uint32_t>(m_renderSnapshot.size()); ++i) {
+        const auto& snapshot = m_renderSnapshot[i];
+        m_sortedChunks.push_back({i, snapshot.poolIndex, snapshot.lod});
     }
     std::sort(m_sortedChunks.begin(), m_sortedChunks.end(), [](const ChunkDrawCmd& a, const ChunkDrawCmd& b) {
         if (a.poolIndex != b.poolIndex) return a.poolIndex < b.poolIndex;
@@ -415,14 +370,14 @@ void ChunkRenderer::rebuildCpuInstanceData() {
     m_fadeStartTimes.reserve(m_sortedChunks.size());
 
     for (const auto& cmd : m_sortedChunks) {
-        const auto& rd = m_renderData[cmd.key];
+        const auto& snapshot = m_renderSnapshot[cmd.snapshotIndex];
         ChunkInstanceData inst;
-        inst.posX         = static_cast<float>(cmd.key.x * CHUNK_SIZE);
-        inst.posY         = static_cast<float>(cmd.key.y * CHUNK_SIZE);
-        inst.posZ         = static_cast<float>(cmd.key.z * CHUNK_SIZE);
-        inst.fadeProgress = rd.fadeProgress; // збережено з попереднього стану
+        inst.posX         = static_cast<float>(snapshot.key.x * CHUNK_SIZE);
+        inst.posY         = static_cast<float>(snapshot.key.y * CHUNK_SIZE);
+        inst.posZ         = static_cast<float>(snapshot.key.z * CHUNK_SIZE);
+        inst.fadeProgress = snapshot.fadeProgress;
         m_cpuInstanceData.push_back(inst);
-        m_fadeStartTimes.push_back(rd.fadeStartTime);
+        m_fadeStartTimes.push_back(snapshot.fadeStartTime);
     }
 
     // Всі GPU буфери застаріли — потрібен memcpy для кожного кадру
@@ -444,37 +399,31 @@ void ChunkRenderer::rebuildIndirectBuffers(uint32_t frame) {
 
     for (uint32_t idx = 0; idx < static_cast<uint32_t>(m_sortedChunks.size()); ++idx) {
         const auto& cmd = m_sortedChunks[idx];
+        const auto& snapshot = m_renderSnapshot[cmd.snapshotIndex];
         if (cmd.poolIndex != currentPool) {
             m_activeBatches.push_back({currentPool, startIdx, idx - startIdx});
             currentPool = cmd.poolIndex;
             startIdx = idx;
         }
 
-        const auto it = m_renderData.find(cmd.key);
-        if (it == m_renderData.end() || !it->second.mesh) continue;
-        const auto& rd = it->second;
-
-        cameraIndirects[idx].indexCount    = rd.indexCount;
+        cameraIndirects[idx].indexCount    = snapshot.indexCount;
         cameraIndirects[idx].instanceCount = 0; // GPU Compute will set to 1 if visible
-        cameraIndirects[idx].firstIndex    = rd.mesh->getFirstIndex();
-        cameraIndirects[idx].vertexOffset  = rd.mesh->getVertexOffset();
+        cameraIndirects[idx].firstIndex    = snapshot.firstIndex;
+        cameraIndirects[idx].vertexOffset  = snapshot.vertexOffset;
         cameraIndirects[idx].firstInstance = idx;
 
-        shadowIndirects[idx].indexCount    = rd.indexCount;
+        shadowIndirects[idx].indexCount    = snapshot.indexCount;
         shadowIndirects[idx].instanceCount = 0;
-        shadowIndirects[idx].firstIndex    = rd.mesh->getFirstIndex();
-        shadowIndirects[idx].vertexOffset  = rd.mesh->getVertexOffset();
+        shadowIndirects[idx].firstIndex    = snapshot.firstIndex;
+        shadowIndirects[idx].vertexOffset  = snapshot.vertexOffset;
         shadowIndirects[idx].firstInstance = idx;
     }
     m_activeBatches.push_back({currentPool, startIdx,
         static_cast<uint32_t>(m_sortedChunks.size()) - startIdx});
-
-    // Save how many draw commands this frame slot contains so cull() can
-    // read back GPU-written instanceCount values on the NEXT use of this slot.
-    m_lastDispatchCount[frame] = static_cast<uint32_t>(m_sortedChunks.size());
 }
 
 void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, float currentTime, uint32_t currentFrame) {
+    (void)cmd;
 
     // 1. Якщо список чанків змінився (load/unload) — перебудуємо sorted list і CPU-буфер.
     // m_listDirty встановлюється ТІЛЬКИ у rebuildDirtyChunks / removeChunk / unloadMeshOnly.
@@ -496,36 +445,19 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
     }
     if (fadeUpdated) m_framesDirty[currentFrame] = true;
 
-    // 2.5 Throttled GPU readback for display counters.
-    // -----------------------------------------------------------------------
-    // CPU_TO_GPU (write-combined) memory is fast to write but SLOW to read:
-    // cache-bypassing reads kill performance at high FPS.
-    // Solution: copy the indirect buffer to a normal heap vector once every
-    // 60 frames via a single memcpy (sequential, cache-friendly), then count.
-    // At 1800 FPS this runs 30x/sec — invisible latency, zero FPS impact.
-    m_readbackTick = (m_readbackTick + 1) % 60;
-    if (m_readbackTick == 0) {
-        const uint32_t prevCount = m_lastDispatchCount[currentFrame];
-        if (prevCount > 0 && m_cameraIndirectMapped[currentFrame]) {
-            // Single sequential memcpy into normal RAM — cache-friendly
-            m_readbackShadow.resize(prevCount);
-            std::memcpy(m_readbackShadow.data(),
-                        m_cameraIndirectMapped[currentFrame],
-                        prevCount * sizeof(VkDrawIndexedIndirectCommand));
-            // Count on normal heap memory — fast
-            uint32_t visChunks  = 0;
-            uint32_t visIndices = 0;
-            for (uint32_t i = 0; i < prevCount; ++i) {
-                if (m_readbackShadow[i].instanceCount > 0) {
-                    ++visChunks;
-                    visIndices += m_readbackShadow[i].indexCount;
-                }
-            }
-            m_visibleCount    = visChunks;
-            m_visibleVertices = visIndices / 3;
-            m_culledCount     = prevCount - visChunks;
+    // 2.5 Renderer-side visibility stats come from the compact render snapshot,
+    // not from indirect-buffer readback.
+    uint32_t visibleCount = 0;
+    uint32_t visibleIndexCount = 0;
+    for (const auto& snapshot : m_renderSnapshot) {
+        if (!isSnapshotVisibleInFrustum(snapshot, cameraFrustum)) {
+            continue;
         }
+        ++visibleCount;
+        visibleIndexCount += snapshot.indexCount;
     }
+    m_visibleCount = visibleCount;
+    m_visibleVertices = visibleIndexCount / 3;
 
     // 3. Один memcpy якщо GPU-буфер поточного кадру застарів
     if (m_framesDirty[currentFrame] && !m_cpuInstanceData.empty()) {
@@ -536,55 +468,37 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
     }
 
     m_activeInstances = static_cast<uint32_t>(m_cpuInstanceData.size());
+    m_culledCount = m_activeInstances > visibleCount ? (m_activeInstances - visibleCount) : 0;
 
     if (m_activeInstances == 0) return;
 
-    // 4. GPU Compute Shader Dispatch
-    struct ComputePush {
-        core::math::Vec4 planes[6];
-        core::math::Vec4 cameraPosAndLimit;
-        uint32_t count;
-    } push{};
+    // 4. CPU-side frustum filtering writes instanceCount directly into the mapped indirect buffers.
+    auto* cameraIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_cameraIndirectMapped[currentFrame]);
+    auto* shadowIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_shadowIndirectMapped[currentFrame]);
 
-    uint32_t groupCount = (m_activeInstances + 63) / 64;
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipeline);
+    for (uint32_t idx = 0; idx < static_cast<uint32_t>(m_sortedChunks.size()); ++idx) {
+        const auto& drawCmd = m_sortedChunks[idx];
+        const auto& snapshot = m_renderSnapshot[drawCmd.snapshotIndex];
 
-    // --- DISPATCH 1: CAMERA ---
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipelineLayout, 0, 1, &m_cameraDescriptorSets[currentFrame], 0, nullptr);
-    for (int i = 0; i < 6; i++) {
-        const auto& p = cameraFrustum.getPlanes()[i];
-        push.planes[i] = core::math::Vec4{p.normal.x, p.normal.y, p.normal.z, p.d};
+        const bool cameraVisible = isSnapshotVisibleInFrustum(snapshot, cameraFrustum);
+        cameraIndirects[idx].instanceCount = cameraVisible ? 1u : 0u;
+
+        bool shadowVisible = isSnapshotVisibleInFrustum(snapshot, shadowFrustum);
+        if (shadowVisible && shadowDistanceLimit > 0.0f) {
+            const float centerX = snapshot.key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            const float centerY = snapshot.key.y * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            const float centerZ = snapshot.key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
+            const float dx = centerX - cameraPos.x;
+            const float dy = centerY - cameraPos.y;
+            const float dz = centerZ - cameraPos.z;
+            const float distSq = dx * dx + dy * dy + dz * dz;
+            shadowVisible = distSq <= shadowDistanceLimit * shadowDistanceLimit;
+        }
+        shadowIndirects[idx].instanceCount = shadowVisible ? 1u : 0u;
     }
-    push.cameraPosAndLimit = core::math::Vec4{cameraPos.x, cameraPos.y, cameraPos.z, 0.0f};
-    push.count = m_activeInstances;
-    vkCmdPushConstants(cmd, m_computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePush), &push);
-    vkCmdDispatch(cmd, groupCount, 1, 1);
 
-    // --- DISPATCH 2: SHADOW ---
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipelineLayout, 0, 1, &m_shadowDescriptorSets[currentFrame], 0, nullptr);
-    for (int i = 0; i < 6; i++) {
-        const auto& p = shadowFrustum.getPlanes()[i];
-        push.planes[i] = core::math::Vec4{p.normal.x, p.normal.y, p.normal.z, p.d};
-    }
-    push.cameraPosAndLimit = core::math::Vec4{cameraPos.x, cameraPos.y, cameraPos.z, shadowDistanceLimit};
-    push.count = m_activeInstances;
-    vkCmdPushConstants(cmd, m_computePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePush), &push);
-    vkCmdDispatch(cmd, groupCount, 1, 1);
-
-    // 5. Memory Barrier (Compute Write -> Graphic Indirect Read)
-    VkMemoryBarrier2 barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
-    barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-    barrier.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT;
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
-    barrier.dstAccessMask = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
-
-    VkDependencyInfo dep{};
-    dep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dep.memoryBarrierCount = 1;
-    dep.pMemoryBarriers = &barrier;
-
-    vkCmdPipelineBarrier2(cmd, &dep);
+    m_cameraIndirectBuffers[currentFrame]->flush();
+    m_shadowIndirectBuffers[currentFrame]->flush();
 }
 
 void ChunkRenderer::renderCamera(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
@@ -602,7 +516,7 @@ void ChunkRenderer::renderCamera(VkCommandBuffer cmd, VkPipelineLayout layout, u
         m_geometryManager.bindPool(cmd, batch.poolIndex);
         vkCmdDrawIndexedIndirect(cmd, indirectBuffer, batch.startIdx * stride, batch.count, stride);
     }
-    // m_visibleCount is now populated via non-blocking GPU readback in cull().
+    // m_visibleCount is populated from the renderer-owned CPU snapshot visibility pass in cull().
 }
 
 void ChunkRenderer::renderShadow(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
@@ -657,7 +571,6 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     requests.reserve(latestTasks.size());
 
     for (auto& [key, task] : latestTasks) {
-
         if (task.type != MeshTask::Type::GENERATE) {
             auto chunk = m_storage.getChunk(key.x, key.y, key.z);
             int desiredLOD = chunk ? chunk->m_currentLOD.load(std::memory_order_relaxed) : 0;
@@ -679,6 +592,7 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
             }
             rd.mesh.reset();
             rd.valid = false;
+            eraseRenderSnapshot(key);
             m_listDirty = true;
             m_framesDirty = {true, true, true};
         }
@@ -716,6 +630,7 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
         rd.valid = true;
         rd.fadeStartTime = currentTime;
         rd.fadeProgress  = 0.0f; // новий mesh — fade з 0
+        upsertRenderSnapshot(key, rd, task.lod);
         m_listDirty = true;             // список змінився — потрібен rebuild
         m_framesDirty = {true, true, true};
 
@@ -749,6 +664,7 @@ void ChunkRenderer::removeChunk(const IVec3Key& key) {
             m_totalVertices -= rd.vertexCount;
             m_totalIndices  -= rd.indexCount;
         }
+        eraseRenderSnapshot(key);
         m_renderData.erase(it);
         m_listDirty = true;
         m_framesDirty = {true, true, true};
@@ -769,6 +685,7 @@ void ChunkRenderer::unloadMeshOnly(const IVec3Key& key) {
             m_totalVertices -= rd.vertexCount;
             m_totalIndices  -= rd.indexCount;
         }
+        eraseRenderSnapshot(key);
         m_renderData.erase(it);
         m_listDirty = true;
         m_framesDirty = {true, true, true};

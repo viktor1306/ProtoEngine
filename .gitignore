@@ -1,5 +1,14 @@
 /bin/*.exe
 /bin/*.spv
 /obj/
-.vscode/
 *.o
+
+# Local editor/runtime state
+.vscode/
+imgui.ini
+/logs/
+log.txt
+log_*.txt
+run_out.txt
+build.log
+make_log.txt

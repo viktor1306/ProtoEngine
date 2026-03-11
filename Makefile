@@ -1,12 +1,18 @@
 # Makefile for Vulkan Engine (MinGW-w64)
 
 # Paths
+VULKAN_SDK_PATH ?= $(subst \\,/,$(VULKAN_SDK))
+ifeq ($(strip $(VULKAN_SDK_PATH)),)
 VULKAN_SDK_PATH = C:/VulkanSDK/1.4.341.1
+endif
+
+VULKAN_INCLUDE = $(VULKAN_SDK_PATH)/Include
+VULKAN_LIB = $(VULKAN_SDK_PATH)/Lib
 
 # Compiler and Flags
 CXX = g++
-CFLAGS = -std=c++20 -O2 -Wall -Wextra -DNDEBUG -IC:/VulkanSDK/1.4.341.1/Include -I./src -I./src/vendor -I./src/vendor/imgui -I./src/vendor/imgui/backends
-LDFLAGS = -L$(VULKAN_SDK_PATH)/Lib -lvulkan-1 -lgdi32 -luser32 -lkernel32 -ldwmapi -lpsapi -lwinmm
+CFLAGS = -std=c++20 -O2 -Wall -Wextra -DNDEBUG -I$(VULKAN_INCLUDE) -I./src -I./src/vendor -I./src/vendor/imgui -I./src/vendor/imgui/backends
+LDFLAGS = -L$(VULKAN_LIB) -lvulkan-1 -lgdi32 -luser32 -lkernel32 -ldwmapi -lpsapi -lwinmm
 
 # Directories
 SRC_DIR = src
@@ -40,14 +46,17 @@ OBJECTS := $(SOURCES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 TARGET = $(BIN_DIR)/engine.exe
 
 # Shader Compiler
-GLSLC = $(VULKAN_SDK_PATH)/Bin/glslc.exe
+GLSLC ?= $(VULKAN_SDK_PATH)/Bin/glslc.exe
+ifeq ($(wildcard $(GLSLC)),)
+GLSLC = glslc
+endif
 SHADER_SRC_DIR = shaders
 SHADER_BIN_DIR = $(BIN_DIR)/shaders
 SHADERS := $(wildcard $(SHADER_SRC_DIR)/*.vert) $(wildcard $(SHADER_SRC_DIR)/*.frag) $(wildcard $(SHADER_SRC_DIR)/*.comp)
 SPV_SHADERS := $(SHADERS:$(SHADER_SRC_DIR)/%=$(SHADER_BIN_DIR)/%.spv)
 
 # Font assets (copy system Consolas font to bin/fonts/ for TextRenderer)
-FONT_SRC = C:/Windows/Fonts/consola.ttf
+FONT_SRC ?= C:/Windows/Fonts/consola.ttf
 FONT_DST = $(BIN_DIR)/fonts/consola.ttf
 
 # Targets
@@ -71,7 +80,7 @@ fonts: $(FONT_DST)
 
 $(FONT_DST):
 	@if not exist "$(BIN_DIR)\fonts" mkdir "$(BIN_DIR)\fonts"
-	@copy /Y "$(subst /,\,$(FONT_SRC))" "$(subst /,\,$(FONT_DST))" >nul
+	@if exist "$(subst /,\,$(FONT_SRC))" (copy /Y "$(subst /,\,$(FONT_SRC))" "$(subst /,\,$(FONT_DST))" >nul) else (echo [fonts] Warning: FONT_SRC not found: $(FONT_SRC))
 
 clean:
 	@if exist "$(OBJ_DIR)" rmdir /s /q "$(OBJ_DIR)"
