@@ -5,6 +5,36 @@
 #include <fstream>
 #include <filesystem>
 
+namespace {
+
+std::vector<char> readBinaryFile(const std::string& path) {
+    std::ifstream file(path, std::ios::ate | std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("ChunkRenderer: Failed to open shader: " + path);
+    }
+
+    const size_t fileSize = static_cast<size_t>(file.tellg());
+    std::vector<char> buffer(fileSize);
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+    return buffer;
+}
+
+VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code) {
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = code.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+    VkShaderModule shaderModule = VK_NULL_HANDLE;
+    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        throw std::runtime_error("ChunkRenderer: Failed to create compute shader module");
+    }
+    return shaderModule;
+}
+
+} // namespace
+
 namespace world {
 
 ChunkRenderer::ChunkRenderer(gfx::VulkanContext& context, gfx::GeometryManager& geom, ChunkStorage& storage, LODController& lodCtrl, uint32_t meshWorkerThreads)
@@ -13,24 +43,23 @@ ChunkRenderer::ChunkRenderer(gfx::VulkanContext& context, gfx::GeometryManager& 
     std::cout << "[ChunkRenderer] MeshWorker threads: "
               << m_meshWorker.getThreadCount() << "\n" << std::flush;
               
-    createDescriptorSetLayout();
+    createDescriptorSetLayouts();
     createBuffers();
+    createComputePipeline();
 }
 
 ChunkRenderer::~ChunkRenderer() {
     VkDevice device = m_context.getDevice();
+
+    vkDestroyPipeline(device, m_cullPipeline, nullptr);
+    vkDestroyPipelineLayout(device, m_cullPipelineLayout, nullptr);
     
     vkDestroyDescriptorPool(device, m_descriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(device, m_cullDescriptorSetLayout, nullptr);
     vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
-    
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        if (m_instanceBuffers[i]) m_instanceBuffers[i]->unmap();
-        if (m_cameraIndirectBuffers[i]) m_cameraIndirectBuffers[i]->unmap();
-        if (m_shadowIndirectBuffers[i]) m_shadowIndirectBuffers[i]->unmap();
-    }
 }
 
-void ChunkRenderer::createDescriptorSetLayout() {
+void ChunkRenderer::createDescriptorSetLayouts() {
     VkDescriptorSetLayoutBinding bindings[1]{};
     
     // Binding 0: SSBO (InstanceData)
@@ -48,15 +77,35 @@ void ChunkRenderer::createDescriptorSetLayout() {
         throw std::runtime_error("ChunkRenderer: Failed to create SSBO descriptor set layout!");
     }
 
+    VkDescriptorSetLayoutBinding cullBindings[2]{};
+    cullBindings[0].binding = 0;
+    cullBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    cullBindings[0].descriptorCount = 1;
+    cullBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    cullBindings[1].binding = 1;
+    cullBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    cullBindings[1].descriptorCount = 1;
+    cullBindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    VkDescriptorSetLayoutCreateInfo cullLayoutInfo{};
+    cullLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    cullLayoutInfo.bindingCount = 2;
+    cullLayoutInfo.pBindings = cullBindings;
+
+    if (vkCreateDescriptorSetLayout(m_context.getDevice(), &cullLayoutInfo, nullptr, &m_cullDescriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("ChunkRenderer: Failed to create cull descriptor set layout!");
+    }
+
     VkDescriptorPoolSize poolSizes[1]{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT * 2; // Для InstanceBuffer (Camera + Shadow)
+    poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT * 6;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = 1;
     poolInfo.pPoolSizes = poolSizes;
-    poolInfo.maxSets = MAX_FRAMES_IN_FLIGHT * 2;
+    poolInfo.maxSets = MAX_FRAMES_IN_FLIGHT * 4;
 
     if (vkCreateDescriptorPool(m_context.getDevice(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("ChunkRenderer: Failed to create SSBO descriptor pool!");
@@ -75,43 +124,103 @@ void ChunkRenderer::createDescriptorSetLayout() {
     if (vkAllocateDescriptorSets(m_context.getDevice(), &allocInfo, m_shadowDescriptorSets) != VK_SUCCESS) {
         throw std::runtime_error("ChunkRenderer: Failed to allocate Shadow SSBO descriptor sets!");
     }
+
+    std::vector<VkDescriptorSetLayout> cullLayouts(MAX_FRAMES_IN_FLIGHT, m_cullDescriptorSetLayout);
+    allocInfo.pSetLayouts = cullLayouts.data();
+    if (vkAllocateDescriptorSets(m_context.getDevice(), &allocInfo, m_cameraCullDescriptorSets) != VK_SUCCESS) {
+        throw std::runtime_error("ChunkRenderer: Failed to allocate Camera cull descriptor sets!");
+    }
+    if (vkAllocateDescriptorSets(m_context.getDevice(), &allocInfo, m_shadowCullDescriptorSets) != VK_SUCCESS) {
+        throw std::runtime_error("ChunkRenderer: Failed to allocate Shadow cull descriptor sets!");
+    }
+}
+
+void ChunkRenderer::createComputePipeline() {
+    const std::vector<char> shaderCode = readBinaryFile("bin/shaders/culling.comp.spv");
+    VkShaderModule shaderModule = createShaderModule(m_context.getDevice(), shaderCode);
+
+    VkPushConstantRange pushRange{};
+    pushRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushRange.offset = 0;
+    pushRange.size = sizeof(CullPushConstants);
+
+    VkPipelineLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layoutInfo.setLayoutCount = 1;
+    layoutInfo.pSetLayouts = &m_cullDescriptorSetLayout;
+    layoutInfo.pushConstantRangeCount = 1;
+    layoutInfo.pPushConstantRanges = &pushRange;
+
+    if (vkCreatePipelineLayout(m_context.getDevice(), &layoutInfo, nullptr, &m_cullPipelineLayout) != VK_SUCCESS) {
+        vkDestroyShaderModule(m_context.getDevice(), shaderModule, nullptr);
+        throw std::runtime_error("ChunkRenderer: Failed to create cull pipeline layout!");
+    }
+
+    VkPipelineShaderStageCreateInfo shaderStage{};
+    shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    shaderStage.module = shaderModule;
+    shaderStage.pName = "main";
+
+    VkComputePipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipelineInfo.stage = shaderStage;
+    pipelineInfo.layout = m_cullPipelineLayout;
+
+    if (vkCreateComputePipelines(m_context.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_cullPipeline) != VK_SUCCESS) {
+        vkDestroyShaderModule(m_context.getDevice(), shaderModule, nullptr);
+        throw std::runtime_error("ChunkRenderer: Failed to create cull compute pipeline!");
+    }
+
+    vkDestroyShaderModule(m_context.getDevice(), shaderModule, nullptr);
 }
 
 void ChunkRenderer::createBuffers() {
     VkDeviceSize instanceBufferSize = MAX_VISIBLE_CHUNKS * sizeof(ChunkInstanceData);
     VkDeviceSize indirectBufferSize = MAX_VISIBLE_CHUNKS * sizeof(VkDrawIndexedIndirectCommand);
+    constexpr VmaAllocationCreateFlags hostWriteFlags =
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         m_instanceBuffers[i] = std::make_unique<gfx::Buffer>(
             m_context,
             instanceBufferSize,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            VMA_MEMORY_USAGE_CPU_TO_GPU
+            VMA_MEMORY_USAGE_CPU_TO_GPU,
+            hostWriteFlags
         );
-        m_instanceBuffers[i]->map(&m_instanceMapped[i]);
 
         m_cameraIndirectBuffers[i] = std::make_unique<gfx::Buffer>(
             m_context,
             indirectBufferSize,
             VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            VMA_MEMORY_USAGE_CPU_TO_GPU
+            VMA_MEMORY_USAGE_CPU_TO_GPU,
+            hostWriteFlags
         );
-        m_cameraIndirectBuffers[i]->map(&m_cameraIndirectMapped[i]);
 
         m_shadowIndirectBuffers[i] = std::make_unique<gfx::Buffer>(
             m_context,
             indirectBufferSize,
             VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            VMA_MEMORY_USAGE_CPU_TO_GPU
+            VMA_MEMORY_USAGE_CPU_TO_GPU,
+            hostWriteFlags
         );
-        m_shadowIndirectBuffers[i]->map(&m_shadowIndirectMapped[i]);
-
         VkDescriptorBufferInfo instanceInfo{};
         instanceInfo.buffer = m_instanceBuffers[i]->getBuffer();
         instanceInfo.offset = 0;
         instanceInfo.range = instanceBufferSize;
 
-        VkWriteDescriptorSet writes[2]{};
+        VkDescriptorBufferInfo cameraIndirectInfo{};
+        cameraIndirectInfo.buffer = m_cameraIndirectBuffers[i]->getBuffer();
+        cameraIndirectInfo.offset = 0;
+        cameraIndirectInfo.range = indirectBufferSize;
+
+        VkDescriptorBufferInfo shadowIndirectInfo{};
+        shadowIndirectInfo.buffer = m_shadowIndirectBuffers[i]->getBuffer();
+        shadowIndirectInfo.offset = 0;
+        shadowIndirectInfo.range = indirectBufferSize;
+
+        VkWriteDescriptorSet writes[6]{};
         // Camera Set
         writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[0].dstSet = m_cameraDescriptorSets[i];
@@ -130,7 +239,39 @@ void ChunkRenderer::createBuffers() {
         writes[1].descriptorCount = 1;
         writes[1].pBufferInfo = &instanceInfo;
 
-        vkUpdateDescriptorSets(m_context.getDevice(), 2, writes, 0, nullptr);
+        writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[2].dstSet = m_cameraCullDescriptorSets[i];
+        writes[2].dstBinding = 0;
+        writes[2].dstArrayElement = 0;
+        writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[2].descriptorCount = 1;
+        writes[2].pBufferInfo = &instanceInfo;
+
+        writes[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[3].dstSet = m_cameraCullDescriptorSets[i];
+        writes[3].dstBinding = 1;
+        writes[3].dstArrayElement = 0;
+        writes[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[3].descriptorCount = 1;
+        writes[3].pBufferInfo = &cameraIndirectInfo;
+
+        writes[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[4].dstSet = m_shadowCullDescriptorSets[i];
+        writes[4].dstBinding = 0;
+        writes[4].dstArrayElement = 0;
+        writes[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[4].descriptorCount = 1;
+        writes[4].pBufferInfo = &instanceInfo;
+
+        writes[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[5].dstSet = m_shadowCullDescriptorSets[i];
+        writes[5].dstBinding = 1;
+        writes[5].dstArrayElement = 0;
+        writes[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[5].descriptorCount = 1;
+        writes[5].pBufferInfo = &shadowIndirectInfo;
+
+        vkUpdateDescriptorSets(m_context.getDevice(), 6, writes, 0, nullptr);
     }
     std::cout << "[ChunkRenderer] MDI and SSBO Buffers initialized. Max visible chunks: " << MAX_VISIBLE_CHUNKS << "\n";
 
@@ -150,8 +291,10 @@ void ChunkRenderer::clear() {
     m_renderSnapshot.clear();
     m_renderSnapshotIndices.clear();
     m_sortedChunks.clear();
+    m_activeBatches.clear();
     m_listDirty = true;
     m_framesDirty = {true, true, true};
+    m_activeInstances = 0;
     m_totalVertices = 0;
     m_totalIndices = 0;
     m_visibleCount = 0;
@@ -385,8 +528,7 @@ void ChunkRenderer::rebuildCpuInstanceData() {
 }
 
 void ChunkRenderer::rebuildIndirectBuffers(uint32_t frame) {
-    auto* cameraIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_cameraIndirectMapped[frame]);
-    auto* shadowIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_shadowIndirectMapped[frame]);
+    auto& cameraIndirects = m_cameraIndirectCpu[frame];
 
     m_activeBatches.clear();
     if (m_sortedChunks.empty()) return;
@@ -407,24 +549,21 @@ void ChunkRenderer::rebuildIndirectBuffers(uint32_t frame) {
         }
 
         cameraIndirects[idx].indexCount    = snapshot.indexCount;
-        cameraIndirects[idx].instanceCount = 0; // GPU Compute will set to 1 if visible
+        cameraIndirects[idx].instanceCount = 0;
         cameraIndirects[idx].firstIndex    = snapshot.firstIndex;
         cameraIndirects[idx].vertexOffset  = snapshot.vertexOffset;
         cameraIndirects[idx].firstInstance = idx;
 
-        shadowIndirects[idx].indexCount    = snapshot.indexCount;
-        shadowIndirects[idx].instanceCount = 0;
-        shadowIndirects[idx].firstIndex    = snapshot.firstIndex;
-        shadowIndirects[idx].vertexOffset  = snapshot.vertexOffset;
-        shadowIndirects[idx].firstInstance = idx;
     }
     m_activeBatches.push_back({currentPool, startIdx,
         static_cast<uint32_t>(m_sortedChunks.size()) - startIdx});
+
+    const size_t uploadSize = m_sortedChunks.size() * sizeof(VkDrawIndexedIndirectCommand);
+    m_cameraIndirectBuffers[frame]->upload(cameraIndirects.data(), uploadSize);
 }
 
 void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, float currentTime, uint32_t currentFrame) {
     (void)cmd;
-
     // 1. Якщо список чанків змінився (load/unload) — перебудуємо sorted list і CPU-буфер.
     // m_listDirty встановлюється ТІЛЬКИ у rebuildDirtyChunks / removeChunk / unloadMeshOnly.
     // Після rebuild знімаємо m_listDirty, щоб наступний кадр НЕ перебудовував даремно.
@@ -462,7 +601,7 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
     // 3. Один memcpy якщо GPU-буфер поточного кадру застарів
     if (m_framesDirty[currentFrame] && !m_cpuInstanceData.empty()) {
         size_t sz = m_cpuInstanceData.size() * sizeof(ChunkInstanceData);
-        memcpy(m_instanceMapped[currentFrame], m_cpuInstanceData.data(), sz);
+        m_instanceBuffers[currentFrame]->upload(m_cpuInstanceData.data(), sz);
         rebuildIndirectBuffers(currentFrame);
         m_framesDirty[currentFrame] = false;
     }
@@ -470,11 +609,20 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
     m_activeInstances = static_cast<uint32_t>(m_cpuInstanceData.size());
     m_culledCount = m_activeInstances > visibleCount ? (m_activeInstances - visibleCount) : 0;
 
-    if (m_activeInstances == 0) return;
+    if (m_activeInstances == 0) {
+        return;
+    }
 
-    // 4. CPU-side frustum filtering writes instanceCount directly into the mapped indirect buffers.
-    auto* cameraIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_cameraIndirectMapped[currentFrame]);
-    auto* shadowIndirects = static_cast<VkDrawIndexedIndirectCommand*>(m_shadowIndirectMapped[currentFrame]);
+    runCpuCullFallback(cameraFrustum, shadowFrustum, cameraPos, shadowDistanceLimit, currentFrame);
+}
+
+void ChunkRenderer::runCpuCullFallback(const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, uint32_t currentFrame) {
+    (void)shadowFrustum;
+    (void)cameraPos;
+    (void)shadowDistanceLimit;
+
+    // 4. CPU-side frustum filtering updates the CPU-side indirect command staging arrays.
+    auto& cameraIndirects = m_cameraIndirectCpu[currentFrame];
 
     for (uint32_t idx = 0; idx < static_cast<uint32_t>(m_sortedChunks.size()); ++idx) {
         const auto& drawCmd = m_sortedChunks[idx];
@@ -482,23 +630,10 @@ void ChunkRenderer::cull(VkCommandBuffer cmd, const scene::Frustum& cameraFrustu
 
         const bool cameraVisible = isSnapshotVisibleInFrustum(snapshot, cameraFrustum);
         cameraIndirects[idx].instanceCount = cameraVisible ? 1u : 0u;
-
-        bool shadowVisible = isSnapshotVisibleInFrustum(snapshot, shadowFrustum);
-        if (shadowVisible && shadowDistanceLimit > 0.0f) {
-            const float centerX = snapshot.key.x * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
-            const float centerY = snapshot.key.y * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
-            const float centerZ = snapshot.key.z * CHUNK_SIZE + CHUNK_SIZE / 2.0f;
-            const float dx = centerX - cameraPos.x;
-            const float dy = centerY - cameraPos.y;
-            const float dz = centerZ - cameraPos.z;
-            const float distSq = dx * dx + dy * dy + dz * dz;
-            shadowVisible = distSq <= shadowDistanceLimit * shadowDistanceLimit;
-        }
-        shadowIndirects[idx].instanceCount = shadowVisible ? 1u : 0u;
     }
 
-    m_cameraIndirectBuffers[currentFrame]->flush();
-    m_shadowIndirectBuffers[currentFrame]->flush();
+    const size_t uploadSize = m_sortedChunks.size() * sizeof(VkDrawIndexedIndirectCommand);
+    m_cameraIndirectBuffers[currentFrame]->upload(cameraIndirects.data(), uploadSize);
 }
 
 void ChunkRenderer::renderCamera(VkCommandBuffer cmd, VkPipelineLayout layout, uint32_t currentFrame) {
@@ -549,14 +684,24 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     latestTasks.reserve(done.size());
     for (auto& task : done) {
         IVec3Key key{task.cx, task.cy, task.cz};
+        auto chunk = m_storage.getChunk(key.x, key.y, key.z);
 
         if (task.type == MeshTask::Type::GENERATE) {
+            if (!chunk) {
+                continue;
+            }
             latestTasks[key] = std::move(task);
             continue;
         }
 
-        auto chunk = m_storage.getChunk(key.x, key.y, key.z);
-        int desiredLOD = chunk ? chunk->m_currentLOD.load(std::memory_order_relaxed) : 0;
+        if (!chunk) {
+            continue;
+        }
+
+        int desiredLOD = chunk->m_currentLOD.load(std::memory_order_relaxed);
+        if (desiredLOD < 0) {
+            continue;
+        }
         if (task.lod == desiredLOD) {
             latestTasks[key] = std::move(task);
         }
@@ -571,10 +716,14 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
     requests.reserve(latestTasks.size());
 
     for (auto& [key, task] : latestTasks) {
+        auto chunk = m_storage.getChunk(key.x, key.y, key.z);
+        if (!chunk) {
+            continue;
+        }
+
         if (task.type != MeshTask::Type::GENERATE) {
-            auto chunk = m_storage.getChunk(key.x, key.y, key.z);
-            int desiredLOD = chunk ? chunk->m_currentLOD.load(std::memory_order_relaxed) : 0;
-            if (task.lod != desiredLOD) {
+            int desiredLOD = chunk->m_currentLOD.load(std::memory_order_relaxed);
+            if (desiredLOD < 0 || task.lod != desiredLOD) {
                 continue;
             }
         }
@@ -610,7 +759,6 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
             rd.isEmpty = true;
             // Always clear the dirty flag regardless of LOD level (Bug fix: previously
             // markClean was only called for lod==0, leaving LOD1/2 chunks permanently dirty).
-            auto chunk = m_storage.getChunk(key.x, key.y, key.z);
             if (chunk) chunk->markClean();
             // No SSBO change needed — empty chunks don't occupy a slot.
             continue;
@@ -639,7 +787,6 @@ void ChunkRenderer::rebuildDirtyChunks(VkDevice device, float currentTime) {
 
         requests.push_back(req);
 
-        auto chunk = m_storage.getChunk(key.x, key.y, key.z);
         if (chunk) chunk->markClean();
     }
 

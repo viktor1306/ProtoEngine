@@ -16,6 +16,7 @@ public:
     core::math::Mat4 getProjectionMatrix() const;
 
     void setAspectRatio(float aspect) { m_aspect = aspect; }
+    void setPosition(core::math::Vec3 position) { m_position = position; }
     void setYaw(float yaw)     { m_yaw = yaw;     updateVectors(); }
     void setPitch(float pitch) { m_pitch = std::clamp(pitch, -89.0f, 89.0f); updateVectors(); }
     core::math::Vec3 getPosition() const { return m_position; }

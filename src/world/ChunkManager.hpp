@@ -81,6 +81,8 @@ public:
     void waitAllWorkers() { m_renderer.waitAllWorkers(); }
 
 private:
+    gfx::VulkanContext& m_context;
+    gfx::GeometryManager& m_geometryManager;
     ChunkStorage  m_storage;
     LODController m_lodCtrl;
     ChunkRenderer m_renderer;

@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <cstdio>
+#include <cstdlib>
 #include <windows.h>
 #include <psapi.h>
 #include <timeapi.h>
@@ -126,6 +127,28 @@ static std::string prepareMetricsLogPath() {
     return metricsPath.generic_string();
 }
 
+static uint64_t readEnvU64(const char* name) {
+    const char* value = std::getenv(name);
+    if (!value || !*value) {
+        return 0;
+    }
+
+    char* end = nullptr;
+    const unsigned long long parsed = std::strtoull(value, &end, 10);
+    return (end != value) ? static_cast<uint64_t>(parsed) : 0;
+}
+
+static double readEnvDouble(const char* name) {
+    const char* value = std::getenv(name);
+    if (!value || !*value) {
+        return 0.0;
+    }
+
+    char* end = nullptr;
+    const double parsed = std::strtod(value, &end);
+    return (end != value) ? parsed : 0.0;
+}
+
 int main() {
     // Flush stdout after every write so log files are always up-to-date
     // even when output is redirected (full-buffering mode by default).
@@ -182,7 +205,10 @@ int main() {
         // ---- Voxel World (ChunkManager) ------------------------------------
         // MeshWorker uses hardware_concurrency() threads by default
         world::ChunkManager chunkManager(vulkanContext, geometryManager);
-        int initialWorldRadius = 10;
+        int initialWorldRadius = static_cast<int>(readEnvU64("PROTOENGINE_WORLD_RADIUS"));
+        if (initialWorldRadius <= 0) {
+            initialWorldRadius = 10;
+        }
         chunkManager.setRenderRadius(initialWorldRadius);
         int worldSeed = 42;
         // Initial generation with island defaults
@@ -349,6 +375,10 @@ int main() {
         float displayUpdateMs = 0.0f, displayRecordMs = 0.0f;
         float displayEventsMs = 0.0f, displayLodMs = 0.0f, displayRebuildMs = 0.0f, displayRaycastMs = 0.0f, displayUiMs = 0.0f;
         float statsTimer = 0.0f;
+        const uint64_t autoRebuildFrame = readEnvU64("PROTOENGINE_AUTOREBUILD_FRAME");
+        const uint64_t autoExitFrame = readEnvU64("PROTOENGINE_AUTO_EXIT_FRAME");
+        const double cameraSweepSpeed = readEnvDouble("PROTOENGINE_CAMERA_SWEEP_SPEED");
+        bool autoRebuildTriggered = false;
 
         // ---- Palette Data --------------------------------------------------
         // Must match VoxelData palette indices used in Chunk::fillTerrain:
@@ -421,6 +451,17 @@ int main() {
                 scene::Camera& moveTarget = (debugCameraMode && controlMainInDebug)
                     ? camera : activeCamera;
                 moveTarget.update(dt);
+            }
+
+            if (!debugCameraMode && cameraSweepSpeed != 0.0) {
+                auto pos = camera.getPosition();
+                auto front = camera.getFront();
+                core::math::Vec3 planarFront{front.x, 0.0f, front.z};
+                float planarLenSq = planarFront.x * planarFront.x + planarFront.z * planarFront.z;
+                if (planarLenSq > 0.0001f) {
+                    planarFront = core::math::Vec3::normalize(planarFront);
+                    camera.setPosition(pos + planarFront * static_cast<float>(cameraSweepSpeed * dt));
+                }
             }
 
             // ---- Build frustum of the MAIN camera (for streaming/LOD) -------
@@ -819,6 +860,18 @@ int main() {
                 ImGui::End(); // Render & Debug
             }
 
+            if (!autoRebuildTriggered && autoRebuildFrame != 0 && absoluteFrame >= autoRebuildFrame) {
+                std::cout << "[diag] auto rebuild world on frame " << absoluteFrame << std::endl;
+                terrainCfg.seed            = worldSeed;
+                terrainCfg.worldRadiusBlks = worldRadius * world::CHUNK_SIZE;
+                chunkManager.generateWorld(worldRadius, worldRadius, terrainCfg);
+                autoRebuildTriggered = true;
+            }
+
+            if (autoExitFrame != 0 && absoluteFrame >= autoExitFrame) {
+                PostMessage(window.getHandle(), WM_CLOSE, 0, 0);
+            }
+
             // ---- Light matrices --------------------------------------------
             core::math::Vec3 lightPos = {5.0f, 10.0f, 3.0f};
             core::math::Mat4 lightView = core::math::Mat4::lookAt(
@@ -864,8 +917,6 @@ int main() {
                 
                 renderer.beginDepthPrePass(commandBuffer);
                 if (chunkManager.hasMesh()) {
-                    auto renderStart = std::chrono::high_resolution_clock::now();
-                    
                     voxelDepthPrePass.bind(commandBuffer);
 
                     VoxelGlobalPush vpc{};
@@ -881,9 +932,6 @@ int main() {
                     bindlessSystem.bind(commandBuffer, voxelDepthPrePass.getLayout(), currentFrame, 1);
 
                     chunkManager.renderCamera(commandBuffer, voxelDepthPrePass.getLayout(), currentFrame);
-                    
-                    auto renderEnd = std::chrono::high_resolution_clock::now();
-                    // renderTime += ... (not logged for prepass)
                 }
                 renderer.endDepthPrePass(commandBuffer);
 
@@ -951,11 +999,20 @@ int main() {
             if (displayRecordMs == 0.0f) displayRecordMs = static_cast<float>(currentRecordMs);
             else displayRecordMs = displayRecordMs * 0.95f + static_cast<float>(currentRecordMs) * 0.05f;
 
+            const double frameTimeSeconds = std::chrono::duration<double>(recordEnd - updateStart).count();
+            if (frameTimeSeconds < targetFrameTime) {
+                const DWORD sleepMs = static_cast<DWORD>((targetFrameTime - frameTimeSeconds) * 1000.0);
+                if (sleepMs > 0) {
+                    Sleep(sleepMs);
+                }
+            }
+
         }
 
         vkDeviceWaitIdle(vulkanContext.getDevice());
 
     } catch (const std::exception& e) {
+        std::cout << "Fatal Error: " << e.what() << std::endl;
         std::cerr << "Fatal Error: " << e.what() << std::endl;
         MessageBoxA(nullptr, e.what(), "ProtoEngine — Fatal Error", MB_OK | MB_ICONERROR);
         timeEndPeriod(1);

@@ -70,6 +70,13 @@ public:
     void submitGenerateTaskHigh(Chunk* chunk, const TerrainConfig& config);
     void submitGenerateTaskLow (Chunk* chunk, const TerrainConfig& config); // async streaming
 
+    struct alignas(16) CullPushConstants {
+        core::math::Vec4 planes[6];
+        core::math::Vec4 cameraPosAndLimit;
+        uint32_t count = 0;
+        uint32_t padding[3]{};
+    };
+
     // Returns true if the last completed mesh task for this chunk produced
     // zero geometry (all-air / fully-occluded). Neighbour-notification code
     // in ChunkManager uses this to skip useless cascade dirty-marks.
@@ -119,11 +126,13 @@ public:
 private:
 
     scene::AABB buildAABB(int cx, int cy, int cz) const;
-    void createDescriptorSetLayout();
+    void createDescriptorSetLayouts();
     void createBuffers();
+    void createComputePipeline();
     void upsertRenderSnapshot(const IVec3Key& key, const ChunkRenderData& rd, int lod);
     void eraseRenderSnapshot(const IVec3Key& key);
     bool isSnapshotVisibleInFrustum(const RenderChunkSnapshot& snapshot, const scene::Frustum& frustum) const;
+    void runCpuCullFallback(const scene::Frustum& cameraFrustum, const scene::Frustum& shadowFrustum, const core::math::Vec3& cameraPos, float shadowDistanceLimit, uint32_t currentFrame);
 
     // Persistent SSBO helpers (викликаються рідко — лише при load/unload)
     void rebuildSortedList();                    // сортує m_sortedChunks
@@ -179,14 +188,20 @@ private:
 
     // -------------------------------------------------------------
     // Hardware resources (MDI + instance SSBO)
-    VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
-    VkDescriptorPool      m_descriptorPool      = VK_NULL_HANDLE;
+    VkDescriptorSetLayout m_descriptorSetLayout     = VK_NULL_HANDLE;
+    VkDescriptorSetLayout m_cullDescriptorSetLayout = VK_NULL_HANDLE;
+    VkDescriptorPool      m_descriptorPool          = VK_NULL_HANDLE;
     VkDescriptorSet       m_cameraDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
     VkDescriptorSet       m_shadowDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
+    VkDescriptorSet       m_cameraCullDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
+    VkDescriptorSet       m_shadowCullDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
+    VkPipelineLayout      m_cullPipelineLayout      = VK_NULL_HANDLE;
+    VkPipeline            m_cullPipeline            = VK_NULL_HANDLE;
 
     std::unique_ptr<gfx::Buffer> m_instanceBuffers[MAX_FRAMES_IN_FLIGHT];
     std::unique_ptr<gfx::Buffer> m_cameraIndirectBuffers[MAX_FRAMES_IN_FLIGHT];
     std::unique_ptr<gfx::Buffer> m_shadowIndirectBuffers[MAX_FRAMES_IN_FLIGHT];
+    std::array<VkDrawIndexedIndirectCommand, MAX_VISIBLE_CHUNKS> m_cameraIndirectCpu[MAX_FRAMES_IN_FLIGHT]{};
     void* m_instanceMapped[MAX_FRAMES_IN_FLIGHT]{};
     void* m_cameraIndirectMapped[MAX_FRAMES_IN_FLIGHT]{};
     void* m_shadowIndirectMapped[MAX_FRAMES_IN_FLIGHT]{};

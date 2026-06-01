@@ -4,7 +4,9 @@
 namespace world {
 
 ChunkManager::ChunkManager(gfx::VulkanContext& context, gfx::GeometryManager& geometryManager, uint32_t meshWorkerThreads)
-    : m_storage()
+    : m_context(context)
+    , m_geometryManager(geometryManager)
+    , m_storage()
     , m_lodCtrl()
     , m_renderer(context, geometryManager, m_storage, m_lodCtrl, meshWorkerThreads)
 {
@@ -13,7 +15,13 @@ ChunkManager::ChunkManager(gfx::VulkanContext& context, gfx::GeometryManager& ge
 
 void ChunkManager::generateWorld(int radiusX, int radiusZ, const TerrainConfig& config) {
     m_terrainConfig = config;
+
+    // World rebuild swaps out the full chunk set. Make the reset explicit so
+    // stale draw data and allocator state from the previous world cannot leak
+    // into the next one.
+    vkDeviceWaitIdle(m_context.getDevice());
     m_renderer.clear();
+    m_geometryManager.reset();
     m_storage.generateWorld(radiusX, radiusZ, config);
 
     const auto& chunks = m_storage.getChunks();
@@ -271,7 +279,6 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
         const float unloadRadiusSq   = m_unloadRadius * m_unloadRadius;
         const float frustumMaxDistSq = m_frustumRadius * m_frustumRadius;
 
-        std::vector<IVec3Key> chunksToFullyRemove;  // voxels + GPU
         std::vector<IVec3Key> chunksMeshOnly;       // GPU mesh only (keep voxels)
 
         for (const auto& ac : m_storage.getChunks()) {
@@ -286,8 +293,11 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             float distSq    = dx_chunk * dx_chunk + dz_chunk * dz_chunk;
 
             if (distSq > frustumMaxDistSq) {
-                // Tier 4: too far — remove everything
-                chunksToFullyRemove.push_back(key);
+                // Hard-removing chunk objects here races with in-flight mesh/generation
+                // work because worker tasks still hold raw Chunk* pointers. Keep the voxel
+                // payload alive and only evict GPU mesh until chunk task ownership is fully
+                // reference-counted.
+                chunksMeshOnly.push_back(key);
                 continue;
             }
 
@@ -359,11 +369,6 @@ void ChunkManager::updateCamera(const core::math::Vec3& cameraPos, const scene::
             }
         }
 
-        for (const auto& key : chunksToFullyRemove) {
-            m_renderer.removeChunk(key);
-        }
-        m_storage.removeChunks(chunksToFullyRemove);
-        
         for (const auto& key : chunksMeshOnly) {
             m_renderer.unloadMeshOnly(key);  // free GPU only, voxels stay, LOD = EVICTED
         }

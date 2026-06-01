@@ -1,6 +1,6 @@
 #include "SyncManager.hpp"
-#include <stdexcept>
 #include <chrono>
+#include <stdexcept>
 
 namespace gfx {
 
@@ -11,8 +11,10 @@ SyncManager::SyncManager(VulkanContext& context, int framesInFlight)
     m_renderFinishedSemaphores.resize(framesInFlight);
     m_inFlightFences.resize(framesInFlight);
 
-    VkSemaphoreCreateInfo semInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-    VkFenceCreateInfo fenceInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+    VkSemaphoreCreateInfo semInfo{};
+    semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     VkDevice device = m_context.getDevice();
@@ -43,18 +45,22 @@ void SyncManager::waitAndResetFence(uint32_t frameIndex) {
 }
 
 void SyncManager::submitFrame(VkCommandBuffer cmd, uint32_t frameIndex, VkQueue graphicsQueue) {
-    VkSemaphoreSubmitInfo waitSem{VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO};
+    VkSemaphoreSubmitInfo waitSem{};
+    waitSem.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     waitSem.semaphore = m_imageAvailableSemaphores[frameIndex];
     waitSem.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    VkSemaphoreSubmitInfo signalSem{VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO};
+    VkSemaphoreSubmitInfo signalSem{};
+    signalSem.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     signalSem.semaphore = m_renderFinishedSemaphores[frameIndex];
     signalSem.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    VkCommandBufferSubmitInfo cmdInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO};
+    VkCommandBufferSubmitInfo cmdInfo{};
+    cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
     cmdInfo.commandBuffer = cmd;
 
-    VkSubmitInfo2 submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO_2};
+    VkSubmitInfo2 submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
     submitInfo.waitSemaphoreInfoCount   = 1; submitInfo.pWaitSemaphoreInfos   = &waitSem;
     submitInfo.commandBufferInfoCount   = 1; submitInfo.pCommandBufferInfos   = &cmdInfo;
     submitInfo.signalSemaphoreInfoCount = 1; submitInfo.pSignalSemaphoreInfos = &signalSem;
@@ -70,7 +76,8 @@ void SyncManager::submitFrame(VkCommandBuffer cmd, uint32_t frameIndex, VkQueue 
 
 bool SyncManager::presentFrame(uint32_t frameIndex, VkSwapchainKHR swapchain,
                                 uint32_t imageIndex, VkQueue presentQueue) {
-    VkPresentInfoKHR presentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores    = &m_renderFinishedSemaphores[frameIndex];
     presentInfo.swapchainCount     = 1;
@@ -81,6 +88,12 @@ bool SyncManager::presentFrame(uint32_t frameIndex, VkSwapchainKHR swapchain,
     VkResult result = vkQueuePresentKHR(presentQueue, &presentInfo);
     auto end = std::chrono::high_resolution_clock::now();
     m_presentTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
+
+    if (result != VK_SUCCESS && result != VK_ERROR_OUT_OF_DATE_KHR && result != VK_SUBOPTIMAL_KHR) {
+        std::ostringstream oss;
+        oss << "SyncManager: present failed with VkResult=" << static_cast<int>(result);
+        throw std::runtime_error(oss.str());
+    }
 
     return (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR);
 }
