@@ -1,0 +1,6 @@
+159.051 ms [INFO] Vulkan 1.3; core + synchronization validation enabled
+237.273 ms [INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+281.937 ms [INFO] Swapchain 320x180; 2; 3 images
+351.439 ms [INFO] Swapchain 320x180; 0; 3 images
+645.816 ms [INFO] Scene GPU readback: geometry_pixels=418426 depth_probes=0
+702.162 ms [INFO] Vulkan resources released

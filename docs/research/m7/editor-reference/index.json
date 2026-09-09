@@ -1,0 +1,192 @@
+{
+  "format": "proto.benchmark.supplement",
+  "version": 1,
+  "started": "2026-09-09T14:52:01.7102822+03:00",
+  "bin_directory": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin",
+  "repeats": 3,
+  "warmup_seconds": 2.0,
+  "sample_seconds": 5.0,
+  "asset_cycles": 12,
+  "skip_editor": false,
+  "skip_asset_benchmark": true,
+  "binaries": {
+    "editor": {
+      "path": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin\\ProtoEditor.exe",
+      "sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc"
+    },
+    "asset_benchmark": {
+      "path": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin\\ProtoAssetBenchmark.exe",
+      "sha256": null
+    }
+  },
+  "order": "editor idle repeats, editor interactive repeats, asset repeats; all serial",
+  "runs": [
+    {
+      "id": "editor-idle-r1",
+      "group": "editor-idle",
+      "repeat": 1,
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin\\ProtoEditor.exe",
+      "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+      "arguments": [
+        "--benchmark",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.main.json",
+        "--benchmark-warmup",
+        "2",
+        "--benchmark-seconds",
+        "5"
+      ],
+      "reports": [
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.csv",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.manifest.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.observations.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.main.json"
+      ],
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.host.json",
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.stderr.log"
+    },
+    {
+      "id": "editor-idle-r2",
+      "group": "editor-idle",
+      "repeat": 2,
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin\\ProtoEditor.exe",
+      "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+      "arguments": [
+        "--benchmark",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.main.json",
+        "--benchmark-warmup",
+        "2",
+        "--benchmark-seconds",
+        "5"
+      ],
+      "reports": [
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.csv",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.manifest.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.observations.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.main.json"
+      ],
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.host.json",
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.stderr.log"
+    },
+    {
+      "id": "editor-idle-r3",
+      "group": "editor-idle",
+      "repeat": 3,
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin\\ProtoEditor.exe",
+      "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+      "arguments": [
+        "--benchmark",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.main.json",
+        "--benchmark-warmup",
+        "2",
+        "--benchmark-seconds",
+        "5"
+      ],
+      "reports": [
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.csv",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.manifest.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.observations.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.main.json"
+      ],
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.host.json",
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.stderr.log"
+    },
+    {
+      "id": "editor-interactive-r1",
+      "group": "editor-interactive",
+      "repeat": 1,
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin\\ProtoEditor.exe",
+      "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+      "arguments": [
+        "--benchmark",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.main.json",
+        "--benchmark-warmup",
+        "2",
+        "--benchmark-seconds",
+        "5",
+        "--benchmark-interactive"
+      ],
+      "reports": [
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.csv",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.manifest.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.observations.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.main.json"
+      ],
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.host.json",
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.stderr.log"
+    },
+    {
+      "id": "editor-interactive-r2",
+      "group": "editor-interactive",
+      "repeat": 2,
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin\\ProtoEditor.exe",
+      "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+      "arguments": [
+        "--benchmark",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.main.json",
+        "--benchmark-warmup",
+        "2",
+        "--benchmark-seconds",
+        "5",
+        "--benchmark-interactive"
+      ],
+      "reports": [
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.csv",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.manifest.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.observations.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.main.json"
+      ],
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.host.json",
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.stderr.log"
+    },
+    {
+      "id": "editor-interactive-r3",
+      "group": "editor-interactive",
+      "repeat": 3,
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-editor-reference\\bin\\ProtoEditor.exe",
+      "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+      "arguments": [
+        "--benchmark",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.main.json",
+        "--benchmark-warmup",
+        "2",
+        "--benchmark-seconds",
+        "5",
+        "--benchmark-interactive"
+      ],
+      "reports": [
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.csv",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.manifest.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.observations.json",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.main.json"
+      ],
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.host.json",
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.stderr.log"
+    }
+  ],
+  "complete": true,
+  "finished": "2026-09-09T14:52:52.0251586+03:00"
+}

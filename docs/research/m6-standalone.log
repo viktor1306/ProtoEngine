@@ -1,0 +1,8 @@
+1.868 ms [BEHAVIOR] [1a765fea-eef4-4932-8771-01db813db06a] ReadData loaded 9f21b5d0-7f62-4e93-a8b3-68d2c4f11022: Proto Standalone raw payload v1
+159.527 ms [INFO] Vulkan 1.3; core + synchronization validation enabled
+220.469 ms [INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+262.340 ms [INFO] Swapchain 1375x900; 2; 3 images
+419.988 ms [PLAYER] Ready
+1135.414 ms [BEHAVIOR] [50000000-0000-4000-8000-000000000010] Space pressed: object moved up by 0.5 m
+2286.551 ms [INFO] Scene GPU readback: geometry_pixels=537882 depth_probes=0
+2381.285 ms [INFO] Vulkan resources released

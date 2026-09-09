@@ -1,0 +1,336 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "m2-debug",
+      "inherits": "debug"
+    },
+    {
+      "name": "m2-release",
+      "inherits": "release"
+    },
+    {
+      "name": "m3-debug",
+      "inherits": "debug"
+    },
+    {
+      "name": "m3-release",
+      "inherits": "release"
+    },
+    {
+      "name": "m4-debug",
+      "inherits": "debug"
+    },
+    {
+      "name": "m4-release",
+      "inherits": "release"
+    },
+    {
+      "name": "m5-debug",
+      "inherits": "debug"
+    },
+    {
+      "name": "m5-release",
+      "inherits": "release"
+    },
+    {
+      "name": "m6-debug",
+      "inherits": "debug"
+    },
+    {
+      "name": "m6-release",
+      "inherits": "release"
+    },
+    {
+      "name": "m7-debug",
+      "inherits": "debug"
+    },
+    {
+      "name": "m7-release",
+      "inherits": "release"
+    },
+    {
+      "name": "m8-debug",
+      "inherits": "debug"
+    },
+    {
+      "name": "m8-release",
+      "inherits": "release"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "jobs": 8
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "jobs": 8
+    },
+    {
+      "name": "m2-debug",
+      "configurePreset": "m2-debug",
+      "jobs": 8
+    },
+    {
+      "name": "m2-release",
+      "configurePreset": "m2-release",
+      "jobs": 8
+    },
+    {
+      "name": "m3-debug",
+      "configurePreset": "m3-debug",
+      "jobs": 8
+    },
+    {
+      "name": "m3-release",
+      "configurePreset": "m3-release",
+      "jobs": 8
+    },
+    {
+      "name": "m4-debug",
+      "configurePreset": "m4-debug",
+      "jobs": 8
+    },
+    {
+      "name": "m4-release",
+      "configurePreset": "m4-release",
+      "jobs": 8
+    },
+    {
+      "name": "m5-debug",
+      "configurePreset": "m5-debug",
+      "jobs": 8
+    },
+    {
+      "name": "m5-release",
+      "configurePreset": "m5-release",
+      "jobs": 8
+    },
+    {
+      "name": "m6-debug",
+      "configurePreset": "m6-debug",
+      "jobs": 8
+    },
+    {
+      "name": "m6-release",
+      "configurePreset": "m6-release",
+      "jobs": 8
+    },
+    {
+      "name": "m7-debug",
+      "configurePreset": "m7-debug",
+      "jobs": 8
+    },
+    {
+      "name": "m7-release",
+      "configurePreset": "m7-release",
+      "jobs": 8
+    },
+    {
+      "name": "m8-debug",
+      "configurePreset": "m8-debug",
+      "jobs": 8
+    },
+    {
+      "name": "m8-release",
+      "configurePreset": "m8-release",
+      "jobs": 8
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m2-debug",
+      "configurePreset": "m2-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m2-release",
+      "configurePreset": "m2-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m3-debug",
+      "configurePreset": "m3-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m3-release",
+      "configurePreset": "m3-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m4-debug",
+      "configurePreset": "m4-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m4-release",
+      "configurePreset": "m4-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m5-debug",
+      "configurePreset": "m5-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m5-release",
+      "configurePreset": "m5-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m6-debug",
+      "configurePreset": "m6-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m6-release",
+      "configurePreset": "m6-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m7-debug",
+      "configurePreset": "m7-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m7-release",
+      "configurePreset": "m7-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m8-debug",
+      "configurePreset": "m8-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    },
+    {
+      "name": "m8-release",
+      "configurePreset": "m8-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 1
+      }
+    }
+  ]
+}

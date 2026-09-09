@@ -1,0 +1,11 @@
+{
+  "format":"proto.graphics",
+  "formatVersion":1,
+  "profile":"Balanced",
+  "renderScale":1,
+  "vSync":true,
+  "viewDistance":300,
+  "sunShadows":{"enabled":true,"cascades":3,"resolution":2048,"distance":80,"filter":"pcf3x3"},
+  "pointShadows":{"enabled":true,"resolution":512,"filterTaps":9,"poolBudgetMiB":96,"overflow":"multiPass"},
+  "textureTopMipDrop":0
+}

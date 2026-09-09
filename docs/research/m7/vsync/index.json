@@ -1,0 +1,60 @@
+{
+  "format": "proto.benchmark.runs",
+  "version": 1,
+  "started": "2026-09-09T14:00:40.2596252+03:00",
+  "repeats": 3,
+  "requested_warmup_seconds": 2.0,
+  "requested_sample_seconds": 5.0,
+  "vsync": true,
+  "scenarios": [
+    "empty",
+    "small"
+  ],
+  "order": "paired alternating order by repetition when baseline supplied",
+  "runs": [
+    {
+      "scenario": "empty",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\empty-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\empty-r1.host.json"
+    },
+    {
+      "scenario": "empty",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\empty-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\empty-r2.host.json"
+    },
+    {
+      "scenario": "empty",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\empty-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\empty-r3.host.json"
+    },
+    {
+      "scenario": "small",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\small-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\small-r1.host.json"
+    },
+    {
+      "scenario": "small",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\small-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\small-r2.host.json"
+    },
+    {
+      "scenario": "small",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\small-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\vsync\\candidate\\small-r3.host.json"
+    }
+  ],
+  "complete": true,
+  "finished": "2026-09-09T14:01:26.0918874+03:00"
+}

@@ -1,0 +1,25 @@
+{
+  "format": "proto.benchmark.supplement",
+  "version": 1,
+  "started": "2026-09-09T13:12:45.6742362+03:00",
+  "bin_directory": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\.cache\\m7-instrumented-baseline\\bin",
+  "repeats": 3,
+  "warmup_seconds": 2.0,
+  "sample_seconds": 5.0,
+  "asset_cycles": 12,
+  "skip_editor": true,
+  "skip_asset_benchmark": false,
+  "binaries": {
+    "editor": {
+      "path": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\.cache\\m7-instrumented-baseline\\bin\\ProtoEditor.exe",
+      "sha256": null
+    },
+    "asset_benchmark": {
+      "path": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\.cache\\m7-instrumented-baseline\\bin\\ProtoAssetBenchmark.exe",
+      "sha256": "7284cc2b0c7f3d5f50ea324670222058c7de040a2f05d7d41a1076851894cff9"
+    }
+  },
+  "order": "editor idle repeats, editor interactive repeats, asset repeats; all serial",
+  "runs": [],
+  "complete": false
+}

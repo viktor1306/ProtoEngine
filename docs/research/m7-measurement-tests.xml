@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Win32-ninja"
+	tests="9"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname="Buriak-vi-laptop"
+	time="9"
+	timestamp="2026-09-09T12:51:07"
+	>
+	<testcase name="m7_scene_workloads" classname="m7_scene_workloads" time="0.61266" status="run">
+		<properties/>
+		<system-out>M7 scene workloads, culling, deterministic animation and pool equivalence passed
+</system-out>
+	</testcase>
+	<testcase name="m7_metric_contract" classname="m7_metric_contract" time="0.028874" status="run">
+		<properties/>
+		<system-out>M7 quantiles, GPU serial deduplication and unavailable samples passed
+</system-out>
+	</testcase>
+	<testcase name="m7_sample_reservoir" classname="m7_sample_reservoir" time="0.040119" status="run">
+		<properties/>
+		<system-out>M7 uniform bounded sample reservoir passed
+</system-out>
+	</testcase>
+	<testcase name="m7_gpu_timestamp_3" classname="m7_gpu_timestamp_3" time="0.937476" status="run">
+		<properties/>
+		<system-out>[VULKAN LOADER] windows_read_data_files_in_registry: Registry lookup failed to get layer manifest files.
+[INFO] Vulkan 1.3; release validation disabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 320x180; 2; 3 images
+[INFO] Swapchain 320x180; 0; 3 images
+[INFO] Vulkan resources released
+ProtoBenchmark completed: 3 frames, 103.447 ms
+</system-out>
+	</testcase>
+	<testcase name="m7_gpu_timestamp_4" classname="m7_gpu_timestamp_4" time="0.911288" status="run">
+		<properties/>
+		<system-out>[VULKAN LOADER] windows_read_data_files_in_registry: Registry lookup failed to get layer manifest files.
+[INFO] Vulkan 1.3; release validation disabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 320x180; 2; 3 images
+[INFO] Swapchain 320x180; 0; 3 images
+[INFO] Vulkan resources released
+ProtoBenchmark completed: 4 frames, 132.342 ms
+</system-out>
+	</testcase>
+	<testcase name="m7_editor_benchmark" classname="m7_editor_benchmark" time="1.62021" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[VULKAN LOADER] windows_read_data_files_in_registry: Registry lookup failed to get layer manifest files.
+[INFO] Vulkan 1.3; release validation disabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[CPU MARKER] editor.ui mean_ms=1.103000
+[CPU MARKER] renderer.submit_present mean_ms=15.427733
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m7_asset_benchmark" classname="m7_asset_benchmark" time="3.22532" status="run">
+		<properties/>
+		<system-out>Asset benchmark completed: C:/Users/buriak_vi/Documents/ChatGPT/ProtoEngine/build/m7-release/test-results/m7-asset-benchmark.json
+</system-out>
+	</testcase>
+	<testcase name="m7_benchmark_smoke" classname="m7_benchmark_smoke" time="1.02776" status="run">
+		<properties/>
+		<system-out>[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 320x180; 2; 3 images
+[INFO] Swapchain 320x180; 0; 3 images
+[INFO] Scene GPU readback: geometry_pixels=418426 depth_probes=0
+[INFO] Vulkan resources released
+ProtoBenchmark completed: 16 frames, 195.331 ms
+</system-out>
+	</testcase>
+	<testcase name="m7_gpu_asset_cycle" classname="m7_gpu_asset_cycle" time="0.986466" status="run">
+		<properties/>
+		<system-out>[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 800x450; 2; 3 images
+[INFO] Swapchain 800x450; 0; 3 images
+[INFO] Vulkan resources released
+12 GPU asset load/unload cycles passed; tracked owners expired and allocations plateaued
+</system-out>
+	</testcase>
+</testsuite>

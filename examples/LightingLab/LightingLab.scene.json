@@ -1,0 +1,538 @@
+{
+  "format": "proto.scene",
+  "formatVersion": 1,
+  "sceneId": "ea4113d4-a25d-4ad9-808b-ee47dbbb756a",
+  "name": "Proto Engine · Лабораторія світла",
+  "activeCamera": "35dfde38-21ca-47b7-abcc-1d651f5d86e7",
+  "assetRoot": ".",
+  "modelSources": [
+    "8c1b4542-ab8d-4f95-ae0b-43d14582f88b"
+  ],
+  "entities": [
+    {
+      "id": "1a765fea-eef4-4932-8771-01db813db06a",
+      "name": "Дзеркальна кераміка",
+      "parent": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+      "enabled": true,
+      "transform": {
+        "position": [
+          0.0,
+          1.0,
+          -2.4000000953674316
+        ],
+        "scale": [
+          -1.0,
+          -1.0,
+          -1.0
+        ],
+        "rotation": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "components": {
+        "meshRenderer": {
+          "mesh": "cc5ac519-9f3d-489a-99e4-3cd6431914a3",
+          "materials": [],
+          "debugColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "castShadows": true,
+          "receiveShadows": true
+        }
+      },
+      "behaviors": []
+    },
+    {
+      "id": "2bc94dc9-742a-4572-8090-6bfaf4abf5f5",
+      "name": "Золото",
+      "parent": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+      "enabled": true,
+      "transform": {
+        "position": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "components": {
+        "meshRenderer": {
+          "mesh": "cc5ac519-9f3d-489a-99e4-3cd6431914a3",
+          "materials": [
+            "5df2da18-add0-4a98-9c06-a8eb8a35a2fb"
+          ],
+          "debugColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "castShadows": true,
+          "receiveShadows": true
+        }
+      },
+      "behaviors": []
+    },
+    {
+      "id": "327233e2-e9ea-4ee4-9fb2-d503ad5b81ad",
+      "name": "Синя кераміка",
+      "parent": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+      "enabled": true,
+      "transform": {
+        "position": [
+          -2.0999999046325684,
+          1.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "components": {
+        "meshRenderer": {
+          "mesh": "cc5ac519-9f3d-489a-99e4-3cd6431914a3",
+          "materials": [],
+          "debugColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "castShadows": true,
+          "receiveShadows": true
+        }
+      },
+      "behaviors": []
+    },
+    {
+      "id": "35dfde38-21ca-47b7-abcc-1d651f5d86e7",
+      "name": "Камера",
+      "parent": null,
+      "enabled": true,
+      "transform": {
+        "position": [
+          6.0,
+          4.5,
+          9.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "rotation": [
+          -0.14506009221076965,
+          0.3363496959209442,
+          0.052518993616104126,
+          0.9290146231651306
+        ]
+      },
+      "components": {
+        "camera": {
+          "projection": "perspective",
+          "verticalFovDegrees": 60.0,
+          "near": 0.05000000074505806,
+          "far": 500.0,
+          "exposure": 1.0
+        }
+      },
+      "behaviors": []
+    },
+    {
+      "id": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+      "name": "Сфери матеріалів",
+      "parent": "e5279978-0a0d-4322-ab75-e61bd7797ec0",
+      "enabled": true,
+      "transform": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "components": {},
+      "behaviors": []
+    },
+    {
+      "id": "bece38c6-a5cf-4aa7-9284-86c988a7505b",
+      "name": "Площина",
+      "parent": null,
+      "enabled": true,
+      "transform": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          14.0,
+          1.0,
+          14.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "components": {
+        "meshRenderer": {
+          "mesh": "00000000-0000-4000-8000-000000000002",
+          "materials": [],
+          "debugColor": [
+            0.26,
+            0.29,
+            0.34,
+            1.0
+          ],
+          "castShadows": true,
+          "receiveShadows": true
+        }
+      },
+      "behaviors": []
+    },
+    {
+      "id": "e5279978-0a0d-4322-ab75-e61bd7797ec0",
+      "name": "MaterialSpheres",
+      "parent": null,
+      "enabled": true,
+      "transform": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "components": {},
+      "behaviors": []
+    },
+    {
+      "id": "fe961326-7de5-4d78-85b0-4bc9fa9f05db",
+      "name": "Шорстка мідь",
+      "parent": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+      "enabled": true,
+      "transform": {
+        "position": [
+          2.0999999046325684,
+          1.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "components": {
+        "meshRenderer": {
+          "mesh": "cc5ac519-9f3d-489a-99e4-3cd6431914a3",
+          "materials": [
+            "3e5924f6-c082-41cc-b3d2-00468743baa2"
+          ],
+          "debugColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "castShadows": true,
+          "receiveShadows": true
+        }
+      },
+      "behaviors": []
+    },
+    {
+      "parent": null,
+      "name": "Тепла лампа · рухайте XYZ",
+      "id": "004de170-579e-4f2c-8d1f-35903540a74a",
+      "components": {
+        "pointLight": {
+          "shadows": true,
+          "intensity": 95.0,
+          "color": [
+            1.0,
+            0.67,
+            0.32
+          ],
+          "radius": 12.0
+        }
+      },
+      "behaviors": [],
+      "enabled": true,
+      "transform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "position": [
+          -3.5,
+          4.0,
+          3.5
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "parent": null,
+      "name": "Блакитна лампа",
+      "id": "fb6a890e-e681-4c2f-92a6-d2b9d777786e",
+      "components": {
+        "pointLight": {
+          "shadows": true,
+          "intensity": 75.0,
+          "color": [
+            0.28,
+            0.53,
+            1.0
+          ],
+          "radius": 11.0
+        }
+      },
+      "behaviors": [],
+      "enabled": true,
+      "transform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "position": [
+          3.5,
+          2.8,
+          2.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "parent": null,
+      "name": "Сонце · змінюйте обертання",
+      "id": "f3d05618-ff09-4c42-99e7-85fe2482b5fd",
+      "components": {
+        "directionalLight": {
+          "shadows": true,
+          "intensity": 0.65,
+          "color": [
+            1.0,
+            0.95,
+            0.85
+          ]
+        }
+      },
+      "behaviors": [],
+      "enabled": true,
+      "transform": {
+        "rotation": [
+          -0.38,
+          0.16,
+          0.07,
+          0.91
+        ],
+        "position": [
+          0.0,
+          5.0,
+          -2.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "parent": null,
+      "name": "Стійка 1",
+      "id": "086d94b4-f2bf-4ea4-8339-78de672d6946",
+      "components": {
+        "meshRenderer": {
+          "debugColor": [
+            0.3,
+            0.33,
+            0.37,
+            1.0
+          ],
+          "mesh": "00000000-0000-4000-8000-000000000001",
+          "materials": [],
+          "castShadows": true,
+          "receiveShadows": true
+        }
+      },
+      "behaviors": [],
+      "enabled": true,
+      "transform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "position": [
+          -3.8,
+          1.3,
+          -2.8
+        ],
+        "scale": [
+          0.18,
+          2.6,
+          0.18
+        ]
+      }
+    },
+    {
+      "parent": null,
+      "name": "Стійка 2",
+      "id": "ce5b3d96-f484-4410-ab9f-ac6b4d4ed69d",
+      "components": {
+        "meshRenderer": {
+          "debugColor": [
+            0.3,
+            0.33,
+            0.37,
+            1.0
+          ],
+          "mesh": "00000000-0000-4000-8000-000000000001",
+          "materials": [],
+          "castShadows": true,
+          "receiveShadows": true
+        }
+      },
+      "behaviors": [],
+      "enabled": true,
+      "transform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "position": [
+          -3.25,
+          1.3,
+          -2.8
+        ],
+        "scale": [
+          0.18,
+          2.6,
+          0.18
+        ]
+      }
+    },
+    {
+      "parent": null,
+      "name": "Стійка 3",
+      "id": "525f70db-720f-410a-ae55-d26658da0dd1",
+      "components": {
+        "meshRenderer": {
+          "debugColor": [
+            0.3,
+            0.33,
+            0.37,
+            1.0
+          ],
+          "mesh": "00000000-0000-4000-8000-000000000001",
+          "materials": [],
+          "castShadows": true,
+          "receiveShadows": true
+        }
+      },
+      "behaviors": [],
+      "enabled": true,
+      "transform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "position": [
+          -2.6999999999999997,
+          1.3,
+          -2.8
+        ],
+        "scale": [
+          0.18,
+          2.6,
+          0.18
+        ]
+      }
+    }
+  ],
+  "lighting": {
+    "ambient": 0.025,
+    "depthBias": 0.0007,
+    "referenceLighting": false,
+    "shadowPoolMiB": 80,
+    "shadowDistance": 35.0,
+    "forceShadowRefresh": false,
+    "shadows": true,
+    "shadowCascades": 3,
+    "shadowResolution": 1024,
+    "filteredShadows": true,
+    "normalBias": 0.025
+  }
+}

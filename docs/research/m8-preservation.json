@@ -1,0 +1,326 @@
+{
+  "format": "proto.m8.preservation",
+  "version": 1,
+  "captured": "2026-09-09T16:26:02.3407389+03:00",
+  "rendererAndShadersUnchanged": true,
+  "runtimeBootstrapChange": "PlayerApp now uses a process-local short alias for validation layer discovery when available",
+  "rendererRuntimeFiles": [
+    {
+      "path": "src/renderer/AssetLighting.inl",
+      "sha256": "C217C3E08299C7A1650D30BE0D39B1FBDC5C029E26226BD81439E9EC321B260B",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/AssetRenderer.cpp",
+      "sha256": "0D75875ECCB4272D2657B70D443932AE052025298AE78D5B4ACDF6F9BE26DE85",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/AssetRenderer.hpp",
+      "sha256": "38EAE67A4D94867F00AE882308E9940A701F127202F85EB411E6669DBA341B2D",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/LightingMath.cpp",
+      "sha256": "993953DC0649922506ACAC06A7E11113C6FF62684AAAD5FBCEA18755502A36EE",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/LightingMath.hpp",
+      "sha256": "5A3CAE4A737746D0C4420165EA0EADF57DD70461A02C600C331952AB862FF1A9",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/PrimitiveGeometry.cpp",
+      "sha256": "8D7A07B5408DEDA9B9FD5231FF9071A5B44146494F8C98DBAD33CD572E66E297",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/PrimitiveGeometry.hpp",
+      "sha256": "0499DEEF1127FCB0A8BB18B79D2C261FA76E437DA52F7B1B1E8E04BDDDC43307",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/RenderView.hpp",
+      "sha256": "8E85F95555E134ACA87227BABF17C2FF81778DD0935DFF467309B800A209C4B7",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/SceneRenderer.cpp",
+      "sha256": "C261EFC4FD43C83A5DE0CA65E8AC99391EC26514CF488DD89D8E4ACB3A14C683",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/Vma.cpp",
+      "sha256": "7AD82C57C56B8440E9683F7069FC0C878DAAA73AB68CBDF264F31285215815DA",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/VulkanRenderer.cpp",
+      "sha256": "34B85EB831F5267801DCE792B2B21E1D6686C30F529CE6A78BA9F3E8CC221117",
+      "unchanged": true
+    },
+    {
+      "path": "src/renderer/VulkanRenderer.hpp",
+      "sha256": "577A359BA8DC9C104BF7577865CBD92CB7701D778DB9D5E526704DB0D7724FE3",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/BehaviorRuntime.cpp",
+      "sha256": "8FF2DD2233CF9349CADDC051D900F61F250FE2EA7E8A0A66BF718FBD05171BD5",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/BehaviorRuntime.hpp",
+      "sha256": "DCD99E6C1FE04D5851954F352CC7A5723DB90C269E2503E6C03396770CD20FD7",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/EmptyBehaviors.cpp",
+      "sha256": "310C61A9F29CFA95CC6AA7221DAD6F71F2D7F4E2951A92795E27D70B05E34ED3",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/PlayerApp.cpp",
+      "sha256": "DF24368C4457BA5EE8ABA5115EC7E74649F52C8DF41CAA9727ED60E39343CEB2",
+      "unchanged": false
+    },
+    {
+      "path": "src/runtime/PlayerGraphics.cpp",
+      "sha256": "880C147511DD627A31F96CB28E1EDE8917870BC6A60021A473D2499A12458C64",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/PlayerGraphics.hpp",
+      "sha256": "049ABF4EA5B0E519CA87DAF57739B59A15A7E83E46F9157D799AFE650F6EA85C",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/PlayerGraphicsUi.cpp",
+      "sha256": "D4AFEC6071A75150D76BA23D57BEB849FD2C0E3736348A1F17AEACC92257B113",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/PlayerGraphicsUi.hpp",
+      "sha256": "430A23109F2406CF2D46C65A9A4D108233EA7F4E22AD7503CF802E257640F30B",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/PlayerMain.cpp",
+      "sha256": "1D6C3E471B2CB4DB813502ADA2FE6A80F574D5DDDBF64AA170860D3BC4AEB237",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/PlayerPresenter.cpp",
+      "sha256": "09446E390DBEE36C6182E112951463D2CA1B75B6CCBC37CC9298EE108793608C",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/PlayerPresenter.hpp",
+      "sha256": "A6BB09A8885E8441F26C3BC84D256B4F6F5534A0951DF46CB7994918E027906D",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/RuntimePackage.cpp",
+      "sha256": "408781DB2FB62B793AA7FC2901D9BD6AE753B2804521F9A1737F04878805E0AA",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/RuntimePackage.hpp",
+      "sha256": "1572C5B45EE5E492B384AE6E4277D53FCDEB8AD0D22E368CFC472872624E1063",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/RuntimeSnapshot.cpp",
+      "sha256": "EAF86A0CC60498563187590EDEE6328782DA8E110C9910F331324DC1C13FD701",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/RuntimeSnapshot.hpp",
+      "sha256": "DBA9B84ABCA50D735A7377D78F4626017080C41DDF4CAE2C0AF833EA5F949B3F",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/SceneViewBuilder.cpp",
+      "sha256": "3A86054BDCD6240CA35CCBE8817B120E07A05FBC8E1D3409D3FC371DCE0A8B41",
+      "unchanged": true
+    },
+    {
+      "path": "src/runtime/SceneViewBuilder.hpp",
+      "sha256": "12830C4ADF3F02BC1AA97FB2F24A6FA6813CF39C5589099512773B3C9276C50C",
+      "unchanged": true
+    },
+    {
+      "path": "src/scene/DensePool.hpp",
+      "sha256": "EE202B4E2EF64B226A59917456E3356CB63B1981CBDE18AB605304243290B43E",
+      "unchanged": true
+    },
+    {
+      "path": "src/scene/Lighting.hpp",
+      "sha256": "EAD20F272A9EFAE4C2B680D53F757FC2C69A1E3BE7B08AADD012614B9789A35A",
+      "unchanged": true
+    },
+    {
+      "path": "src/scene/Scene.cpp",
+      "sha256": "D8595C4D852BB4A170A6EA2C334692B814CB19EE200E2ECFB9F06059D9F80913",
+      "unchanged": true
+    },
+    {
+      "path": "src/scene/Scene.hpp",
+      "sha256": "EECB1C5D32AF6DEF7477D920D93CC39464D57945AC7381EAFCD0A82AFE26AD6F",
+      "unchanged": true
+    },
+    {
+      "path": "src/scene/SceneIO.cpp",
+      "sha256": "7A4452B6B51761FF3947198A02BF10DC3841ABDFB4AC732613450C5DBC3DE41E",
+      "unchanged": true
+    },
+    {
+      "path": "src/scene/SceneIO.hpp",
+      "sha256": "8864223234F7585CBE1EDA6B831475F16B654372FE60572E14873515176C3407",
+      "unchanged": true
+    },
+    {
+      "path": "src/behavior/BehaviorSchema.cpp",
+      "sha256": "41090B789F39C1CA25D40E3B5971F0699777B51026D15AB7664C05E8DB1E9A00",
+      "unchanged": true
+    },
+    {
+      "path": "src/behavior/BehaviorSchema.hpp",
+      "sha256": "C3556E702240817621DA95720007C2B648D8A5B50906FB380D5DBF00771EE48C",
+      "unchanged": true
+    },
+    {
+      "path": "include/Proto/Behavior.hpp",
+      "sha256": "B8E9DCE224DBD685AD0D1B7FCEC895963423C7C8EE36A784A6ED14607C411ED8",
+      "unchanged": true
+    },
+    {
+      "path": "include/Proto/Id.hpp",
+      "sha256": "BAFE034946BDC09EAE9E089BB4A927C14D65843E910A006924830BE20C091A26",
+      "unchanged": true
+    },
+    {
+      "path": "include/Proto/Player.hpp",
+      "sha256": "C49EF55189EEC53304E30D8BB8C2A8A0EF624C867D20C430B499F7BA5CA46A99",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/camera_depth.frag",
+      "sha256": "6B706C75A0940767C4A33458BE3EE4672350A27BA4193AABE40195FD7CF3473C",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/camera_depth.vert",
+      "sha256": "20FC8106BC526DD45A8ACD3D9FFC248849CCACDC2D5095AC2CD9BED79DEC0FEE",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/light_tiles.comp",
+      "sha256": "509D1E74525FCEAA95B878AD1DD45B3A0204B415599F6FA9D5877D331FA25D20",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/lighting.glsl",
+      "sha256": "2C1F8E75328A1872B904042077A0D1BD3CA1606867F9C346A4320505A0958438",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/lit.frag",
+      "sha256": "96F32D8495CB7DAC9FC050003E11F04274E2810EB802C4A114215B31DE8C00B6",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/lit.vert",
+      "sha256": "F2E6CFB0BB3EF0A17DBE8346AF8D73D8E57A94E80D4A7DB8CD138005431F13EB",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/material.glsl",
+      "sha256": "8BE66F0963A3674110BC7B9185EFED589D1EE041B46581BA5EE16DCB72B5206E",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/pbr.frag",
+      "sha256": "B409F3CD601C4CB9E0F0D9B5B647984E0A1BD335AEF2CEADCC2CF1A7E295C93F",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/pbr.vert",
+      "sha256": "1FD3C9597CE64DBFE48EA9BEBA032AA0184B725B61D6EAA53160C79FC94EBB84",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/player_present.frag",
+      "sha256": "6B41DD4FC5A8CA744D26F19A6F73967CAF4A112A768A011A1BDCF3FF06828A03",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/player_present.vert",
+      "sha256": "B8108A0A6D710101F9862A4406A602EC8215BE9CC7847E23D7EE540D0AED353F",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/scene.frag",
+      "sha256": "D2FB10C181419A68A3D9168B973E4DA3860FEEE9AEE1A8B2BEA3E2D8A2E8766D",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/scene.vert",
+      "sha256": "6E855EA4723F35E964B0D7345E6003A131953B0616CB2497677F6F963E6F6EF3",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/shadow.frag",
+      "sha256": "1A1D4A742F589122FA0ECF552004C618DE182DD25C979E716021B4BBAC5080AC",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/shadow.vert",
+      "sha256": "663A5A68CCEB0E988337DCB20EEB4C730AF52BDBC1A0E33FE9DB8A179B81BC25",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/tone.frag",
+      "sha256": "3BDDE161191EC1293276297AD2054B2B8239BF28F39F934586DEA918EEF07F36",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/tone.vert",
+      "sha256": "E3C26A7F46CAE981C9C3FD8C07598EE247BF6B1E0518D7533E3985A76CBF0053",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/triangle.frag",
+      "sha256": "AD92E48316E5E9CE920695AD8CA55B5BBB70937508B3C0AD2B7F59ACFA350385",
+      "unchanged": true
+    },
+    {
+      "path": "shaders/triangle.vert",
+      "sha256": "B057D6C6EDDD3DFAB7A4A30AFD425D7FFA376FBB1CA1B59B6962B17DAC543F39",
+      "unchanged": true
+    }
+  ],
+  "previousBinaries": [
+    {
+      "path": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-release\\bin\\ProtoEditor.exe",
+      "sha256": "F243877651FB0B786FFC8314CC81EE3ED120FA34BFCA2FFCEF1ED798E0B16A69",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-release\\bin\\ProtoPlayer.exe",
+      "sha256": "F0B313B11293BAC05E145593035238D0F5D941E7A76418FFD733A684CE97DB1D",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-debug\\bin\\ProtoEditor.exe",
+      "sha256": "BCA7372E5CA3804672C88C2CB96827C0FC4811E2E4A8085A36A62B000CEF8D75",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-debug\\bin\\ProtoPlayer.exe",
+      "sha256": "C11434A355659EBA3A85202EFAA4E4E3454B95311D77E56E237400042081C5D8",
+      "unchanged": true
+    }
+  ]
+}

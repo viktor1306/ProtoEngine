@@ -1,0 +1,19 @@
+{
+  "format": "proto.m8.final.delivery",
+  "version": 1,
+  "completed": "2026-09-09T16:35:35.9069171+03:00",
+  "passed": true,
+  "distribution": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\dist\\ProtoEngine-v0.1",
+  "sdkBuildId": "5e87cfb5f24470e32a97c8ef2d84f8ed5d20602a4e44561b26af1b38e75e530c",
+  "contentSha256": "797f1acc19b3da20373723ad88a879320330742ac43c1034556aa532d52317f0",
+  "manifestSha256": "3E54F431EE1983DE9864DB2F4219DB734BB50EB04F6AEBD9DEF444BFD3624392",
+  "files": 242,
+  "payloadBytes": 49004775.0,
+  "smoke": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-final-verification\\r-9e3d907fa571-Україна\\m8-distribution-smoke.json",
+  "previousM7BinariesUnchanged": [
+    "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-release\\bin\\ProtoEditor.exe",
+    "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-release\\bin\\ProtoPlayer.exe",
+    "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-debug\\bin\\ProtoEditor.exe",
+    "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m7-debug\\bin\\ProtoPlayer.exe"
+  ]
+}

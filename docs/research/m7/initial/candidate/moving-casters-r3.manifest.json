@@ -1,0 +1,12 @@
+{"format":"proto.benchmark.scene","version":1,"scenario":"moving-casters","contentHash":"8679d6885185a6a3c9d0d3077540fa3978ee46647d1e45a17fd2cc4d9c36bb79","entities":47,"meshes":40,"authoredTriangles":440,"geometry":"shared 12-triangle cubes, plane and original PBR MASK quads","pointLights":4,"directionalLights":1,"movingTransforms":12,"animation":"continuous four-second cycle; timed origin zero; capture frame at 60 Hz","graphics":{
+  "format":"proto.graphics",
+  "formatVersion":1,
+  "profile":"Custom",
+  "renderScale":1,
+  "vSync":false,
+  "viewDistance":500,
+  "sunShadows":{"enabled":true,"cascades":3,"resolution":1024,"distance":60,"filter":"pcf3x3"},
+  "pointShadows":{"enabled":true,"resolution":256,"filterTaps":9,"poolBudgetMiB":48,"overflow":"multiPass"},
+  "textureTopMipDrop":0
+}
+}

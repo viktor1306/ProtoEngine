@@ -1,0 +1,61 @@
+{
+  "format": "proto.benchmark.runs",
+  "version": 1,
+  "started": "2026-09-09T13:08:07.3752990+03:00",
+  "repeats": 1,
+  "requested_warmup_seconds": 2.0,
+  "requested_sample_seconds": 5.0,
+  "vsync": false,
+  "scenarios": [
+    "instances-10000-visible",
+    "instances-10000-moving",
+    "instances-10000-culled"
+  ],
+  "order": "paired alternating order by repetition when baseline supplied",
+  "runs": [
+    {
+      "scenario": "instances-10000-visible",
+      "phase": "baseline",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\baseline\\instances-10000-visible-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\baseline\\instances-10000-visible-r1.host.json"
+    },
+    {
+      "scenario": "instances-10000-visible",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\candidate\\instances-10000-visible-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\candidate\\instances-10000-visible-r1.host.json"
+    },
+    {
+      "scenario": "instances-10000-moving",
+      "phase": "baseline",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\baseline\\instances-10000-moving-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\baseline\\instances-10000-moving-r1.host.json"
+    },
+    {
+      "scenario": "instances-10000-moving",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\candidate\\instances-10000-moving-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\candidate\\instances-10000-moving-r1.host.json"
+    },
+    {
+      "scenario": "instances-10000-culled",
+      "phase": "baseline",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\baseline\\instances-10000-culled-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\baseline\\instances-10000-culled-r1.host.json"
+    },
+    {
+      "scenario": "instances-10000-culled",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\candidate\\instances-10000-culled-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\candidate\\instances-10000-culled-r1.host.json"
+    }
+  ],
+  "complete": true,
+  "finished": "2026-09-09T13:08:54.2589173+03:00"
+}

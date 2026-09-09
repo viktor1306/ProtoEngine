@@ -1,0 +1,298 @@
+{
+    "format": "proto.scene",
+    "formatVersion": 1,
+    "sceneId": "69aa2e6b-2cf6-4a49-9594-70e29161313e",
+    "name": "Proto Engine · Матеріали",
+    "activeCamera": "35dfde38-21ca-47b7-abcc-1d651f5d86e7",
+    "assetRoot": ".",
+    "modelSources": [
+        "8c1b4542-ab8d-4f95-ae0b-43d14582f88b"
+    ],
+    "entities": [
+        {
+            "id": "1a765fea-eef4-4932-8771-01db813db06a",
+            "name": "Дзеркальна кераміка",
+            "parent": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    1.0,
+                    -2.4000000953674316
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "cc5ac519-9f3d-489a-99e4-3cd6431914a3",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "2bc94dc9-742a-4572-8090-6bfaf4abf5f5",
+            "name": "Золото",
+            "parent": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "cc5ac519-9f3d-489a-99e4-3cd6431914a3",
+                    "materials": [
+                        "5df2da18-add0-4a98-9c06-a8eb8a35a2fb"
+                    ],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "327233e2-e9ea-4ee4-9fb2-d503ad5b81ad",
+            "name": "Синя кераміка",
+            "parent": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.0999999046325684,
+                    1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "cc5ac519-9f3d-489a-99e4-3cd6431914a3",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "35dfde38-21ca-47b7-abcc-1d651f5d86e7",
+            "name": "Камера",
+            "parent": null,
+            "enabled": true,
+            "transform": {
+                "position": [
+                    5.0,
+                    3.0,
+                    6.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    -0.14506009221076965,
+                    0.3363496959209442,
+                    0.052518993616104126,
+                    0.9290146231651306
+                ]
+            },
+            "components": {
+                "camera": {
+                    "projection": "perspective",
+                    "verticalFovDegrees": 60.0,
+                    "near": 0.05000000074505806,
+                    "far": 500.0,
+                    "exposure": 1.0
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+            "name": "Сфери матеріалів",
+            "parent": "e5279978-0a0d-4322-ab75-e61bd7797ec0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "bece38c6-a5cf-4aa7-9284-86c988a7505b",
+            "name": "Площина",
+            "parent": null,
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    10.0,
+                    1.0,
+                    10.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "00000000-0000-4000-8000-000000000002",
+                    "materials": [],
+                    "debugColor": [
+                        0.1599999964237213,
+                        0.20000000298023224,
+                        0.25,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "e5279978-0a0d-4322-ab75-e61bd7797ec0",
+            "name": "MaterialSpheres",
+            "parent": null,
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "fe961326-7de5-4d78-85b0-4bc9fa9f05db",
+            "name": "Шорстка мідь",
+            "parent": "3f2e49ae-a372-46ab-9175-e654fbea84ba",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.0999999046325684,
+                    1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "cc5ac519-9f3d-489a-99e4-3cd6431914a3",
+                    "materials": [
+                        "3e5924f6-c082-41cc-b3d2-00468743baa2"
+                    ],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        }
+    ]
+}

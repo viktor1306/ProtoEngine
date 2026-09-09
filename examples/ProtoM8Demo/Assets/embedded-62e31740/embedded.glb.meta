@@ -1,0 +1,123 @@
+{
+    "format": "proto.assetmeta",
+    "formatVersion": 1,
+    "kind": "ModelSource",
+    "assetId": "62e31740-e642-48ba-b939-3dca7dade85c",
+    "importer": {
+        "name": "gltf",
+        "version": 2
+    },
+    "settings": {
+        "generateTangents": true
+    },
+    "signature": "22ac7b7aab5e2bc3854be3deff62d513d77b18732ff5a640acbb5eb90aa27b32",
+    "contentHash": "abad8de6ff76e2027eef8f59cb398aee53fdaa9d8be7b123f616f455f742de60",
+    "cacheHash": "1e7e727d1e320d552b6dbdf66bda5ef28f01cea721950502347280ceabcbc8e0",
+    "dependencies": [
+        {
+            "uri": "checker.jpg",
+            "sha256": "188a368e83b1aee11c8ac49a522b14c31cbc9892b3363738674f1de6400ada1f",
+            "assetId": "8124c973-0963-4904-8c7e-2be4a5875230",
+            "pointer": "/images/2/uri"
+        },
+        {
+            "uri": "normal.png",
+            "sha256": "9ca366740525e59f1a622e9daff0180380f9e6842852d025b2e8dcd6ffc48229",
+            "assetId": "56f46cdd-8c6a-4e85-9790-97fd2a9f3e3a",
+            "pointer": "/images/1/uri"
+        }
+    ],
+    "subAssets": [
+        {
+            "id": "8343c080-ec55-453a-8207-1aa667812adb",
+            "kind": "Material",
+            "locator": "/materials/0"
+        },
+        {
+            "id": "95e1e031-4044-4dab-8525-989fc99ec57a",
+            "kind": "Texture",
+            "locator": "/materials/0/texture/2"
+        },
+        {
+            "id": "15100ace-aa02-4414-b88c-2c72c33fe6af",
+            "kind": "Material",
+            "locator": "/materials/1"
+        },
+        {
+            "id": "8625be64-82a5-4a0e-a3cb-64c8bf954bfa",
+            "kind": "Material",
+            "locator": "/materials/2"
+        },
+        {
+            "id": "b2b53b30-9702-4106-8699-6e063ce4d6cc",
+            "kind": "Texture",
+            "locator": "/materials/2/texture/0"
+        },
+        {
+            "id": "f0330342-e157-474c-b5b2-bb938f80bf83",
+            "kind": "Material",
+            "locator": "/materials/3"
+        },
+        {
+            "id": "8962d464-f21a-4a5f-903b-f21afc0fed58",
+            "kind": "Texture",
+            "locator": "/materials/3/texture/1"
+        },
+        {
+            "id": "4e51521c-1327-4104-9f79-53b29d947c6e",
+            "kind": "Material",
+            "locator": "/materials/4"
+        },
+        {
+            "id": "04a8e471-4713-46a4-b6ca-20cf23c7d104",
+            "kind": "Texture",
+            "locator": "/materials/4/texture/0"
+        },
+        {
+            "id": "9ea35995-1d51-4494-a16c-2ede3132ca26",
+            "kind": "Material",
+            "locator": "/materials/5"
+        },
+        {
+            "id": "146f2395-225a-44ae-8964-888a3c949df3",
+            "kind": "Texture",
+            "locator": "/materials/5/texture/0"
+        },
+        {
+            "id": "1ac52649-f222-405f-b803-0e2e10715b95",
+            "kind": "Material",
+            "locator": "/materials/6"
+        },
+        {
+            "id": "e2186d90-5225-4390-9c4e-cd45f9c82f79",
+            "kind": "Mesh",
+            "locator": "/meshes/0"
+        },
+        {
+            "id": "05a59fb1-7a16-48e2-9d26-ff239dfd028a",
+            "kind": "Mesh",
+            "locator": "/meshes/1"
+        },
+        {
+            "id": "09cccfcd-a30d-48d2-a28e-cfd501a2033d",
+            "kind": "Mesh",
+            "locator": "/meshes/2"
+        },
+        {
+            "id": "d466b8ca-2fe3-4ac1-a010-5350d69697ca",
+            "kind": "Mesh",
+            "locator": "/meshes/3"
+        },
+        {
+            "id": "74c27917-33bc-4097-a721-8980b440fe47",
+            "kind": "Mesh",
+            "locator": "/meshes/4"
+        },
+        {
+            "id": "7c14da5c-6b2f-4f2b-8e71-9e3ce32590fa",
+            "kind": "Mesh",
+            "locator": "/meshes/5"
+        }
+    ],
+    "materialOverrides": {}
+}

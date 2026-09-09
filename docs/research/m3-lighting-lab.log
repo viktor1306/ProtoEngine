@@ -1,0 +1,10 @@
+36.384 ms [INFO] Native GLFW window created; per-monitor DPI requested
+67.432 ms [VULKAN LOADER] windows_read_data_files_in_registry: Registry lookup failed to get layer manifest files.
+93.693 ms [INFO] Vulkan 1.3; release validation disabled
+134.481 ms [INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+169.349 ms [INFO] Swapchain 1700x1075; FIFO; 3 images
+1398.687 ms [INFO] Scene GPU readback: geometry_pixels=337995 depth_probes=0
+1418.286 ms [CPU MARKER] editor.ui mean_ms=0.606850
+1418.363 ms [CPU MARKER] renderer.submit_present mean_ms=8.147680
+1490.870 ms [INFO] Vulkan resources released
+1508.807 ms [INFO] Session completed successfully

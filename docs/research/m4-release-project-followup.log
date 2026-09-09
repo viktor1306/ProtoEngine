@@ -1,0 +1,9 @@
+Test project C:/Users/buriak_vi/Documents/ChatGPT/ProtoEngine/build/m4-release
+    Start 1: m4_project_sessions
+1/2 Test #1: m4_project_sessions ..............   Passed    1.40 sec
+    Start 3: m4_project_editor
+2/2 Test #3: m4_project_editor ................   Passed    8.17 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =   9.59 sec

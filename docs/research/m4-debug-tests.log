@@ -1,0 +1,43 @@
+Test project C:/Users/buriak_vi/Documents/ChatGPT/ProtoEngine/build/m4-debug
+      Start  1: m4_project_sessions
+ 1/19 Test  #1: m4_project_sessions ..............   Passed    1.34 sec
+      Start  2: m4_document_history
+ 2/19 Test  #2: m4_document_history ..............   Passed    5.51 sec
+      Start 10: m2_asset_contract
+ 3/19 Test #10: m2_asset_contract ................   Passed    6.85 sec
+      Start  3: m4_project_editor
+ 4/19 Test  #3: m4_project_editor ................   Passed    9.85 sec
+      Start  4: m4_asset_file_plans
+ 5/19 Test  #4: m4_asset_file_plans ..............   Passed   24.28 sec
+      Start  5: m4_gizmo_math
+ 6/19 Test  #5: m4_gizmo_math ....................   Passed    0.13 sec
+      Start  6: m4_gizmo_editor
+ 7/19 Test  #6: m4_gizmo_editor ..................   Passed    1.77 sec
+      Start  7: m4_file_transactions
+ 8/19 Test  #7: m4_file_transactions .............   Passed   12.48 sec
+      Start  8: m3_lighting_math
+ 9/19 Test  #8: m3_lighting_math .................   Passed    0.04 sec
+      Start  9: m3_scene_contract
+10/19 Test  #9: m3_scene_contract ................   Passed    0.16 sec
+      Start 11: m2_editor
+11/19 Test #11: m2_editor ........................   Passed    2.94 sec
+      Start 12: m2_glb_editor
+12/19 Test #12: m2_glb_editor ....................   Passed    2.96 sec
+      Start 13: m3_lighting_gpu
+13/19 Test #13: m3_lighting_gpu ..................   Passed   28.08 sec
+      Start 14: m3_dim_batches
+14/19 Test #14: m3_dim_batches ...................   Passed    9.99 sec
+      Start 15: m1_scene_contract
+15/19 Test #15: m1_scene_contract ................   Passed    0.29 sec
+      Start 16: m0_gpu_window
+16/19 Test #16: m0_gpu_window ....................   Passed    2.74 sec
+      Start 17: m0_reopen
+17/19 Test #17: m0_reopen ........................   Passed    1.12 sec
+      Start 18: m1_editor
+18/19 Test #18: m1_editor ........................   Passed    2.79 sec
+      Start 19: m1_scene_reopen
+19/19 Test #19: m1_scene_reopen ..................   Passed    1.20 sec
+
+100% tests passed out of 19
+
+Total Test time (real) = 114.60 sec

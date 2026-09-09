@@ -1,0 +1,1 @@
+PASS: 402-character file removed; 5 entries removed; junction target and sibling sentinel unchanged; locked-file failure returned in 0 ms and retry succeeded.

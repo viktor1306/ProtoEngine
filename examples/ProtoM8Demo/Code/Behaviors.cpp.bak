@@ -1,0 +1,6 @@
+#include <Proto/Behavior.hpp>
+
+void RegisterProjectBehaviors(proto::sdk::BehaviorRegistry& registry) {
+    (void)registry;
+    // Register each class explicitly: registry.Add<YourBehavior>({stableTypeId, "YourBehavior", {}});
+}

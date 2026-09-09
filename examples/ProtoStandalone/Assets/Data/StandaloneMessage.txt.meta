@@ -1,0 +1,7 @@
+{
+  "format": "proto.assetmeta",
+  "formatVersion": 1,
+  "kind": "RawDependency",
+  "assetId": "9f21b5d0-7f62-4e93-a8b3-68d2c4f11022",
+  "sourcePath": "Assets/Data/StandaloneMessage.txt"
+}

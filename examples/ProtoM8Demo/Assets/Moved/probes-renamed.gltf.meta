@@ -1,0 +1,147 @@
+{
+    "format": "proto.assetmeta",
+    "formatVersion": 1,
+    "kind": "ModelSource",
+    "assetId": "68931549-2ff0-40df-9c91-c85d2484b628",
+    "importer": {
+        "name": "gltf",
+        "version": 2
+    },
+    "settings": {
+        "generateTangents": true
+    },
+    "signature": "22ac7b7aab5e2bc3854be3deff62d513d77b18732ff5a640acbb5eb90aa27b32",
+    "contentHash": "d497ed4f2d0007d8e42ffaaadc66874e4b17deac823c5230623fc3f3ac076694",
+    "cacheHash": "8c87e2a9a940fbe87e90d3dca29f3c69e938cf1728b3a720305e34a4c6841d61",
+    "dependencies": [
+        {
+            "uri": "../probes-68931549/checker.jpg",
+            "sha256": "188a368e83b1aee11c8ac49a522b14c31cbc9892b3363738674f1de6400ada1f",
+            "assetId": "925ca792-d665-4256-a489-746639d26a54",
+            "pointer": "/images/2/uri"
+        },
+        {
+            "uri": "../probes-68931549/mesh%20data.bin",
+            "sha256": "bce33d5987594900cba5ab8e9329bddb3f35b4ef6ef4fc90fd3eef7b89510a9a",
+            "assetId": "37706ffe-0db5-439b-8081-d2cf160676bb",
+            "pointer": "/buffers/0/uri"
+        },
+        {
+            "uri": "../probes-68931549/normal.png",
+            "sha256": "9ca366740525e59f1a622e9daff0180380f9e6842852d025b2e8dcd6ffc48229",
+            "assetId": "e66f2c6f-0f78-4237-8778-2936b44036a8",
+            "pointer": "/images/1/uri"
+        },
+        {
+            "uri": "../probes-68931549/%D1%82%D0%B5%D0%BA%D1%81%D1%82%D1%83%D1%80%D0%B8/%D0%BC%D0%B0%D1%81%D0%BA%D0%B0%20100%25.png",
+            "sha256": "ed2624cd184c496e02eb782b2306832cd158b394d11de42e31e9bb1a62ea869f",
+            "assetId": "fc5d635c-2ea9-4438-86ae-a11900c76969",
+            "pointer": "/images/0/uri"
+        }
+    ],
+    "subAssets": [
+        {
+            "id": "0d6619a6-2b48-4974-9131-7a263477f820",
+            "kind": "Material",
+            "locator": "/materials/0"
+        },
+        {
+            "id": "315b3a35-f2aa-4b9f-a704-3222f2581fe9",
+            "kind": "Texture",
+            "locator": "/materials/0/texture/2"
+        },
+        {
+            "id": "a36b933d-e701-43a6-8cf9-02e085932c5b",
+            "kind": "Material",
+            "locator": "/materials/1"
+        },
+        {
+            "id": "f4d153b8-4b35-49c2-8db1-867b11e6158d",
+            "kind": "Material",
+            "locator": "/materials/2"
+        },
+        {
+            "id": "c4caab13-1da2-4d2b-91b5-ad3fa655fa60",
+            "kind": "Texture",
+            "locator": "/materials/2/texture/0"
+        },
+        {
+            "id": "35573940-cbab-41e4-84cc-8305448e6e81",
+            "kind": "Material",
+            "locator": "/materials/3"
+        },
+        {
+            "id": "37a62896-c547-4658-b2f7-c467bfdece8a",
+            "kind": "Texture",
+            "locator": "/materials/3/texture/1"
+        },
+        {
+            "id": "b993f9f7-e33d-4192-af47-c0af242a56a2",
+            "kind": "Material",
+            "locator": "/materials/4"
+        },
+        {
+            "id": "da6f2538-5268-41c0-ad89-6688e7d4dff2",
+            "kind": "Texture",
+            "locator": "/materials/4/texture/0"
+        },
+        {
+            "id": "9cdcbcf7-574d-4cf1-b0e8-163963ea6c1d",
+            "kind": "Material",
+            "locator": "/materials/5"
+        },
+        {
+            "id": "75a83736-4809-4340-b5d3-5ca2669fe9be",
+            "kind": "Texture",
+            "locator": "/materials/5/texture/0"
+        },
+        {
+            "id": "c0ae1cdc-744a-4c93-be61-1f85c6cd89d2",
+            "kind": "Material",
+            "locator": "/materials/6"
+        },
+        {
+            "id": "038088e3-4659-468b-9296-e7fefd75dc37",
+            "kind": "Mesh",
+            "locator": "/meshes/0"
+        },
+        {
+            "id": "48d4134a-906f-4d64-b575-72473c3c6655",
+            "kind": "Mesh",
+            "locator": "/meshes/1"
+        },
+        {
+            "id": "14d608fd-6401-4bf6-ac11-8389a069bdad",
+            "kind": "Mesh",
+            "locator": "/meshes/2"
+        },
+        {
+            "id": "3f8b456b-9a5b-4360-aa40-75d94e804f70",
+            "kind": "Mesh",
+            "locator": "/meshes/3"
+        },
+        {
+            "id": "b0c01f81-85df-44cd-876a-554a7fff70b2",
+            "kind": "Mesh",
+            "locator": "/meshes/4"
+        },
+        {
+            "id": "9005449b-d12e-44e3-beca-b533093d0c20",
+            "kind": "Mesh",
+            "locator": "/meshes/5"
+        }
+    ],
+    "materialOverrides": {
+        "0d6619a6-2b48-4974-9131-7a263477f820": {
+            "baseColor": [
+                0.449999988,
+                0.449999988,
+                0.449999988,
+                1
+            ],
+            "metallic": 0,
+            "roughness": 0.519999981,
+            "normalScale": 1
+        }
+    }
+}

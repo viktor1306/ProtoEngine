@@ -1,0 +1,25 @@
+{
+  "format": "proto.project",
+  "formatVersion": 1,
+  "projectId": "aede39e7-f95b-4730-9f04-f0ee0cb45131",
+  "name": "Proto Playground",
+  "engine": {
+    "sdkVersion": "0.1",
+    "behaviorApiVersion": 1
+  },
+  "startupScene": "0084f853-73bf-4733-ba8a-550c901709c8",
+  "contentRoots": [
+    "Assets",
+    "Scenes"
+  ],
+  "code": {
+    "sourceRoot": "Code",
+    "registrationFile": "Code/Behaviors.cpp"
+  },
+  "graphicsSettings": "Config/graphics.json",
+  "build": {
+    "target": "windows-x64",
+    "name": "Proto Playground",
+    "additionalAssets": []
+  }
+}

@@ -1,0 +1,324 @@
+{
+  "format": "proto.benchmark.runs",
+  "version": 1,
+  "started": "2026-09-09T12:53:07.6027852+03:00",
+  "repeats": 3,
+  "requested_warmup_seconds": 2.0,
+  "requested_sample_seconds": 5.0,
+  "vsync": false,
+  "scenarios": [
+    "empty",
+    "small",
+    "instances-1000",
+    "instances-10000-visible",
+    "instances-10000-culled",
+    "instances-10000-moving",
+    "lights-1",
+    "lights-8",
+    "lights-32",
+    "lights-128",
+    "moving-lights-32",
+    "moving-casters",
+    "pool-overflow",
+    "pool-resident"
+  ],
+  "order": "paired alternating order by repetition when baseline supplied",
+  "runs": [
+    {
+      "scenario": "empty",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\empty-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\empty-r1.host.json"
+    },
+    {
+      "scenario": "empty",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\empty-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\empty-r2.host.json"
+    },
+    {
+      "scenario": "empty",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\empty-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\empty-r3.host.json"
+    },
+    {
+      "scenario": "small",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\small-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\small-r1.host.json"
+    },
+    {
+      "scenario": "small",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\small-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\small-r2.host.json"
+    },
+    {
+      "scenario": "small",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\small-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\small-r3.host.json"
+    },
+    {
+      "scenario": "instances-1000",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-1000-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-1000-r1.host.json"
+    },
+    {
+      "scenario": "instances-1000",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-1000-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-1000-r2.host.json"
+    },
+    {
+      "scenario": "instances-1000",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-1000-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-1000-r3.host.json"
+    },
+    {
+      "scenario": "instances-10000-visible",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-visible-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-visible-r1.host.json"
+    },
+    {
+      "scenario": "instances-10000-visible",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-visible-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-visible-r2.host.json"
+    },
+    {
+      "scenario": "instances-10000-visible",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-visible-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-visible-r3.host.json"
+    },
+    {
+      "scenario": "instances-10000-culled",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-culled-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-culled-r1.host.json"
+    },
+    {
+      "scenario": "instances-10000-culled",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-culled-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-culled-r2.host.json"
+    },
+    {
+      "scenario": "instances-10000-culled",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-culled-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-culled-r3.host.json"
+    },
+    {
+      "scenario": "instances-10000-moving",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-moving-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-moving-r1.host.json"
+    },
+    {
+      "scenario": "instances-10000-moving",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-moving-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-moving-r2.host.json"
+    },
+    {
+      "scenario": "instances-10000-moving",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-moving-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\instances-10000-moving-r3.host.json"
+    },
+    {
+      "scenario": "lights-1",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-1-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-1-r1.host.json"
+    },
+    {
+      "scenario": "lights-1",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-1-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-1-r2.host.json"
+    },
+    {
+      "scenario": "lights-1",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-1-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-1-r3.host.json"
+    },
+    {
+      "scenario": "lights-8",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-8-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-8-r1.host.json"
+    },
+    {
+      "scenario": "lights-8",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-8-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-8-r2.host.json"
+    },
+    {
+      "scenario": "lights-8",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-8-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-8-r3.host.json"
+    },
+    {
+      "scenario": "lights-32",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-32-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-32-r1.host.json"
+    },
+    {
+      "scenario": "lights-32",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-32-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-32-r2.host.json"
+    },
+    {
+      "scenario": "lights-32",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-32-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-32-r3.host.json"
+    },
+    {
+      "scenario": "lights-128",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-128-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-128-r1.host.json"
+    },
+    {
+      "scenario": "lights-128",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-128-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-128-r2.host.json"
+    },
+    {
+      "scenario": "lights-128",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-128-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\lights-128-r3.host.json"
+    },
+    {
+      "scenario": "moving-lights-32",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-lights-32-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-lights-32-r1.host.json"
+    },
+    {
+      "scenario": "moving-lights-32",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-lights-32-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-lights-32-r2.host.json"
+    },
+    {
+      "scenario": "moving-lights-32",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-lights-32-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-lights-32-r3.host.json"
+    },
+    {
+      "scenario": "moving-casters",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-casters-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-casters-r1.host.json"
+    },
+    {
+      "scenario": "moving-casters",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-casters-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-casters-r2.host.json"
+    },
+    {
+      "scenario": "moving-casters",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-casters-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\moving-casters-r3.host.json"
+    },
+    {
+      "scenario": "pool-overflow",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-overflow-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-overflow-r1.host.json"
+    },
+    {
+      "scenario": "pool-overflow",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-overflow-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-overflow-r2.host.json"
+    },
+    {
+      "scenario": "pool-overflow",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-overflow-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-overflow-r3.host.json"
+    },
+    {
+      "scenario": "pool-resident",
+      "phase": "candidate",
+      "repeat": 1,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-resident-r1.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-resident-r1.host.json"
+    },
+    {
+      "scenario": "pool-resident",
+      "phase": "candidate",
+      "repeat": 2,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-resident-r2.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-resident-r2.host.json"
+    },
+    {
+      "scenario": "pool-resident",
+      "phase": "candidate",
+      "repeat": 3,
+      "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-resident-r3.json",
+      "host": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\initial\\candidate\\pool-resident-r3.host.json"
+    }
+  ],
+  "complete": true,
+  "finished": "2026-09-09T12:58:34.5679271+03:00"
+}

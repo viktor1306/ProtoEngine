@@ -1,0 +1,177 @@
+{
+  "format": "proto.m8.distribution.smoke",
+  "version": 1,
+  "passed": true,
+  "error": null,
+  "distribution": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\ProtoEngine-v0.1",
+  "distributionContentSha256": "c9b83b138168e1025f8c6f519a3702d6dfd2c0bf6984a7444f64f83310fe60a7",
+  "runRoot": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна",
+  "processes": [
+    {
+      "label": "template-Template-One",
+      "executable": "C:\\Users\\buriak_vi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "arguments": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\ProtoEngine-v0.1\\Templates\\ProtoCppEmpty\\Create-Project.ps1",
+        "-Destination",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Template One Україна spaces",
+        "-Name",
+        "Template One"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-Template-One.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-Template-One.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-Template-One.process.json"
+    },
+    {
+      "label": "template-Template-Two",
+      "executable": "C:\\Users\\buriak_vi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "arguments": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\ProtoEngine-v0.1\\Templates\\ProtoCppEmpty\\Create-Project.ps1",
+        "-Destination",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Template Two Україна spaces",
+        "-Name",
+        "Template Two"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-Template-Two.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-Template-Two.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-Template-Two.process.json"
+    },
+    {
+      "label": "template-no-overwrite",
+      "executable": "C:\\Users\\buriak_vi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "arguments": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\ProtoEngine-v0.1\\Templates\\ProtoCppEmpty\\Create-Project.ps1",
+        "-Destination",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Template One Україна spaces",
+        "-Name",
+        "Template One Again"
+      ],
+      "exitCode": 1,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-no-overwrite.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-no-overwrite.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\template-no-overwrite.process.json"
+    },
+    {
+      "label": "starter-package-build",
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Relocated ProtoEngine Україна spaces\\bin\\ProtoPackage.exe",
+      "arguments": [
+        "--project",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Template One Україна spaces",
+        "--sdk",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Relocated ProtoEngine Україна spaces\\sdk",
+        "--output",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Starter Package Україна spaces"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-package-build.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-package-build.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-package-build.process.json"
+    },
+    {
+      "label": "starter-player-validate",
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Starter Player Only Україна spaces\\Template One.exe",
+      "arguments": [
+        "--validate-package"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-player-validate.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-player-validate.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-player-validate.process.json"
+    },
+    {
+      "label": "starter-player-run",
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Starter Player Only Україна spaces\\Template One.exe",
+      "arguments": [
+        "--frames",
+        "12",
+        "--capture",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-player.png",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-player.json"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-player-run.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-player-run.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\starter-player-run.process.json"
+    },
+    {
+      "label": "editor-relocated",
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Relocated ProtoEngine Україна spaces\\bin\\ProtoEditor.exe",
+      "arguments": [
+        "--project",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Relocated ProtoEngine Україна spaces\\Examples\\ProtoM8Demo\\project.proto.json",
+        "--scene-camera",
+        "--frames",
+        "12",
+        "--capture",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\editor-relocated.png",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\editor-relocated.json"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\editor-relocated.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\editor-relocated.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\editor-relocated.process.json"
+    },
+    {
+      "label": "player-validate-package",
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Player Only Україна spaces\\Proto M8 Demo.exe",
+      "arguments": [
+        "--validate-package"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\player-validate-package.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\player-validate-package.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\player-validate-package.process.json"
+    },
+    {
+      "label": "player-relocated",
+      "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Player Only Україна spaces\\Proto M8 Demo.exe",
+      "arguments": [
+        "--frames",
+        "12",
+        "--capture",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\player-relocated.png",
+        "--report",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\player-relocated.json",
+        "--validation-dir",
+        "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\Relocated ProtoEngine Україна spaces\\bin\\validation"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "error": null,
+      "stdout": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\player-relocated.stdout.log",
+      "stderr": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\player-relocated.stderr.log",
+      "metadata": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-debug\\test-results\\m8-delivery\\r-f3ff0b633244\\check\\r-fc726990e305-Україна\\player-relocated.process.json"
+    }
+  ]
+}

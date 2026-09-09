@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Win32-ninja"
+	tests="6"
+	failures="1"
+	disabled="0"
+	skipped="0"
+	hostname="Buriak-vi-laptop"
+	time="34"
+	timestamp="2026-09-09T11:21:28"
+	>
+	<testcase name="m6_portable_assets" classname="m6_portable_assets" time="0.122471" status="run">
+		<properties/>
+		<system-out>PASS m6 portable model roundtrip and validation
+</system-out>
+	</testcase>
+	<testcase name="m6_graphics_contract" classname="m6_graphics_contract" time="0.140705" status="run">
+		<properties/>
+		<system-out>4 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m6_package_contract" classname="m6_package_contract" time="15.2265" status="run">
+		<properties/>
+		<system-out>PASS PE audit handles distinct normal and delay import tables
+PASS exports saved startup scene and explicit raw asset
+PASS package runs from its own directory and preserves schema discovery
+PASS re-export retains the previous successful output
+PASS manifest edits without session refresh are rejected
+PASS invalid saved behavior scene cannot replace a successful package
+PASS cancelled or failed export cannot replace a successful package
+PASS relocating the project preserves raw asset identity
+8 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m6_runtime_package" classname="m6_runtime_package" time="2.02936" status="run">
+		<properties/>
+		<system-out>PASS synthetic portable model roundtrip
+PASS loads package and preserves active material override dependencies
+PASS real Player validates the copied package
+PASS raw data is available during an actual behavior OnStart
+PASS package pins block root rename while live
+PASS missing or corrupt model blobs are rejected
+PASS wrong SDK identity is rejected
+PASS altered resource type and dependency tables are rejected
+PASS omitted DLL inventory entry and unlisted files are rejected
+PASS declared mutable logs and user settings are accepted
+PASS private Play snapshot carries raw bytes
+PASS writes a static textured MASK package for native graphics QA
+12 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m6_editor_export" classname="m6_editor_export" time="8.54917" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[INFO] Scene GPU readback: geometry_pixels=337995 depth_probes=0
+[CPU MARKER] editor.ui mean_ms=0.770552
+[CPU MARKER] renderer.submit_present mean_ms=9.287511
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m6_player_standalone" classname="m6_player_standalone" time="8.18413" status="fail">
+		<failure message="Failed"/>
+		<properties/>
+		<system-out>Get-Entity: C:\Users\buriak_vi\Documents\ChatGPT\ProtoEngine\tests\M6PlayerSmoke.ps1:294
+Line |
+ 294 |  $moveBefore = Get-Entity $initial $moveLightId
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | The property 'Count' cannot be found on this object. Verify that the property exists.
+</system-out>
+	</testcase>
+</testsuite>

@@ -1,0 +1,1307 @@
+{
+  "format": "proto.benchmark.supplement.summary",
+  "version": 1,
+  "generated": "2026-09-09T14:58:07.4243376+03:00",
+  "inputs": {
+    "editor": [
+      {
+        "label": "baseline",
+        "root": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference",
+        "index": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\index.json"
+      },
+      {
+        "label": "candidate",
+        "root": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-final",
+        "index": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-final\\index.json"
+      }
+    ],
+    "asset": [
+      {
+        "label": "baseline",
+        "root": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\assets-baseline-fixed",
+        "index": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\assets-baseline-fixed\\index.json"
+      },
+      {
+        "label": "candidate",
+        "root": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\supplement-candidate",
+        "index": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\supplement-candidate\\index.json"
+      }
+    ]
+  },
+  "editor": {
+    "runs": [
+      {
+        "id": "editor-idle-r1",
+        "group": "editor-idle",
+        "repeat": 1,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r1.json",
+        "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "f540fa2ad56871bbde414be6e2cdee2331a4cd49bfd74ae000456cee144e1a7d",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 48.1385,
+          "p95": 198.4457,
+          "p99": 267.76139
+        },
+        "gpu": {
+          "median": 7.59557273123,
+          "p95": 70.6336701505,
+          "p99": 138.059900275
+        },
+        "actual_duration_ms": 5125.878,
+        "timed_frames": 74.0,
+        "session_rendered_frames": 100,
+        "session_scene_frames": 100,
+        "warmup_frames": 26,
+        "timed_scene_frames": 74,
+        "process_cpu_ms_last": 125.0,
+        "process_cpu_ratio_1core": 0.024386066152959553,
+        "process_cpu_ratio_16core": 0.001524129134559972,
+        "process_cpu_percent_1core": 2.438606615295955,
+        "process_cpu_percent_16core": 0.1524129134559972,
+        "memory": {
+          "working_set_peak": 266559488.0,
+          "private_bytes_peak": 219586560.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 26.0,
+        "gpu_end_serial": 100.0,
+        "gpu_sample_count": 74,
+        "label": "baseline"
+      },
+      {
+        "id": "editor-idle-r2",
+        "group": "editor-idle",
+        "repeat": 2,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r2.json",
+        "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "f540fa2ad56871bbde414be6e2cdee2331a4cd49bfd74ae000456cee144e1a7d",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 73.645,
+          "p95": 210.8458,
+          "p99": 295.69952
+        },
+        "gpu": {
+          "median": 7.41968731886,
+          "p95": 102.056643342,
+          "p99": 159.025750284
+        },
+        "actual_duration_ms": 5018.22,
+        "timed_frames": 53.0,
+        "session_rendered_frames": 71,
+        "session_scene_frames": 71,
+        "warmup_frames": 18,
+        "timed_scene_frames": 53,
+        "process_cpu_ms_last": 93.75,
+        "process_cpu_ratio_1core": 0.018681923072324448,
+        "process_cpu_ratio_16core": 0.001167620192020278,
+        "process_cpu_percent_1core": 1.868192307232445,
+        "process_cpu_percent_16core": 0.1167620192020278,
+        "memory": {
+          "working_set_peak": 266604544.0,
+          "private_bytes_peak": 219717632.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 18.0,
+        "gpu_end_serial": 71.0,
+        "gpu_sample_count": 53,
+        "label": "baseline"
+      },
+      {
+        "id": "editor-idle-r3",
+        "group": "editor-idle",
+        "repeat": 3,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-idle\\r3.json",
+        "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "f540fa2ad56871bbde414be6e2cdee2331a4cd49bfd74ae000456cee144e1a7d",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 56.999,
+          "p95": 178.18995,
+          "p99": 197.6564
+        },
+        "gpu": {
+          "median": 7.58903627305,
+          "p95": 62.266266709,
+          "p99": 74.5814987
+        },
+        "actual_duration_ms": 5034.99,
+        "timed_frames": 68.0,
+        "session_rendered_frames": 94,
+        "session_scene_frames": 94,
+        "warmup_frames": 26,
+        "timed_scene_frames": 68,
+        "process_cpu_ms_last": 46.875,
+        "process_cpu_ratio_1core": 0.009309849671995376,
+        "process_cpu_ratio_16core": 0.000581865604499711,
+        "process_cpu_percent_1core": 0.9309849671995376,
+        "process_cpu_percent_16core": 0.0581865604499711,
+        "memory": {
+          "working_set_peak": 266395648.0,
+          "private_bytes_peak": 219545600.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 26.0,
+        "gpu_end_serial": 94.0,
+        "gpu_sample_count": 68,
+        "label": "baseline"
+      },
+      {
+        "id": "editor-interactive-r1",
+        "group": "editor-interactive",
+        "repeat": 1,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r1.json",
+        "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "f540fa2ad56871bbde414be6e2cdee2331a4cd49bfd74ae000456cee144e1a7d",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 81.342,
+          "p95": 230.2592,
+          "p99": 361.06824
+        },
+        "gpu": {
+          "median": 6.9194269144,
+          "p95": 82.5071646523,
+          "p99": 149.234188023
+        },
+        "actual_duration_ms": 5162.905,
+        "timed_frames": 53.0,
+        "session_rendered_frames": 77,
+        "session_scene_frames": 77,
+        "warmup_frames": 24,
+        "timed_scene_frames": 53,
+        "process_cpu_ms_last": 78.125,
+        "process_cpu_ratio_1core": 0.015131984803129247,
+        "process_cpu_ratio_16core": 0.0009457490501955779,
+        "process_cpu_percent_1core": 1.5131984803129246,
+        "process_cpu_percent_16core": 0.09457490501955779,
+        "memory": {
+          "working_set_peak": 266551296.0,
+          "private_bytes_peak": 219566080.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 24.0,
+        "gpu_end_serial": 77.0,
+        "gpu_sample_count": 53,
+        "label": "baseline"
+      },
+      {
+        "id": "editor-interactive-r2",
+        "group": "editor-interactive",
+        "repeat": 2,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r2.json",
+        "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "f540fa2ad56871bbde414be6e2cdee2331a4cd49bfd74ae000456cee144e1a7d",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 17.633,
+          "p95": 133.3909,
+          "p99": 218.4474
+        },
+        "gpu": {
+          "median": 2.54958327109,
+          "p95": 50.8358425089,
+          "p99": 132.960346754
+        },
+        "actual_duration_ms": 5015.557,
+        "timed_frames": 119.0,
+        "session_rendered_frames": 157,
+        "session_scene_frames": 157,
+        "warmup_frames": 38,
+        "timed_scene_frames": 119,
+        "process_cpu_ms_last": 140.625,
+        "process_cpu_ratio_1core": 0.028037763303258245,
+        "process_cpu_ratio_16core": 0.0017523602064536403,
+        "process_cpu_percent_1core": 2.8037763303258245,
+        "process_cpu_percent_16core": 0.17523602064536403,
+        "memory": {
+          "working_set_peak": 266641408.0,
+          "private_bytes_peak": 219729920.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 38.0,
+        "gpu_end_serial": 157.0,
+        "gpu_sample_count": 119,
+        "label": "baseline"
+      },
+      {
+        "id": "editor-interactive-r3",
+        "group": "editor-interactive",
+        "repeat": 3,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-reference\\editor-interactive\\r3.json",
+        "executable_sha256": "4f1c5d7d55fe61309b48ec062de46f51588b1ab5ecee26c3c8cd9ce42992c7cc",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "f540fa2ad56871bbde414be6e2cdee2331a4cd49bfd74ae000456cee144e1a7d",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 14.466,
+          "p95": 28.62425,
+          "p99": 37.60921
+        },
+        "gpu": {
+          "median": 1.07924476532,
+          "p95": 6.41734359333,
+          "p99": 16.0247027338
+        },
+        "actual_duration_ms": 5016.667,
+        "timed_frames": 338.0,
+        "session_rendered_frames": 478,
+        "session_scene_frames": 478,
+        "warmup_frames": 140,
+        "timed_scene_frames": 338,
+        "process_cpu_ms_last": 390.625,
+        "process_cpu_ratio_1core": 0.07786544333119977,
+        "process_cpu_ratio_16core": 0.0048665902081999855,
+        "process_cpu_percent_1core": 7.786544333119977,
+        "process_cpu_percent_16core": 0.48665902081999857,
+        "memory": {
+          "working_set_peak": 266842112.0,
+          "private_bytes_peak": 219967488.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 140.0,
+        "gpu_end_serial": 478.0,
+        "gpu_sample_count": 338,
+        "label": "baseline"
+      },
+      {
+        "id": "editor-idle-r1",
+        "group": "editor-idle",
+        "repeat": 1,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-final\\editor-idle\\r1.json",
+        "executable_sha256": "f243877651fb0b786ffc8314cc81ee3ed120fa34bfca2ffcef1ed798e0b16a69",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "307e99ae6e95222c058d44a4d5c8ad45750fbe160a9f078663423ead572f5413",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 13.875,
+          "p95": 33.8398,
+          "p99": 43.06618
+        },
+        "gpu": {
+          "median": 1.08765622345,
+          "p95": 9.50195028885,
+          "p99": 26.3368378987
+        },
+        "actual_duration_ms": 5003.356,
+        "timed_frames": 320.0,
+        "session_rendered_frames": 443,
+        "session_scene_frames": 443,
+        "warmup_frames": 123,
+        "timed_scene_frames": 320,
+        "process_cpu_ms_last": 437.5,
+        "process_cpu_ratio_1core": 0.08744130939313534,
+        "process_cpu_ratio_16core": 0.005465081837070959,
+        "process_cpu_percent_1core": 8.744130939313534,
+        "process_cpu_percent_16core": 0.5465081837070959,
+        "memory": {
+          "working_set_peak": 266686464.0,
+          "private_bytes_peak": 219783168.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 123.0,
+        "gpu_end_serial": 443.0,
+        "gpu_sample_count": 320,
+        "label": "candidate"
+      },
+      {
+        "id": "editor-idle-r2",
+        "group": "editor-idle",
+        "repeat": 2,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-final\\editor-idle\\r2.json",
+        "executable_sha256": "f243877651fb0b786ffc8314cc81ee3ed120fa34bfca2ffcef1ed798e0b16a69",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "307e99ae6e95222c058d44a4d5c8ad45750fbe160a9f078663423ead572f5413",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 12.768,
+          "p95": 24.1754,
+          "p99": 36.55213
+        },
+        "gpu": {
+          "median": 1.1044791397,
+          "p95": 3.84779417689,
+          "p99": 30.179534159
+        },
+        "actual_duration_ms": 5003.845,
+        "timed_frames": 362.0,
+        "session_rendered_frames": 491,
+        "session_scene_frames": 491,
+        "warmup_frames": 129,
+        "timed_scene_frames": 362,
+        "process_cpu_ms_last": 531.25,
+        "process_cpu_ratio_1core": 0.10616835653382549,
+        "process_cpu_ratio_16core": 0.006635522283364093,
+        "process_cpu_percent_1core": 10.616835653382548,
+        "process_cpu_percent_16core": 0.6635522283364093,
+        "memory": {
+          "working_set_peak": 266858496.0,
+          "private_bytes_peak": 220033024.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 129.0,
+        "gpu_end_serial": 491.0,
+        "gpu_sample_count": 362,
+        "label": "candidate"
+      },
+      {
+        "id": "editor-idle-r3",
+        "group": "editor-idle",
+        "repeat": 3,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-final\\editor-idle\\r3.json",
+        "executable_sha256": "f243877651fb0b786ffc8314cc81ee3ed120fa34bfca2ffcef1ed798e0b16a69",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "307e99ae6e95222c058d44a4d5c8ad45750fbe160a9f078663423ead572f5413",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 14.056,
+          "p95": 33.023,
+          "p99": 60.1682
+        },
+        "gpu": {
+          "median": 1.12598955584,
+          "p95": 10.9568747325,
+          "p99": 38.2097074005
+        },
+        "actual_duration_ms": 5046.12,
+        "timed_frames": 321.0,
+        "session_rendered_frames": 451,
+        "session_scene_frames": 451,
+        "warmup_frames": 130,
+        "timed_scene_frames": 321,
+        "process_cpu_ms_last": 406.25,
+        "process_cpu_ratio_1core": 0.08050739974475439,
+        "process_cpu_ratio_16core": 0.005031712484047149,
+        "process_cpu_percent_1core": 8.050739974475439,
+        "process_cpu_percent_16core": 0.5031712484047149,
+        "memory": {
+          "working_set_peak": 266567680.0,
+          "private_bytes_peak": 219709440.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 130.0,
+        "gpu_end_serial": 451.0,
+        "gpu_sample_count": 321,
+        "label": "candidate"
+      },
+      {
+        "id": "editor-interactive-r1",
+        "group": "editor-interactive",
+        "repeat": 1,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-final\\editor-interactive\\r1.json",
+        "executable_sha256": "f243877651fb0b786ffc8314cc81ee3ed120fa34bfca2ffcef1ed798e0b16a69",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "307e99ae6e95222c058d44a4d5c8ad45750fbe160a9f078663423ead572f5413",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 13.673,
+          "p95": 32.98465,
+          "p99": 40.50623
+        },
+        "gpu": {
+          "median": 0.993619767408,
+          "p95": 5.16217435314,
+          "p99": 19.6751318113
+        },
+        "actual_duration_ms": 5029.578,
+        "timed_frames": 342.0,
+        "session_rendered_frames": 454,
+        "session_scene_frames": 454,
+        "warmup_frames": 112,
+        "timed_scene_frames": 342,
+        "process_cpu_ms_last": 609.375,
+        "process_cpu_ratio_1core": 0.12115827610189164,
+        "process_cpu_ratio_16core": 0.007572392256368228,
+        "process_cpu_percent_1core": 12.115827610189164,
+        "process_cpu_percent_16core": 0.7572392256368228,
+        "memory": {
+          "working_set_peak": 266723328.0,
+          "private_bytes_peak": 219619328.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 112.0,
+        "gpu_end_serial": 454.0,
+        "gpu_sample_count": 342,
+        "label": "candidate"
+      },
+      {
+        "id": "editor-interactive-r2",
+        "group": "editor-interactive",
+        "repeat": 2,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-final\\editor-interactive\\r2.json",
+        "executable_sha256": "f243877651fb0b786ffc8314cc81ee3ed120fa34bfca2ffcef1ed798e0b16a69",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "307e99ae6e95222c058d44a4d5c8ad45750fbe160a9f078663423ead572f5413",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 14.213,
+          "p95": 38.8824,
+          "p99": 48.3368
+        },
+        "gpu": {
+          "median": 1.0456770578,
+          "p95": 12.6816142737,
+          "p99": 35.6250616302
+        },
+        "actual_duration_ms": 5032.014,
+        "timed_frames": 293.0,
+        "session_rendered_frames": 409,
+        "session_scene_frames": 409,
+        "warmup_frames": 116,
+        "timed_scene_frames": 293,
+        "process_cpu_ms_last": 453.125,
+        "process_cpu_ratio_1core": 0.09004843786205682,
+        "process_cpu_ratio_16core": 0.0056280273663785515,
+        "process_cpu_percent_1core": 9.004843786205683,
+        "process_cpu_percent_16core": 0.5628027366378552,
+        "memory": {
+          "working_set_peak": 266674176.0,
+          "private_bytes_peak": 219791360.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 116.0,
+        "gpu_end_serial": 409.0,
+        "gpu_sample_count": 293,
+        "label": "candidate"
+      },
+      {
+        "id": "editor-interactive-r3",
+        "group": "editor-interactive",
+        "repeat": 3,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\editor-final\\editor-interactive\\r3.json",
+        "executable_sha256": "f243877651fb0b786ffc8314cc81ee3ed120fa34bfca2ffcef1ed798e0b16a69",
+        "source_hash": "d43e137c25b7a1b1f339ecbc6ba8efcb9ca68ef4be06c3cdfaf008ef9c301b0f",
+        "build_id": "307e99ae6e95222c058d44a4d5c8ad45750fbe160a9f078663423ead572f5413",
+        "shader_hash": "63165125d7ce2a7d905193b4ed88eb47b54224f68917182503e699331405869a",
+        "target_width": 989,
+        "target_height": 738,
+        "wall": {
+          "median": 16.0655,
+          "p95": 33.03425,
+          "p99": 41.3472
+        },
+        "gpu": {
+          "median": 0.955052060017,
+          "p95": 4.46802072425,
+          "p99": 21.3259552085
+        },
+        "actual_duration_ms": 5028.794,
+        "timed_frames": 296.0,
+        "session_rendered_frames": 423,
+        "session_scene_frames": 423,
+        "warmup_frames": 127,
+        "timed_scene_frames": 296,
+        "process_cpu_ms_last": 406.25,
+        "process_cpu_ratio_1core": 0.08078477662835265,
+        "process_cpu_ratio_16core": 0.005049048539272041,
+        "process_cpu_percent_1core": 8.078477662835265,
+        "process_cpu_percent_16core": 0.5049048539272041,
+        "memory": {
+          "working_set_peak": 266682368.0,
+          "private_bytes_peak": 219820032.0
+        },
+        "vma": {
+          "allocation_peak": 28312000.0,
+          "allocation_observed_peak": 28312000.0
+        },
+        "dimensions_stable": true,
+        "gpu_complete": true,
+        "gpu_warmup_serial": 127.0,
+        "gpu_end_serial": 423.0,
+        "gpu_sample_count": 296,
+        "label": "candidate"
+      }
+    ],
+    "aggregates": [
+      {
+        "label": "baseline",
+        "variant": "idle",
+        "run_count": 3,
+        "wall": {
+          "median": 56.999,
+          "p95": 198.4457,
+          "p99": 267.76139
+        },
+        "gpu": {
+          "median": 7.58903627305,
+          "p95": 70.6336701505,
+          "p99": 138.059900275
+        },
+        "actual_duration_ms": 5034.99,
+        "process_cpu_ms_last": 93.75,
+        "process_cpu_ratio_1core": 0.0186819230723244,
+        "process_cpu_ratio_16core": 0.00116762019202028,
+        "working_set_peak": 266559488.0,
+        "private_bytes_peak": 219586560.0,
+        "vma_allocation_peak": 28312000.0,
+        "target_width": 989.0,
+        "target_height": 738.0,
+        "session_scene_frames": 94.0,
+        "timed_scene_frames": 68.0,
+        "all_dimensions_stable": true,
+        "all_gpu_complete": true
+      },
+      {
+        "label": "baseline",
+        "variant": "interactive",
+        "run_count": 3,
+        "wall": {
+          "median": 17.633,
+          "p95": 133.3909,
+          "p99": 218.4474
+        },
+        "gpu": {
+          "median": 2.54958327109,
+          "p95": 50.8358425089,
+          "p99": 132.960346754
+        },
+        "actual_duration_ms": 5016.667,
+        "process_cpu_ms_last": 140.625,
+        "process_cpu_ratio_1core": 0.0280377633032582,
+        "process_cpu_ratio_16core": 0.00175236020645364,
+        "working_set_peak": 266641408.0,
+        "private_bytes_peak": 219729920.0,
+        "vma_allocation_peak": 28312000.0,
+        "target_width": 989.0,
+        "target_height": 738.0,
+        "session_scene_frames": 157.0,
+        "timed_scene_frames": 119.0,
+        "all_dimensions_stable": true,
+        "all_gpu_complete": true
+      },
+      {
+        "label": "candidate",
+        "variant": "idle",
+        "run_count": 3,
+        "wall": {
+          "median": 13.875,
+          "p95": 33.023,
+          "p99": 43.06618
+        },
+        "gpu": {
+          "median": 1.1044791397,
+          "p95": 9.50195028885,
+          "p99": 30.179534159
+        },
+        "actual_duration_ms": 5003.845,
+        "process_cpu_ms_last": 437.5,
+        "process_cpu_ratio_1core": 0.0874413093931353,
+        "process_cpu_ratio_16core": 0.00546508183707096,
+        "working_set_peak": 266686464.0,
+        "private_bytes_peak": 219783168.0,
+        "vma_allocation_peak": 28312000.0,
+        "target_width": 989.0,
+        "target_height": 738.0,
+        "session_scene_frames": 451.0,
+        "timed_scene_frames": 321.0,
+        "all_dimensions_stable": true,
+        "all_gpu_complete": true
+      },
+      {
+        "label": "candidate",
+        "variant": "interactive",
+        "run_count": 3,
+        "wall": {
+          "median": 14.213,
+          "p95": 33.03425,
+          "p99": 41.3472
+        },
+        "gpu": {
+          "median": 0.993619767408,
+          "p95": 5.16217435314,
+          "p99": 21.3259552085
+        },
+        "actual_duration_ms": 5029.578,
+        "process_cpu_ms_last": 453.125,
+        "process_cpu_ratio_1core": 0.0900484378620568,
+        "process_cpu_ratio_16core": 0.00562802736637855,
+        "working_set_peak": 266682368.0,
+        "private_bytes_peak": 219791360.0,
+        "vma_allocation_peak": 28312000.0,
+        "target_width": 989.0,
+        "target_height": 738.0,
+        "session_scene_frames": 423.0,
+        "timed_scene_frames": 296.0,
+        "all_dimensions_stable": true,
+        "all_gpu_complete": true
+      }
+    ]
+  },
+  "asset": {
+    "runs": [
+      {
+        "id": "asset-r1",
+        "group": "asset",
+        "repeat": 1,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\assets-baseline-fixed\\asset\\r1.json",
+        "executable_sha256": "7284cc2b0c7f3d5f50ea324670222058c7de040a2f05d7d41a1076851894cff9",
+        "source_hash": "cd44f7f822ce27933d3368d29c5c566289724418ac7c00e5083b5cdbcaaa7815",
+        "imported_id": "2607d207-e9e1-4623-879d-24b19333a461",
+        "cycles": 12,
+        "initial_import_ms": 95.134,
+        "cooked_cold_load_ms": 76,
+        "cooked_warm_load_ms": 26.099,
+        "cold_from_cache": false,
+        "warm_from_cache": true,
+        "material_document_load_unload_ms": 240.966,
+        "material_private_peak": 20742144,
+        "material_working_peak": 26722304,
+        "cycle_count": 12,
+        "cycles_restored": true,
+        "weak_owners_expired": true,
+        "hashes_restored": true,
+        "ids_restored": true,
+        "cleanup_all": true,
+        "cycle_private_peak": 10047488.0,
+        "cycle_working_peak": 16011264.0,
+        "cycle_vma_peak": null,
+        "operation_metrics": {
+          "move_redo_ms": {
+            "count": 12,
+            "median": 88.983,
+            "p95": 98.65585,
+            "p99": 101.34557000000001
+          },
+          "move_undo_ms": {
+            "count": 12,
+            "median": 87.156,
+            "p95": 102.719,
+            "p99": 105.5438
+          },
+          "move_redo_again_ms": {
+            "count": 12,
+            "median": 88.1555,
+            "p95": 100.84405,
+            "p99": 102.62561
+          },
+          "move_final_undo_ms": {
+            "count": 12,
+            "median": 90.79849999999999,
+            "p95": 292.3142999999997,
+            "p99": 469.4380600000003
+          },
+          "copy_redo_ms": {
+            "count": 12,
+            "median": 68.53049999999999,
+            "p95": 79.64535,
+            "p99": 79.96347
+          },
+          "copy_undo_ms": {
+            "count": 12,
+            "median": 60.876999999999995,
+            "p95": 66.40055000000001,
+            "p99": 66.57611
+          },
+          "copy_redo_again_ms": {
+            "count": 12,
+            "median": 67.07900000000001,
+            "p95": 89.71449999999999,
+            "p99": 101.87170000000002
+          },
+          "copy_final_undo_ms": {
+            "count": 12,
+            "median": 59.551500000000004,
+            "p95": 68.0854,
+            "p99": 69.70108
+          }
+        },
+        "label": "baseline"
+      },
+      {
+        "id": "asset-r2",
+        "group": "asset",
+        "repeat": 2,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\assets-baseline-fixed\\asset\\r2.json",
+        "executable_sha256": "7284cc2b0c7f3d5f50ea324670222058c7de040a2f05d7d41a1076851894cff9",
+        "source_hash": "cd44f7f822ce27933d3368d29c5c566289724418ac7c00e5083b5cdbcaaa7815",
+        "imported_id": "1e8cd8c6-7fb6-4584-ba1a-4944bafb1efd",
+        "cycles": 12,
+        "initial_import_ms": 106.768,
+        "cooked_cold_load_ms": 86.164,
+        "cooked_warm_load_ms": 28.98,
+        "cold_from_cache": false,
+        "warm_from_cache": true,
+        "material_document_load_unload_ms": 259.197,
+        "material_private_peak": 20750336,
+        "material_working_peak": 26726400,
+        "cycle_count": 12,
+        "cycles_restored": true,
+        "weak_owners_expired": true,
+        "hashes_restored": true,
+        "ids_restored": true,
+        "cleanup_all": true,
+        "cycle_private_peak": 10043392.0,
+        "cycle_working_peak": 15978496.0,
+        "cycle_vma_peak": null,
+        "operation_metrics": {
+          "move_redo_ms": {
+            "count": 12,
+            "median": 93.251,
+            "p95": 104.47005,
+            "p99": 106.90281
+          },
+          "move_undo_ms": {
+            "count": 12,
+            "median": 89.8665,
+            "p95": 113.84819999999999,
+            "p99": 116.01124000000002
+          },
+          "move_redo_again_ms": {
+            "count": 12,
+            "median": 93.38900000000001,
+            "p95": 107.0005,
+            "p99": 112.5841
+          },
+          "move_final_undo_ms": {
+            "count": 12,
+            "median": 95.6035,
+            "p95": 329.46354999999966,
+            "p99": 544.7111100000003
+          },
+          "copy_redo_ms": {
+            "count": 12,
+            "median": 69.47200000000001,
+            "p95": 82.3681,
+            "p99": 85.09522
+          },
+          "copy_undo_ms": {
+            "count": 12,
+            "median": 62.8185,
+            "p95": 74.15015,
+            "p99": 76.49403
+          },
+          "copy_redo_again_ms": {
+            "count": 12,
+            "median": 69.8865,
+            "p95": 208.8980999999998,
+            "p99": 324.7580200000001
+          },
+          "copy_final_undo_ms": {
+            "count": 12,
+            "median": 62.269000000000005,
+            "p95": 106.31004999999995,
+            "p99": 139.55161000000004
+          }
+        },
+        "label": "baseline"
+      },
+      {
+        "id": "asset-r3",
+        "group": "asset",
+        "repeat": 3,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\assets-baseline-fixed\\asset\\r3.json",
+        "executable_sha256": "7284cc2b0c7f3d5f50ea324670222058c7de040a2f05d7d41a1076851894cff9",
+        "source_hash": "cd44f7f822ce27933d3368d29c5c566289724418ac7c00e5083b5cdbcaaa7815",
+        "imported_id": "321b0b84-b8d6-40da-82f8-041d4703dd1a",
+        "cycles": 12,
+        "initial_import_ms": 91.073,
+        "cooked_cold_load_ms": 83.558,
+        "cooked_warm_load_ms": 30.179,
+        "cold_from_cache": false,
+        "warm_from_cache": true,
+        "material_document_load_unload_ms": 260.605,
+        "material_private_peak": 20770816,
+        "material_working_peak": 26742784,
+        "cycle_count": 12,
+        "cycles_restored": true,
+        "weak_owners_expired": true,
+        "hashes_restored": true,
+        "ids_restored": true,
+        "cleanup_all": true,
+        "cycle_private_peak": 10072064.0,
+        "cycle_working_peak": 16019456.0,
+        "cycle_vma_peak": null,
+        "operation_metrics": {
+          "move_redo_ms": {
+            "count": 12,
+            "median": 93.0555,
+            "p95": 250.30799999999977,
+            "p99": 395.5432000000002
+          },
+          "move_undo_ms": {
+            "count": 12,
+            "median": 96.5265,
+            "p95": 129.15899999999996,
+            "p99": 150.5342
+          },
+          "move_redo_again_ms": {
+            "count": 12,
+            "median": 90.1525,
+            "p95": 151.26004999999992,
+            "p99": 195.47521000000006
+          },
+          "move_final_undo_ms": {
+            "count": 12,
+            "median": 89.97800000000001,
+            "p95": 101.0232,
+            "p99": 101.59344
+          },
+          "copy_redo_ms": {
+            "count": 12,
+            "median": 67.5415,
+            "p95": 79.6715,
+            "p99": 80.87270000000001
+          },
+          "copy_undo_ms": {
+            "count": 12,
+            "median": 63.1075,
+            "p95": 67.62984999999999,
+            "p99": 68.70917
+          },
+          "copy_redo_again_ms": {
+            "count": 12,
+            "median": 67.5925,
+            "p95": 198.6850999999998,
+            "p99": 315.88262000000014
+          },
+          "copy_final_undo_ms": {
+            "count": 12,
+            "median": 58.8065,
+            "p95": 67.297,
+            "p99": 68.31779999999999
+          }
+        },
+        "label": "baseline"
+      },
+      {
+        "id": "asset-r1",
+        "group": "asset",
+        "repeat": 1,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\supplement-candidate\\asset\\r1.json",
+        "executable_sha256": "7284cc2b0c7f3d5f50ea324670222058c7de040a2f05d7d41a1076851894cff9",
+        "source_hash": "cd44f7f822ce27933d3368d29c5c566289724418ac7c00e5083b5cdbcaaa7815",
+        "imported_id": "c4529c6b-e9a9-496f-8bf0-f2a06216aaa2",
+        "cycles": 12,
+        "initial_import_ms": 134.014,
+        "cooked_cold_load_ms": 151.907,
+        "cooked_warm_load_ms": 22.751,
+        "cold_from_cache": false,
+        "warm_from_cache": true,
+        "material_document_load_unload_ms": 251.527,
+        "material_private_peak": 21610496,
+        "material_working_peak": 26882048,
+        "cycle_count": 12,
+        "cycles_restored": true,
+        "weak_owners_expired": true,
+        "hashes_restored": true,
+        "ids_restored": true,
+        "cleanup_all": true,
+        "cycle_private_peak": 10498048.0,
+        "cycle_working_peak": 16125952.0,
+        "cycle_vma_peak": null,
+        "operation_metrics": {
+          "move_redo_ms": {
+            "count": 12,
+            "median": 120.2345,
+            "p95": 173.42849999999999,
+            "p99": 174.34810000000002
+          },
+          "move_undo_ms": {
+            "count": 12,
+            "median": 115.3195,
+            "p95": 150.30854999999997,
+            "p99": 163.11211
+          },
+          "move_redo_again_ms": {
+            "count": 12,
+            "median": 116.9795,
+            "p95": 151.69410000000002,
+            "p99": 151.70202
+          },
+          "move_final_undo_ms": {
+            "count": 12,
+            "median": 122.91650000000001,
+            "p95": 176.32779999999997,
+            "p99": 193.53356000000002
+          },
+          "copy_redo_ms": {
+            "count": 12,
+            "median": 95.089,
+            "p95": 117.9368,
+            "p99": 119.82176000000001
+          },
+          "copy_undo_ms": {
+            "count": 12,
+            "median": 79.163,
+            "p95": 145.96505,
+            "p99": 149.40981
+          },
+          "copy_redo_again_ms": {
+            "count": 12,
+            "median": 85.22200000000001,
+            "p95": 115.87174999999999,
+            "p99": 118.67675
+          },
+          "copy_final_undo_ms": {
+            "count": 12,
+            "median": 75.23249999999999,
+            "p95": 117.65619999999996,
+            "p99": 139.06484000000003
+          }
+        },
+        "label": "candidate"
+      },
+      {
+        "id": "asset-r2",
+        "group": "asset",
+        "repeat": 2,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\supplement-candidate\\asset\\r2.json",
+        "executable_sha256": "7284cc2b0c7f3d5f50ea324670222058c7de040a2f05d7d41a1076851894cff9",
+        "source_hash": "cd44f7f822ce27933d3368d29c5c566289724418ac7c00e5083b5cdbcaaa7815",
+        "imported_id": "615c4437-d057-4d06-9458-b6560ff207eb",
+        "cycles": 12,
+        "initial_import_ms": 103.16,
+        "cooked_cold_load_ms": 81.453,
+        "cooked_warm_load_ms": 29.127,
+        "cold_from_cache": false,
+        "warm_from_cache": true,
+        "material_document_load_unload_ms": 264.634,
+        "material_private_peak": 21667840,
+        "material_working_peak": 26894336,
+        "cycle_count": 12,
+        "cycles_restored": true,
+        "weak_owners_expired": true,
+        "hashes_restored": true,
+        "ids_restored": true,
+        "cleanup_all": true,
+        "cycle_private_peak": 10059776.0,
+        "cycle_working_peak": 16060416.0,
+        "cycle_vma_peak": null,
+        "operation_metrics": {
+          "move_redo_ms": {
+            "count": 12,
+            "median": 109.649,
+            "p95": 159.9642,
+            "p99": 167.80324000000002
+          },
+          "move_undo_ms": {
+            "count": 12,
+            "median": 117.21199999999999,
+            "p95": 181.49214999999995,
+            "p99": 215.78003000000007
+          },
+          "move_redo_again_ms": {
+            "count": 12,
+            "median": 114.2285,
+            "p95": 173.10649999999995,
+            "p99": 193.43010000000004
+          },
+          "move_final_undo_ms": {
+            "count": 12,
+            "median": 116.2405,
+            "p95": 152.35764999999998,
+            "p99": 164.50913000000003
+          },
+          "copy_redo_ms": {
+            "count": 12,
+            "median": 78.638,
+            "p95": 124.77939999999998,
+            "p99": 141.14388000000002
+          },
+          "copy_undo_ms": {
+            "count": 12,
+            "median": 78.69550000000001,
+            "p95": 104.55305,
+            "p99": 105.50741
+          },
+          "copy_redo_again_ms": {
+            "count": 12,
+            "median": 88.7575,
+            "p95": 143.46949999999998,
+            "p99": 166.48590000000004
+          },
+          "copy_final_undo_ms": {
+            "count": 12,
+            "median": 71.15700000000001,
+            "p95": 106.96019999999996,
+            "p99": 131.02644000000004
+          }
+        },
+        "label": "candidate"
+      },
+      {
+        "id": "asset-r3",
+        "group": "asset",
+        "repeat": 3,
+        "report": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\supplement-candidate\\asset\\r3.json",
+        "executable_sha256": "7284cc2b0c7f3d5f50ea324670222058c7de040a2f05d7d41a1076851894cff9",
+        "source_hash": "cd44f7f822ce27933d3368d29c5c566289724418ac7c00e5083b5cdbcaaa7815",
+        "imported_id": "75b97cbf-4e06-4a02-97ac-bffd80fa088d",
+        "cycles": 12,
+        "initial_import_ms": 105.907,
+        "cooked_cold_load_ms": 86.719,
+        "cooked_warm_load_ms": 27.183,
+        "cold_from_cache": false,
+        "warm_from_cache": true,
+        "material_document_load_unload_ms": 250.629,
+        "material_private_peak": 21200896,
+        "material_working_peak": 26898432,
+        "cycle_count": 12,
+        "cycles_restored": true,
+        "weak_owners_expired": true,
+        "hashes_restored": true,
+        "ids_restored": true,
+        "cleanup_all": true,
+        "cycle_private_peak": 10256384.0,
+        "cycle_working_peak": 16138240.0,
+        "cycle_vma_peak": null,
+        "operation_metrics": {
+          "move_redo_ms": {
+            "count": 12,
+            "median": 100.2955,
+            "p95": 149.8746,
+            "p99": 164.73252000000002
+          },
+          "move_undo_ms": {
+            "count": 12,
+            "median": 107.9685,
+            "p95": 137.0567,
+            "p99": 146.13214000000002
+          },
+          "move_redo_again_ms": {
+            "count": 12,
+            "median": 105.221,
+            "p95": 147.06214999999997,
+            "p99": 162.89643
+          },
+          "move_final_undo_ms": {
+            "count": 12,
+            "median": 113.12450000000001,
+            "p95": 129.207,
+            "p99": 131.12539999999998
+          },
+          "copy_redo_ms": {
+            "count": 12,
+            "median": 88.4385,
+            "p95": 107.7535,
+            "p99": 110.7763
+          },
+          "copy_undo_ms": {
+            "count": 12,
+            "median": 86.974,
+            "p95": 117.2516,
+            "p99": 119.05912
+          },
+          "copy_redo_again_ms": {
+            "count": 12,
+            "median": 85.02250000000001,
+            "p95": 113.21074999999999,
+            "p99": 114.69574999999999
+          },
+          "copy_final_undo_ms": {
+            "count": 12,
+            "median": 80.999,
+            "p95": 99.81434999999999,
+            "p99": 108.71247000000001
+          }
+        },
+        "label": "candidate"
+      }
+    ],
+    "aggregates": [
+      {
+        "label": "baseline",
+        "variant": "asset",
+        "run_count": 3,
+        "initial_import_ms": 95.134,
+        "cooked_cold_load_ms": 83.558,
+        "cooked_warm_load_ms": 28.98,
+        "material_document_load_unload_ms": 259.197,
+        "material_private_peak": 20750336.0,
+        "material_working_peak": 26726400.0,
+        "cycle_private_peak": 10047488.0,
+        "cycle_working_peak": 16011264.0,
+        "all_cycles_restored": true,
+        "all_weak_owners_expired": true,
+        "all_hashes_restored": true,
+        "all_ids_restored": true,
+        "all_cleanup_succeeded": true,
+        "operations": {
+          "move_redo_ms": {
+            "median": 93.0555,
+            "p95": 104.47005,
+            "p99": 106.90281
+          },
+          "move_undo_ms": {
+            "median": 89.8665,
+            "p95": 113.8482,
+            "p99": 116.01124
+          },
+          "move_redo_again_ms": {
+            "median": 90.1525,
+            "p95": 107.0005,
+            "p99": 112.5841
+          },
+          "move_final_undo_ms": {
+            "median": 90.7985,
+            "p95": 292.3143,
+            "p99": 469.43806
+          },
+          "copy_redo_ms": {
+            "median": 68.5305,
+            "p95": 79.6715,
+            "p99": 80.8727
+          },
+          "copy_undo_ms": {
+            "median": 62.8185,
+            "p95": 67.62985,
+            "p99": 68.70917
+          },
+          "copy_redo_again_ms": {
+            "median": 67.5925,
+            "p95": 198.6851,
+            "p99": 315.88262
+          },
+          "copy_final_undo_ms": {
+            "median": 59.5515,
+            "p95": 68.0854,
+            "p99": 69.70108
+          }
+        }
+      },
+      {
+        "label": "candidate",
+        "variant": "asset",
+        "run_count": 3,
+        "initial_import_ms": 105.907,
+        "cooked_cold_load_ms": 86.719,
+        "cooked_warm_load_ms": 27.183,
+        "material_document_load_unload_ms": 251.527,
+        "material_private_peak": 21610496.0,
+        "material_working_peak": 26894336.0,
+        "cycle_private_peak": 10256384.0,
+        "cycle_working_peak": 16125952.0,
+        "all_cycles_restored": true,
+        "all_weak_owners_expired": true,
+        "all_hashes_restored": true,
+        "all_ids_restored": true,
+        "all_cleanup_succeeded": true,
+        "operations": {
+          "move_redo_ms": {
+            "median": 109.649,
+            "p95": 159.9642,
+            "p99": 167.80324
+          },
+          "move_undo_ms": {
+            "median": 115.3195,
+            "p95": 150.30855,
+            "p99": 163.11211
+          },
+          "move_redo_again_ms": {
+            "median": 114.2285,
+            "p95": 151.6941,
+            "p99": 162.89643
+          },
+          "move_final_undo_ms": {
+            "median": 116.2405,
+            "p95": 152.35765,
+            "p99": 164.50913
+          },
+          "copy_redo_ms": {
+            "median": 88.4385,
+            "p95": 117.9368,
+            "p99": 119.82176
+          },
+          "copy_undo_ms": {
+            "median": 79.163,
+            "p95": 117.2516,
+            "p99": 119.05912
+          },
+          "copy_redo_again_ms": {
+            "median": 85.222,
+            "p95": 115.87175,
+            "p99": 118.67675
+          },
+          "copy_final_undo_ms": {
+            "median": 75.2325,
+            "p95": 106.9602,
+            "p99": 131.02644
+          }
+        }
+      }
+    ]
+  }
+}

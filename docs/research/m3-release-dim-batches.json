@@ -1,0 +1,41 @@
+{
+    "status":  "passed",
+    "editor":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\bin\\ProtoEditor.exe",
+    "output":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch",
+    "run_directory":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d",
+    "scenes":  {
+
+               },
+    "image_comparison":  {
+                             "Width":  989,
+                             "Height":  738,
+                             "MaxDiff":  0,
+                             "MeanAbsDiff":  0,
+                             "DifferingChannels":  0,
+                             "DifferingPixels":  0
+                         },
+    "lighting_contribution":  {
+                                  "MaxBrightening":  2,
+                                  "BrightenedChannels":  943905
+                              },
+    "runs":  [
+                 {
+                     "label":  "baseline",
+                     "scene":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\baseline.scene.json",
+                     "report":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\baseline.report.json",
+                     "viewport":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\baseline-viewport.png"
+                 },
+                 {
+                     "label":  "large-pool",
+                     "scene":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\large-pool.scene.json",
+                     "report":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\large-pool.report.json",
+                     "viewport":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\large-pool-viewport.png"
+                 },
+                 {
+                     "label":  "small-pool",
+                     "scene":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\small-pool.scene.json",
+                     "report":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\small-pool.report.json",
+                     "viewport":  "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m3-release\\test-results\\dim-batch\\m3-dim-batch-269d1a69c56d4b80b62f6b98ed621e0d\\small-pool-viewport.png"
+                 }
+             ]
+}

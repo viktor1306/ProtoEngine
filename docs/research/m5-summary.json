@@ -1,0 +1,193 @@
+{
+  "milestone": "M5",
+  "verified": true,
+  "date": "2026-09-08",
+  "platform": "Windows x64; GCC 16.2.0; Vulkan 1.3; Intel Arc 140T",
+  "full_ctest": {
+    "debug": {
+      "tests": 24,
+      "failures": 0,
+      "seconds": 193.0,
+      "timestamp": "2026-09-08T21:32:10",
+      "evidence": "docs/research/m5-ctest-debug.xml",
+      "scope": "Complete M0-M5 regression before final affected fixes; see final_affected_ctest for closing changes."
+    },
+    "release": {
+      "tests": 24,
+      "failures": 0,
+      "seconds": 149.0,
+      "timestamp": "2026-09-08T21:35:24",
+      "evidence": "docs/research/m5-ctest-release.xml",
+      "scope": "Complete M0-M5 regression before final affected fixes; see final_affected_ctest for closing changes."
+    }
+  },
+  "final_affected_ctest": {
+    "debug": {
+      "tests": 3,
+      "failures": 0,
+      "seconds": 75.0,
+      "timestamp": "2026-09-08T23:03:21",
+      "evidence": "docs/research/m5-final-affected-debug.xml",
+      "names": [
+        "m5_process_contract",
+        "m5_build_contract",
+        "m5_editor_play"
+      ]
+    },
+    "release": {
+      "tests": 3,
+      "failures": 0,
+      "seconds": 61.0,
+      "timestamp": "2026-09-08T23:02:01",
+      "evidence": "docs/research/m5-final-affected-release.xml",
+      "names": [
+        "m5_process_contract",
+        "m5_build_contract",
+        "m5_editor_play"
+      ]
+    }
+  },
+  "native": {
+    "debug": {
+      "editor": {
+        "passed": true,
+        "validation_enabled": true,
+        "synchronization_validation": true,
+        "validation_errors": 0,
+        "validation_warnings": 0,
+        "capture_saved": true
+      },
+      "contract": {
+        "passed": true,
+        "schema_discovery": true,
+        "keyboard_spin_moving_light": true,
+        "paused_editor_renderer": true,
+        "compile_error_file_line": true,
+        "no_stale_launch": true,
+        "runtime_crash_isolated": true,
+        "hung_player_stopped": true,
+        "restart": true,
+        "unsaved_scene_and_history_preserved": true,
+        "string_input_probe": true,
+        "code_panel_native_save_undo": true,
+        "code_panel_external_refresh": true,
+        "schema_recovery": true
+      },
+      "player": {
+        "passed": true,
+        "sdkBuildId": "a542cec16909d6aff3516bd76e8fb20fbb98b94c69bc933c031f134aa5f0d68c",
+        "frames": 90,
+        "starts": 3,
+        "updates": 270,
+        "stops": 3,
+        "shadow_faces_total": 1350,
+        "shadow_cache_hits_total": 0,
+        "validation_errors": 0,
+        "behavior_update_ms_max": 0.195,
+        "gpu_ms_last": 4.066094,
+        "gpu_bytes": 136346048
+      }
+    },
+    "release": {
+      "editor": {
+        "passed": true,
+        "validation_enabled": false,
+        "synchronization_validation": false,
+        "validation_errors": 0,
+        "validation_warnings": 0,
+        "capture_saved": true
+      },
+      "contract": {
+        "passed": true,
+        "schema_discovery": true,
+        "keyboard_spin_moving_light": true,
+        "paused_editor_renderer": true,
+        "compile_error_file_line": true,
+        "no_stale_launch": true,
+        "runtime_crash_isolated": true,
+        "hung_player_stopped": true,
+        "restart": true,
+        "unsaved_scene_and_history_preserved": true,
+        "string_input_probe": true,
+        "code_panel_native_save_undo": true,
+        "code_panel_external_refresh": true,
+        "schema_recovery": true
+      },
+      "player": {
+        "passed": true,
+        "sdkBuildId": "3032f3ee508a39c68e0a27bdee6c6dc0f5f5ba37b95556d9885b54b0c1f61270",
+        "frames": 90,
+        "starts": 3,
+        "updates": 270,
+        "stops": 3,
+        "shadow_faces_total": 1350,
+        "shadow_cache_hits_total": 0,
+        "validation_errors": 0,
+        "behavior_update_ms_max": 0.177,
+        "gpu_ms_last": 3.553073,
+        "gpu_bytes": 136346048
+      }
+    }
+  },
+  "binaries": {
+    "debug": {
+      "path": "build/m5-debug/bin/ProtoEditor.exe",
+      "bytes": 98010917,
+      "sha256": "CE604DD2AC49EEAA6057C324DE34352E22D73CF22B54E38466AC9E59B62A5631"
+    },
+    "release": {
+      "path": "build/m5-release/bin/ProtoEditor.exe",
+      "bytes": 8833266,
+      "sha256": "1575DBAD09F6C180814C7A81006C91848CD84954E035C793B0E5F23B8665F5E7"
+    }
+  },
+  "sdk": {
+    "debug": {
+      "sdkBuildId": "a542cec16909d6aff3516bd76e8fb20fbb98b94c69bc933c031f134aa5f0d68c",
+      "behaviorApiVersion": 1,
+      "compilerTarget": "x86_64-w64-mingw32",
+      "configuration": "Debug"
+    },
+    "release": {
+      "sdkBuildId": "3032f3ee508a39c68e0a27bdee6c6dc0f5f5ba37b95556d9885b54b0c1f61270",
+      "behaviorApiVersion": 1,
+      "compilerTarget": "x86_64-w64-mingw32",
+      "configuration": "Release"
+    }
+  },
+  "m4_binaries_unchanged": {
+    "debug": true,
+    "release": true
+  },
+  "long_path_cleanup": {
+    "verified_path_characters": 402,
+    "removed_entries": 5,
+    "outside_junction_target_and_sibling_preserved": true,
+    "locked_file_failed_promptly_and_retry_succeeded": true,
+    "evidence": "docs/research/m5-long-path-probe.txt"
+  },
+  "transform_microbenchmark": {
+    "configuration": "Release",
+    "entities": 1000,
+    "writes_per_entity_per_frame": 2,
+    "frames_per_run": 10,
+    "synchronous_ms_per_frame": [
+      24.1448,
+      23.4828,
+      23.1716
+    ],
+    "batched_ms_per_frame": [
+      0.3328,
+      0.3253,
+      0.3309
+    ],
+    "median_before_ms": 23.4828,
+    "median_after_ms": 0.3309,
+    "scope": "Transform updates only, no GPU rendering; not whole-engine FPS."
+  },
+  "independent_review": "Astra/max review completed; Luna/max implementation workers.",
+  "limitations": [
+    "Local PC only; no clean second Windows host tested.",
+    "Portable export and Player graphics settings belong to M6."
+  ]
+}

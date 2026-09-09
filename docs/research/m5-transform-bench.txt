@@ -1,0 +1,6 @@
+synchronous run=0 ms_per_frame=24.1448
+batched run=0 ms_per_frame=0.3328
+synchronous run=1 ms_per_frame=23.4828
+batched run=1 ms_per_frame=0.3253
+synchronous run=2 ms_per_frame=23.1716
+batched run=2 ms_per_frame=0.3309

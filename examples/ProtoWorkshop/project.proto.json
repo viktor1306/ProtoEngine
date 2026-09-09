@@ -1,0 +1,25 @@
+{
+  "format": "proto.project",
+  "formatVersion": 1,
+  "projectId": "67b476c2-f3a8-447a-9c87-875bca54b16e",
+  "name": "Майстерня Proto",
+  "engine": {
+    "sdkVersion": "0.1",
+    "behaviorApiVersion": 1
+  },
+  "startupScene": "d3b472ab-0d14-422f-86bb-fa4b32436a14",
+  "contentRoots": [
+    "Assets",
+    "Scenes"
+  ],
+  "code": {
+    "sourceRoot": "Code",
+    "registrationFile": "Code/Behaviors.cpp"
+  },
+  "graphicsSettings": "Config/graphics.json",
+  "build": {
+    "target": "windows-x64",
+    "name": "Майстерня Proto",
+    "additionalAssets": []
+  }
+}

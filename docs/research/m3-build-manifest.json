@@ -1,0 +1,68 @@
+{
+  "date": "2026-09-08",
+  "releaseExeSha256": "437a07a05aec2a923e715c7280b290be94b7f2dfe182e84442e8c5722be11259",
+  "debugExeSha256": "650cfea1871ae205a0ec41088300ccd68860a3190b0d899b9169e2d40a0125af",
+  "shaderBinariesMatch": true,
+  "shaders": [
+    {
+      "sha256": "1d4d9d779ca83bba85bdb3274cb11b5c983051e95c4d376fe0b2b5cee6e2a370",
+      "file": "camera_depth.frag.spv"
+    },
+    {
+      "sha256": "3f21dcfd6af7e74c0fdc2bf60f339594c90e0d8ce3b9438b37955621eb906938",
+      "file": "camera_depth.vert.spv"
+    },
+    {
+      "sha256": "9f8cc2d880a89f7873db1f64d68a55bbf9bdde3f9b3a8fa5d18121e73bf67c74",
+      "file": "light_tiles.comp.spv"
+    },
+    {
+      "sha256": "d4514164909a6ec427f99c44d98b11d73453624ace89d53835d22678d0b6fdcb",
+      "file": "lit.frag.spv"
+    },
+    {
+      "sha256": "29bb602a99a9f8f42d4f125f4ee9c9e231b8a0686ffe56563a96e9e61e5ae41a",
+      "file": "lit.vert.spv"
+    },
+    {
+      "sha256": "913007dbec3aef5385084f25cfb2021a279f88bb4f7241b482b908e5a394bea3",
+      "file": "pbr.frag.spv"
+    },
+    {
+      "sha256": "499f7ed49274669541884a7bf386581be8b26267bb2096d24d1fd60a457f8773",
+      "file": "pbr.vert.spv"
+    },
+    {
+      "sha256": "201ad459e59f5510839a61bb996b2b907c0dd6b5cd6d3429f6333d0f99c0dd3e",
+      "file": "scene.frag.spv"
+    },
+    {
+      "sha256": "b4bf0f04d0def4e79a840e4f86e6bcbaab36d375b12c18334d4c769559896499",
+      "file": "scene.vert.spv"
+    },
+    {
+      "sha256": "b2605494c5f634efa7a741f442e9bd8770315ee7616c8d7e0339ea5f479dca0f",
+      "file": "shadow.frag.spv"
+    },
+    {
+      "sha256": "67fbc187f0752a38f6476c75b93ffc2c5d86bf36421f8424b8a998d174723eb5",
+      "file": "shadow.vert.spv"
+    },
+    {
+      "sha256": "1edad43e65a3cb48e6e3f60a597b44dbff9b815f32a4fea310ab99687b23bd24",
+      "file": "tone.frag.spv"
+    },
+    {
+      "sha256": "69cc8f10366641c98ad6f7feda57d31b83d093dc5226f20cc2fe409f9e05cd5c",
+      "file": "tone.vert.spv"
+    },
+    {
+      "sha256": "201ad459e59f5510839a61bb996b2b907c0dd6b5cd6d3429f6333d0f99c0dd3e",
+      "file": "triangle.frag.spv"
+    },
+    {
+      "sha256": "f0b891b1c84a21705528893fa98a87b96f56b7b9e797a1e4cbd79d41ab182558",
+      "file": "triangle.vert.spv"
+    }
+  ]
+}

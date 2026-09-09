@@ -1,0 +1,6 @@
+119.102 ms [VULKAN LOADER] windows_read_data_files_in_registry: Registry lookup failed to get layer manifest files.
+162.438 ms [INFO] Vulkan 1.3; release validation disabled
+379.928 ms [INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+419.136 ms [INFO] Swapchain 320x180; 2; 3 images
+487.434 ms [INFO] Swapchain 320x180; 0; 3 images
+7532.778 ms [INFO] Vulkan resources released

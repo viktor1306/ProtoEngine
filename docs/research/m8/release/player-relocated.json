@@ -1,0 +1,2239 @@
+{"passed":true,"sdkBuildId":"5e87cfb5f24470e32a97c8ef2d84f8ed5d20602a4e44561b26af1b38e75e530c","frames":12,"starts":4,"updates":48,"stops":4,"behavior_update_ms_max":0.029000,"gpu_ms_last":8.162552,"gpu_bytes":182623616,"shadow_faces_total":180,"shadow_cache_hits_total":0,"validation_errors":0,"validation_enabled":false,"graphics":{"renderScale":1.000000,"vSync":true,"viewDistance":300.000000,"sunResolution":2048,"sunCascades":3,"pointResolution":512,"pointPoolMiB":96,"swapWidth":1375,"swapHeight":900,"viewportWidth":1375,"viewportHeight":900,"presentMode":2,"mipUploadBytes":4194032,"textureTopMipDrop":0,"shadowPoolBytes":120766720,"sunShadowPoolBytes":107348096,"pointShadowPoolBytes":13418624,"graphicsSmokeAttempts":0,"graphicsSmokeFailureCount":0,"graphicsSmokeCancel":false,"graphicsSmokeFailure":false,"graphicsSmokeRecovery":false},"initialScene":{
+    "format": "proto.scene",
+    "formatVersion": 1,
+    "sceneId": "c6db67b8-02bc-49ea-9f2f-0226457a8c3f",
+    "name": "Main",
+    "activeCamera": "060b3e0b-ba6d-4e3b-babc-096c2515b110",
+    "lighting": {
+        "shadowResolution": 1024,
+        "shadowCascades": 3,
+        "shadowPoolMiB": 80,
+        "shadowDistance": 35.0,
+        "depthBias": 0.0010000000474974513,
+        "normalBias": 0.014999999664723873,
+        "ambient": 0.02500000037252903,
+        "shadows": true,
+        "filteredShadows": true,
+        "referenceLighting": false,
+        "forceShadowRefresh": false
+    },
+    "assetRoot": "",
+    "modelSources": [
+        "68931549-2ff0-40df-9c91-c85d2484b628",
+        "62e31740-e642-48ba-b939-3dca7dade85c"
+    ],
+    "entities": [
+        {
+            "id": "004de170-579e-4f2c-8d1f-35903540a74a",
+            "name": "Warm Point · MoveLight · shadowed",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -3.5,
+                    4.0,
+                    3.5
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "pointLight": {
+                    "color": [
+                        1.0,
+                        0.6700000166893005,
+                        0.3199999928474426
+                    ],
+                    "intensity": 95.0,
+                    "radius": 12.0,
+                    "shadows": true
+                }
+            },
+            "behaviors": [
+                {
+                    "id": "caf9ce5f-d56c-4305-9f75-5c338c683d27",
+                    "type": "50000000-0000-4000-8000-000000000002",
+                    "enabled": true,
+                    "properties": {
+                        "radius": 2.0,
+                        "speed": 1.0
+                    }
+                }
+            ]
+        },
+        {
+            "id": "02a97fd9-a421-498d-bc5f-8ef9aa592472",
+            "name": "Mirrored normal",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "e2186d90-5225-4390-9c4e-cd45f9c82f79",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "060b3e0b-ba6d-4e3b-babc-096c2515b110",
+            "name": "Камера",
+            "parent": null,
+            "enabled": true,
+            "transform": {
+                "position": [
+                    5.0,
+                    3.0,
+                    6.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    -0.14506009221076965,
+                    0.3363496959209442,
+                    0.052518993616104126,
+                    0.9290146231651306
+                ]
+            },
+            "components": {
+                "camera": {
+                    "projection": "perspective",
+                    "verticalFovDegrees": 60.0,
+                    "near": 0.05000000074505806,
+                    "far": 500.0,
+                    "exposure": 1.0
+                }
+            },
+            "behaviors": [
+                {
+                    "id": "aeed27f1-2b0b-43e1-8578-b98dcf8dd8e5",
+                    "type": "50000000-0000-4000-8000-000000000004",
+                    "enabled": true,
+                    "properties": {
+                        "lookSpeed": 90.0,
+                        "speed": 4.0
+                    }
+                }
+            ]
+        },
+        {
+            "id": "0fcc9e1d-c02c-45bd-89f6-ce5b21802e28",
+            "name": "Two material slots",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "3f8b456b-9a5b-4360-aa40-75d94e804f70",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "16a7dad7-985f-4e39-bf13-3af7b51fd8e1",
+            "name": "OPAQUE",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "9005449b-d12e-44e3-beca-b533093d0c20",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "1cc199fd-48db-4117-b9d4-38d52169588c",
+            "name": "probes",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.5999999046325684,
+                    0.8999999761581421,
+                    0.0
+                ],
+                "scale": [
+                    0.7200000286102295,
+                    0.7200000286102295,
+                    0.7200000286102295
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "1f20b097-5fe8-4929-9e41-73fa27053cb9",
+            "name": "Flat normal",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "48d4134a-906f-4d64-b575-72473c3c6655",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "name": "Material Lab",
+            "parent": "dd491a0e-18d3-4bf9-b8b7-f29494b041d2",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "23d9b4b9-34ca-4d33-b5d4-a40da866c0d2",
+            "name": "Texture transform",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "74c27917-33bc-4097-a721-8980b440fe47",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "50000000-0000-4000-8000-000000000010",
+            "name": "C++ cube · Space / Spin",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.25,
+                    0.6499999761581421,
+                    2.5
+                ],
+                "scale": [
+                    1.2999999523162842,
+                    1.2999999523162842,
+                    1.2999999523162842
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "00000000-0000-4000-8000-000000000001",
+                    "materials": [],
+                    "debugColor": [
+                        0.15000000596046448,
+                        0.800000011920929,
+                        0.6499999761581421,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": [
+                {
+                    "id": "4662d9df-b444-4786-9137-dd13df83a803",
+                    "type": "50000000-0000-4000-8000-000000000001",
+                    "enabled": true,
+                    "properties": {
+                        "speedDegreesPerSecond": 30.0
+                    }
+                },
+                {
+                    "id": "201e7c44-1cce-4e40-8586-4a5517ae50d1",
+                    "type": "50000000-0000-4000-8000-000000000003",
+                    "enabled": true,
+                    "properties": {
+                        "spaceOnly": true,
+                        "speed": 2.0
+                    }
+                }
+            ]
+        },
+        {
+            "id": "53ee3961-e89e-4361-95da-a3d78375960d",
+            "name": "Mirrored normal",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "038088e3-4659-468b-9296-e7fefd75dc37",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "5a263e7f-9f0f-4f12-bbbb-6a3fc1a2aa4e",
+            "name": "OPAQUE",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "7c14da5c-6b2f-4f2b-8e71-9e3ce32590fa",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "6e7f2314-d13d-48b1-9033-e5409cfbe7af",
+            "name": "Flat normal",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "05a59fb1-7a16-48e2-9d26-ff239dfd028a",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "70000000-0000-4000-8000-000000000001",
+            "name": "M8 Demo · PBR / MASK",
+            "parent": null,
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "70000000-0000-4000-8000-000000000002",
+            "name": "Ground · imported materials",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    12.0,
+                    1.0,
+                    12.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "00000000-0000-4000-8000-000000000002",
+                    "materials": [],
+                    "debugColor": [
+                        0.11999999731779099,
+                        0.1599999964237213,
+                        0.2199999988079071,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "7d86e0f9-083d-4996-a884-ded4dd039aa7",
+            "name": "Normal map",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "038088e3-4659-468b-9296-e7fefd75dc37",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "9e3e8571-b5fd-417a-a286-f2622cd3ae95",
+            "name": "Mirrored MASK",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "09cccfcd-a30d-48d2-a28e-cfd501a2033d",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "a4b23f93-4476-43d0-95cf-d51e32dc32cd",
+            "name": "Texture transform",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "b0c01f81-85df-44cd-876a-554a7fff70b2",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "name": "Material Lab",
+            "parent": "1cc199fd-48db-4117-b9d4-38d52169588c",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "b8a8c389-101c-4da7-bb1b-edc49bf63efb",
+            "name": "Back face",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "e2186d90-5225-4390-9c4e-cd45f9c82f79",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "bd31d56c-9ca1-4216-b96c-738e7f48c3da",
+            "name": "Two material slots",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "d466b8ca-2fe3-4ac1-a010-5350d69697ca",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "d144523d-dbec-40a1-8d7c-99d982de5e60",
+            "name": "Normal map",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "e2186d90-5225-4390-9c4e-cd45f9c82f79",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "db5a665c-943b-41e4-8cdb-17b544147f79",
+            "name": "MASK",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "14d608fd-6401-4bf6-ac11-8389a069bdad",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "dd491a0e-18d3-4bf9-b8b7-f29494b041d2",
+            "name": "embedded",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.5999999046325684,
+                    0.8999999761581421,
+                    0.0
+                ],
+                "scale": [
+                    0.7200000286102295,
+                    0.7200000286102295,
+                    0.7200000286102295
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "e1636bb5-aec6-4688-870c-d85b4591a3f1",
+            "name": "Back face",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "038088e3-4659-468b-9296-e7fefd75dc37",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "ead7198c-4258-42eb-acf3-ab708e6a7a9e",
+            "name": "MASK",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "09cccfcd-a30d-48d2-a28e-cfd501a2033d",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "f3d05618-ff09-4c42-99e7-85fe2482b5fd",
+            "name": "SunCaster · shadow cascades",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    5.0,
+                    -2.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.15976053476333618,
+                    0.06989523023366928,
+                    0.908638060092926,
+                    -0.37943124771118164
+                ]
+            },
+            "components": {
+                "directionalLight": {
+                    "color": [
+                        1.0,
+                        0.949999988079071,
+                        0.8500000238418579
+                    ],
+                    "intensity": 0.8500000238418579,
+                    "shadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "fa278c39-0213-41e3-a933-86ca6ab714fa",
+            "name": "Mirrored MASK",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "14d608fd-6401-4bf6-ac11-8389a069bdad",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "fb6a890e-e681-4c2f-92a6-d2b9d777786e",
+            "name": "Cool Point · shadowed",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    3.5,
+                    3.0,
+                    2.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "pointLight": {
+                    "color": [
+                        0.2800000011920929,
+                        0.5299999713897705,
+                        1.0
+                    ],
+                    "intensity": 75.0,
+                    "radius": 11.0,
+                    "shadows": true
+                }
+            },
+            "behaviors": []
+        }
+    ]
+}
+,"finalScene":{
+    "format": "proto.scene",
+    "formatVersion": 1,
+    "sceneId": "c6db67b8-02bc-49ea-9f2f-0226457a8c3f",
+    "name": "Main",
+    "activeCamera": "060b3e0b-ba6d-4e3b-babc-096c2515b110",
+    "lighting": {
+        "shadowResolution": 1024,
+        "shadowCascades": 3,
+        "shadowPoolMiB": 80,
+        "shadowDistance": 35.0,
+        "depthBias": 0.0010000000474974513,
+        "normalBias": 0.014999999664723873,
+        "ambient": 0.02500000037252903,
+        "shadows": true,
+        "filteredShadows": true,
+        "referenceLighting": false,
+        "forceShadowRefresh": false
+    },
+    "assetRoot": "",
+    "modelSources": [
+        "68931549-2ff0-40df-9c91-c85d2484b628",
+        "62e31740-e642-48ba-b939-3dca7dade85c"
+    ],
+    "entities": [
+        {
+            "id": "004de170-579e-4f2c-8d1f-35903540a74a",
+            "name": "Warm Point · MoveLight · shadowed",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -3.1038551330566406,
+                    4.0,
+                    3.4603748321533203
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "pointLight": {
+                    "color": [
+                        1.0,
+                        0.6700000166893005,
+                        0.3199999928474426
+                    ],
+                    "intensity": 95.0,
+                    "radius": 12.0,
+                    "shadows": true
+                }
+            },
+            "behaviors": [
+                {
+                    "id": "caf9ce5f-d56c-4305-9f75-5c338c683d27",
+                    "type": "50000000-0000-4000-8000-000000000002",
+                    "enabled": true,
+                    "properties": {
+                        "radius": 2.0,
+                        "speed": 1.0
+                    }
+                }
+            ]
+        },
+        {
+            "id": "02a97fd9-a421-498d-bc5f-8ef9aa592472",
+            "name": "Mirrored normal",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "e2186d90-5225-4390-9c4e-cd45f9c82f79",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "060b3e0b-ba6d-4e3b-babc-096c2515b110",
+            "name": "Камера",
+            "parent": null,
+            "enabled": true,
+            "transform": {
+                "position": [
+                    5.0,
+                    3.0,
+                    6.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    -0.14506009221076965,
+                    0.3363496959209442,
+                    0.052518993616104126,
+                    0.9290146231651306
+                ]
+            },
+            "components": {
+                "camera": {
+                    "projection": "perspective",
+                    "verticalFovDegrees": 60.0,
+                    "near": 0.05000000074505806,
+                    "far": 500.0,
+                    "exposure": 1.0
+                }
+            },
+            "behaviors": [
+                {
+                    "id": "aeed27f1-2b0b-43e1-8578-b98dcf8dd8e5",
+                    "type": "50000000-0000-4000-8000-000000000004",
+                    "enabled": true,
+                    "properties": {
+                        "lookSpeed": 90.0,
+                        "speed": 4.0
+                    }
+                }
+            ]
+        },
+        {
+            "id": "0fcc9e1d-c02c-45bd-89f6-ce5b21802e28",
+            "name": "Two material slots",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "3f8b456b-9a5b-4360-aa40-75d94e804f70",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "16a7dad7-985f-4e39-bf13-3af7b51fd8e1",
+            "name": "OPAQUE",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "9005449b-d12e-44e3-beca-b533093d0c20",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "1cc199fd-48db-4117-b9d4-38d52169588c",
+            "name": "probes",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.5999999046325684,
+                    0.8999999761581421,
+                    0.0
+                ],
+                "scale": [
+                    0.7200000286102295,
+                    0.7200000286102295,
+                    0.7200000286102295
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "1f20b097-5fe8-4929-9e41-73fa27053cb9",
+            "name": "Flat normal",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "48d4134a-906f-4d64-b575-72473c3c6655",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "name": "Material Lab",
+            "parent": "dd491a0e-18d3-4bf9-b8b7-f29494b041d2",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "23d9b4b9-34ca-4d33-b5d4-a40da866c0d2",
+            "name": "Texture transform",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "74c27917-33bc-4097-a721-8980b440fe47",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "50000000-0000-4000-8000-000000000010",
+            "name": "C++ cube · Space / Spin",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.25,
+                    0.6499999761581421,
+                    2.5
+                ],
+                "scale": [
+                    1.2999999523162842,
+                    1.2999999523162842,
+                    1.2999999523162842
+                ],
+                "rotation": [
+                    0.0,
+                    0.052176736295223236,
+                    0.0,
+                    0.998637855052948
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "00000000-0000-4000-8000-000000000001",
+                    "materials": [],
+                    "debugColor": [
+                        0.15000000596046448,
+                        0.800000011920929,
+                        0.6499999761581421,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": [
+                {
+                    "id": "4662d9df-b444-4786-9137-dd13df83a803",
+                    "type": "50000000-0000-4000-8000-000000000001",
+                    "enabled": true,
+                    "properties": {
+                        "speedDegreesPerSecond": 30.0
+                    }
+                },
+                {
+                    "id": "201e7c44-1cce-4e40-8586-4a5517ae50d1",
+                    "type": "50000000-0000-4000-8000-000000000003",
+                    "enabled": true,
+                    "properties": {
+                        "spaceOnly": true,
+                        "speed": 2.0
+                    }
+                }
+            ]
+        },
+        {
+            "id": "53ee3961-e89e-4361-95da-a3d78375960d",
+            "name": "Mirrored normal",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "038088e3-4659-468b-9296-e7fefd75dc37",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "5a263e7f-9f0f-4f12-bbbb-6a3fc1a2aa4e",
+            "name": "OPAQUE",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "7c14da5c-6b2f-4f2b-8e71-9e3ce32590fa",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "6e7f2314-d13d-48b1-9033-e5409cfbe7af",
+            "name": "Flat normal",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "05a59fb1-7a16-48e2-9d26-ff239dfd028a",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "70000000-0000-4000-8000-000000000001",
+            "name": "M8 Demo · PBR / MASK",
+            "parent": null,
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "70000000-0000-4000-8000-000000000002",
+            "name": "Ground · imported materials",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    12.0,
+                    1.0,
+                    12.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "00000000-0000-4000-8000-000000000002",
+                    "materials": [],
+                    "debugColor": [
+                        0.11999999731779099,
+                        0.1599999964237213,
+                        0.2199999988079071,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "7d86e0f9-083d-4996-a884-ded4dd039aa7",
+            "name": "Normal map",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "038088e3-4659-468b-9296-e7fefd75dc37",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "9e3e8571-b5fd-417a-a286-f2622cd3ae95",
+            "name": "Mirrored MASK",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "09cccfcd-a30d-48d2-a28e-cfd501a2033d",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "a4b23f93-4476-43d0-95cf-d51e32dc32cd",
+            "name": "Texture transform",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.4000000953674316,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "b0c01f81-85df-44cd-876a-554a7fff70b2",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "name": "Material Lab",
+            "parent": "1cc199fd-48db-4117-b9d4-38d52169588c",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "b8a8c389-101c-4da7-bb1b-edc49bf63efb",
+            "name": "Back face",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "e2186d90-5225-4390-9c4e-cd45f9c82f79",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "bd31d56c-9ca1-4216-b96c-738e7f48c3da",
+            "name": "Two material slots",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "d466b8ca-2fe3-4ac1-a010-5350d69697ca",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "d144523d-dbec-40a1-8d7c-99d982de5e60",
+            "name": "Normal map",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    1.399999976158142,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "e2186d90-5225-4390-9c4e-cd45f9c82f79",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "db5a665c-943b-41e4-8cdb-17b544147f79",
+            "name": "MASK",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "14d608fd-6401-4bf6-ac11-8389a069bdad",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "dd491a0e-18d3-4bf9-b8b7-f29494b041d2",
+            "name": "embedded",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    2.5999999046325684,
+                    0.8999999761581421,
+                    0.0
+                ],
+                "scale": [
+                    0.7200000286102295,
+                    0.7200000286102295,
+                    0.7200000286102295
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {},
+            "behaviors": []
+        },
+        {
+            "id": "e1636bb5-aec6-4688-870c-d85b4591a3f1",
+            "name": "Back face",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    -3.4000000953674316,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "038088e3-4659-468b-9296-e7fefd75dc37",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "ead7198c-4258-42eb-acf3-ab708e6a7a9e",
+            "name": "MASK",
+            "parent": "22bc4485-dc6f-4ecd-887c-dbcb05bb3f88",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    -2.4000000953674316,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "09cccfcd-a30d-48d2-a28e-cfd501a2033d",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "f3d05618-ff09-4c42-99e7-85fe2482b5fd",
+            "name": "SunCaster · shadow cascades",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    5.0,
+                    -2.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.15976053476333618,
+                    0.06989523023366928,
+                    0.908638060092926,
+                    -0.37943124771118164
+                ]
+            },
+            "components": {
+                "directionalLight": {
+                    "color": [
+                        1.0,
+                        0.949999988079071,
+                        0.8500000238418579
+                    ],
+                    "intensity": 0.8500000238418579,
+                    "shadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "fa278c39-0213-41e3-a933-86ca6ab714fa",
+            "name": "Mirrored MASK",
+            "parent": "b563a77b-24d9-49ac-ab73-702d77f8e2a0",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    0.0,
+                    -1.0,
+                    0.0
+                ],
+                "scale": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "rotation": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "components": {
+                "meshRenderer": {
+                    "mesh": "14d608fd-6401-4bf6-ac11-8389a069bdad",
+                    "materials": [],
+                    "debugColor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "castShadows": true,
+                    "receiveShadows": true
+                }
+            },
+            "behaviors": []
+        },
+        {
+            "id": "fb6a890e-e681-4c2f-92a6-d2b9d777786e",
+            "name": "Cool Point · shadowed",
+            "parent": "70000000-0000-4000-8000-000000000001",
+            "enabled": true,
+            "transform": {
+                "position": [
+                    3.5,
+                    3.0,
+                    2.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "components": {
+                "pointLight": {
+                    "color": [
+                        0.2800000011920929,
+                        0.5299999713897705,
+                        1.0
+                    ],
+                    "intensity": 75.0,
+                    "radius": 11.0,
+                    "shadows": true
+                }
+            },
+            "behaviors": []
+        }
+    ]
+}
+}

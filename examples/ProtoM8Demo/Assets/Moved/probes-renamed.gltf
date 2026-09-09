@@ -1,0 +1,490 @@
+{
+    "asset": {
+        "version": "2.0",
+        "generator": "Proto Engine deterministic M2 fixtures"
+    },
+    "extensionsUsed": [
+        "KHR_texture_transform",
+        "KHR_materials_unlit"
+    ],
+    "scene": 0,
+    "scenes": [
+        {
+            "nodes": [
+                0
+            ]
+        }
+    ],
+    "buffers": [
+        {
+            "byteLength": 920,
+            "uri": "../probes-68931549/mesh%20data.bin"
+        }
+    ],
+    "bufferViews": [
+        {
+            "buffer": 0,
+            "byteOffset": 0,
+            "byteLength": 288,
+            "byteStride": 72
+        },
+        {
+            "buffer": 0,
+            "byteOffset": 288,
+            "byteLength": 24
+        },
+        {
+            "buffer": 0,
+            "byteOffset": 312,
+            "byteLength": 16
+        },
+        {
+            "buffer": 0,
+            "byteOffset": 328,
+            "byteLength": 16
+        },
+        {
+            "buffer": 0,
+            "byteOffset": 344,
+            "byteLength": 288,
+            "byteStride": 72
+        },
+        {
+            "buffer": 0,
+            "byteOffset": 632,
+            "byteLength": 288,
+            "byteStride": 72
+        }
+    ],
+    "accessors": [
+        {
+            "bufferView": 0,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": 4,
+            "type": "VEC3",
+            "min": [
+                -0.85,
+                -0.85,
+                0
+            ],
+            "max": [
+                0.85,
+                0.85,
+                0
+            ]
+        },
+        {
+            "bufferView": 0,
+            "byteOffset": 56,
+            "componentType": 5126,
+            "count": 4,
+            "type": "VEC2"
+        },
+        {
+            "bufferView": 2,
+            "componentType": 5123,
+            "normalized": true,
+            "count": 4,
+            "type": "VEC2"
+        },
+        {
+            "bufferView": 3,
+            "componentType": 5121,
+            "normalized": true,
+            "count": 4,
+            "type": "VEC4"
+        },
+        {
+            "bufferView": 1,
+            "componentType": 5125,
+            "count": 6,
+            "type": "SCALAR"
+        },
+        {
+            "bufferView": 4,
+            "componentType": 5126,
+            "count": 4,
+            "type": "VEC3",
+            "min": [
+                -0.8325,
+                -0.85,
+                0
+            ],
+            "max": [
+                -0.0675,
+                0.85,
+                0
+            ]
+        },
+        {
+            "bufferView": 5,
+            "componentType": 5126,
+            "count": 4,
+            "type": "VEC3",
+            "min": [
+                0.0675,
+                -0.85,
+                0
+            ],
+            "max": [
+                0.8325,
+                0.85,
+                0
+            ]
+        }
+    ],
+    "images": [
+        {
+            "uri": "../probes-68931549/%D1%82%D0%B5%D0%BA%D1%81%D1%82%D1%83%D1%80%D0%B8/%D0%BC%D0%B0%D1%81%D0%BA%D0%B0%20100%25.png"
+        },
+        {
+            "uri": "../probes-68931549/normal.png"
+        },
+        {
+            "uri": "../probes-68931549/checker.jpg"
+        },
+        {
+            "uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAI0lEQVR4XmPUmHniPwMFgImBQjBqAAPDaBiMhgEoGw18OgAAhngCqDCUhWQAAAAASUVORK5CYII="
+        }
+    ],
+    "samplers": [
+        {
+            "magFilter": 9728,
+            "minFilter": 9984,
+            "wrapS": 33071,
+            "wrapT": 33071
+        }
+    ],
+    "textures": [
+        {
+            "source": 0,
+            "sampler": 0
+        },
+        {
+            "source": 1,
+            "sampler": 0
+        },
+        {
+            "source": 2,
+            "sampler": 0
+        },
+        {
+            "source": 3,
+            "sampler": 0
+        }
+    ],
+    "materials": [
+        {
+            "name": "Normal + mirror",
+            "doubleSided": true,
+            "pbrMetallicRoughness": {
+                "baseColorFactor": [
+                    0.45,
+                    0.45,
+                    0.45,
+                    1
+                ],
+                "metallicFactor": 0,
+                "roughnessFactor": 0.8
+            },
+            "normalTexture": {
+                "index": 1
+            }
+        },
+        {
+            "name": "Flat reference",
+            "pbrMetallicRoughness": {
+                "baseColorFactor": [
+                    0.45,
+                    0.45,
+                    0.45,
+                    1
+                ],
+                "metallicFactor": 0,
+                "roughnessFactor": 0.8
+            }
+        },
+        {
+            "name": "Cutout / MASK",
+            "alphaMode": "MASK",
+            "alphaCutoff": 0.5,
+            "doubleSided": true,
+            "extensions": {
+                "KHR_materials_unlit": {}
+            },
+            "pbrMetallicRoughness": {
+                "baseColorTexture": {
+                    "index": 0
+                }
+            }
+        },
+        {
+            "name": "Gold / packed MR",
+            "pbrMetallicRoughness": {
+                "baseColorFactor": [
+                    1,
+                    0.55,
+                    0.1,
+                    1
+                ],
+                "metallicFactor": 1,
+                "roughnessFactor": 0.4,
+                "metallicRoughnessTexture": {
+                    "index": 3
+                }
+            }
+        },
+        {
+            "name": "JPEG / UV transform",
+            "extensions": {
+                "KHR_materials_unlit": {}
+            },
+            "pbrMetallicRoughness": {
+                "baseColorTexture": {
+                    "index": 2,
+                    "extensions": {
+                        "KHR_texture_transform": {
+                            "offset": [
+                                1,
+                                0
+                            ],
+                            "scale": [
+                                0.5,
+                                0.5
+                            ],
+                            "rotation": 1.57079632679,
+                            "texCoord": 1
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "Opaque ignores alpha",
+            "extensions": {
+                "KHR_materials_unlit": {}
+            },
+            "pbrMetallicRoughness": {
+                "baseColorTexture": {
+                    "index": 0
+                }
+            }
+        }
+    ],
+    "meshes": [
+        {
+            "name": "Mesh 0",
+            "primitives": [
+                {
+                    "attributes": {
+                        "POSITION": 0,
+                        "TEXCOORD_0": 1,
+                        "TEXCOORD_1": 2,
+                        "COLOR_0": 3
+                    },
+                    "indices": 4,
+                    "material": 0
+                }
+            ]
+        },
+        {
+            "name": "Mesh 1",
+            "primitives": [
+                {
+                    "attributes": {
+                        "POSITION": 0,
+                        "TEXCOORD_0": 1,
+                        "TEXCOORD_1": 2,
+                        "COLOR_0": 3
+                    },
+                    "indices": 4,
+                    "material": 1
+                }
+            ]
+        },
+        {
+            "name": "Mesh 2",
+            "primitives": [
+                {
+                    "attributes": {
+                        "POSITION": 0,
+                        "TEXCOORD_0": 1,
+                        "TEXCOORD_1": 2,
+                        "COLOR_0": 3
+                    },
+                    "indices": 4,
+                    "material": 2
+                }
+            ]
+        },
+        {
+            "name": "Mesh 3",
+            "primitives": [
+                {
+                    "attributes": {
+                        "POSITION": 5,
+                        "TEXCOORD_0": 1,
+                        "TEXCOORD_1": 2,
+                        "COLOR_0": 3
+                    },
+                    "indices": 4,
+                    "material": 1
+                },
+                {
+                    "attributes": {
+                        "POSITION": 6,
+                        "TEXCOORD_0": 1,
+                        "TEXCOORD_1": 2,
+                        "COLOR_0": 3
+                    },
+                    "indices": 4,
+                    "material": 3
+                }
+            ]
+        },
+        {
+            "name": "Mesh 4",
+            "primitives": [
+                {
+                    "attributes": {
+                        "POSITION": 0,
+                        "TEXCOORD_0": 1,
+                        "TEXCOORD_1": 2,
+                        "COLOR_0": 3
+                    },
+                    "indices": 4,
+                    "material": 4
+                }
+            ]
+        },
+        {
+            "name": "Mesh 5",
+            "primitives": [
+                {
+                    "attributes": {
+                        "POSITION": 0,
+                        "TEXCOORD_0": 1,
+                        "TEXCOORD_1": 2,
+                        "COLOR_0": 3
+                    },
+                    "indices": 4,
+                    "material": 5
+                }
+            ]
+        }
+    ],
+    "nodes": [
+        {
+            "name": "Material Lab",
+            "children": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+            ]
+        },
+        {
+            "name": "Normal map",
+            "mesh": 0,
+            "translation": [
+                -2.4,
+                1.4,
+                0
+            ]
+        },
+        {
+            "name": "Mirrored normal",
+            "mesh": 0,
+            "translation": [
+                0,
+                1.4,
+                0
+            ],
+            "scale": [
+                -1,
+                1,
+                1
+            ]
+        },
+        {
+            "name": "Flat normal",
+            "mesh": 1,
+            "translation": [
+                2.4,
+                1.4,
+                0
+            ]
+        },
+        {
+            "name": "MASK",
+            "mesh": 2,
+            "translation": [
+                -2.4,
+                -1,
+                0
+            ]
+        },
+        {
+            "name": "Mirrored MASK",
+            "mesh": 2,
+            "translation": [
+                0,
+                -1,
+                0
+            ],
+            "scale": [
+                -1,
+                1,
+                1
+            ]
+        },
+        {
+            "name": "Texture transform",
+            "mesh": 4,
+            "translation": [
+                2.4,
+                -1,
+                0
+            ]
+        },
+        {
+            "name": "Back face",
+            "mesh": 0,
+            "translation": [
+                -2.4,
+                -3.4,
+                0
+            ],
+            "rotation": [
+                0,
+                1,
+                0,
+                0
+            ]
+        },
+        {
+            "name": "Two material slots",
+            "mesh": 3,
+            "translation": [
+                0,
+                -3.4,
+                0
+            ]
+        },
+        {
+            "name": "OPAQUE",
+            "mesh": 5,
+            "translation": [
+                2.4,
+                -3.4,
+                0
+            ]
+        }
+    ]
+}

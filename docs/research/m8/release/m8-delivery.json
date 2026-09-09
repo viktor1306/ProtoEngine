@@ -1,0 +1,10 @@
+{
+  "format": "proto.m8.delivery",
+  "version": 1,
+  "passed": true,
+  "completed": "2026-09-09T16:26:32.1342329+03:00",
+  "acceptance": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-release\\test-results\\m8-acceptance-details.json",
+  "distribution": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-release\\test-results\\m8-delivery\\r-444cc702c9c8\\ProtoEngine-v0.1",
+  "results": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\build\\m8-release\\test-results\\m8-delivery\\r-444cc702c9c8\\check",
+  "distributionManifestSha256": "5ED2B55CA7B1BDEF10CE684382EE56841C361DB454133F4657EACD1B56B0041D"
+}

@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="41"
+	failures="1"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="164"
+	timestamp="2026-09-09T13:30:54"
+	>
+	<testcase name="m7_scene_workloads" classname="m7_scene_workloads" time="1.61038" status="run">
+		<properties/>
+		<system-out>M7 scene workloads, culling, deterministic animation and pool equivalence passed
+</system-out>
+	</testcase>
+	<testcase name="m7_metric_contract" classname="m7_metric_contract" time="0.023148" status="run">
+		<properties/>
+		<system-out>M7 quantiles, GPU serial deduplication and unavailable samples passed
+</system-out>
+	</testcase>
+	<testcase name="m7_sample_reservoir" classname="m7_sample_reservoir" time="0.031577" status="run">
+		<properties/>
+		<system-out>M7 uniform bounded sample reservoir passed
+</system-out>
+	</testcase>
+	<testcase name="m7_gpu_timestamp_3" classname="m7_gpu_timestamp_3" time="0.507019" status="run">
+		<properties/>
+		<system-out>[VULKAN LOADER] windows_read_data_files_in_registry: Registry lookup failed to get layer manifest files.
+[INFO] Vulkan 1.3; release validation disabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 320x180; 2; 3 images
+[INFO] Swapchain 320x180; 0; 3 images
+[INFO] Vulkan resources released
+ProtoBenchmark completed: 3 frames, 78.66 ms
+</system-out>
+	</testcase>
+	<testcase name="m7_gpu_timestamp_4" classname="m7_gpu_timestamp_4" time="0.452978" status="run">
+		<properties/>
+		<system-out>[VULKAN LOADER] windows_read_data_files_in_registry: Registry lookup failed to get layer manifest files.
+[INFO] Vulkan 1.3; release validation disabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 320x180; 2; 3 images
+[INFO] Swapchain 320x180; 0; 3 images
+[INFO] Vulkan resources released
+ProtoBenchmark completed: 4 frames, 41.924 ms
+</system-out>
+	</testcase>
+	<testcase name="m7_editor_benchmark" classname="m7_editor_benchmark" time="1.23929" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[CPU MARKER] editor.ui mean_ms=0.599886
+[CPU MARKER] renderer.submit_present mean_ms=13.065659
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m7_editor_benchmark_capture" classname="m7_editor_benchmark_capture" time="1.08462" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[ERROR] Scene GPU readback: geometry_pixels=0 depth_probes=0
+[CPU MARKER] editor.ui mean_ms=0.549083
+[CPU MARKER] renderer.submit_present mean_ms=14.514611
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m7_editor_reject_frame_cap" classname="m7_editor_reject_frame_cap" time="0.123612" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="m7_asset_benchmark" classname="m7_asset_benchmark" time="3.82889" status="run">
+		<properties/>
+		<system-out>Asset benchmark completed: C:/Users/buriak_vi/Documents/ChatGPT/ProtoEngine/build/m7-debug/test-results/m7-asset-benchmark.json
+</system-out>
+	</testcase>
+	<testcase name="m7_benchmark_smoke" classname="m7_benchmark_smoke" time="0.839606" status="run">
+		<properties/>
+		<system-out>[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 320x180; 2; 3 images
+[INFO] Swapchain 320x180; 0; 3 images
+[INFO] Scene GPU readback: geometry_pixels=418426 depth_probes=0
+[INFO] Vulkan resources released
+ProtoBenchmark completed: 16 frames, 232.821 ms
+</system-out>
+	</testcase>
+	<testcase name="m7_gpu_asset_cycle" classname="m7_gpu_asset_cycle" time="2.10303" status="run">
+		<properties/>
+		<system-out>[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 800x450; 2; 3 images
+[INFO] Swapchain 800x450; 0; 3 images
+[INFO] Vulkan resources released
+12 GPU asset load/unload cycles passed; tracked owners expired and allocations plateaued
+</system-out>
+	</testcase>
+	<testcase name="m6_portable_assets" classname="m6_portable_assets" time="0.049458" status="run">
+		<properties/>
+		<system-out>PASS m6 portable model roundtrip and validation
+</system-out>
+	</testcase>
+	<testcase name="m6_graphics_contract" classname="m6_graphics_contract" time="0.039191" status="run">
+		<properties/>
+		<system-out>4 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m6_package_contract" classname="m6_package_contract" time="13.0718" status="run">
+		<properties/>
+		<system-out>PASS PE audit handles distinct normal and delay import tables
+PASS exports saved startup scene and explicit raw asset
+PASS package runs from its own directory and preserves schema discovery
+PASS re-export retains the previous successful output
+PASS manifest edits without session refresh are rejected
+PASS invalid saved behavior scene cannot replace a successful package
+PASS cancelled or failed export cannot replace a successful package
+PASS relocating the project preserves raw asset identity
+8 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m6_runtime_package" classname="m6_runtime_package" time="1.58329" status="run">
+		<properties/>
+		<system-out>PASS synthetic portable model roundtrip
+PASS loads package and preserves active material override dependencies
+PASS real Player validates the copied package
+PASS raw data is available during an actual behavior OnStart
+PASS package pins block root rename while live
+PASS missing or corrupt model blobs are rejected
+PASS wrong SDK identity is rejected
+PASS altered resource type and dependency tables are rejected
+PASS omitted DLL inventory entry and unlisted files are rejected
+PASS declared mutable logs and user settings are accepted
+PASS private Play snapshot carries raw bytes
+PASS writes a static textured MASK package for native graphics QA
+12 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m6_editor_export" classname="m6_editor_export" time="7.43893" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[INFO] Scene GPU readback: geometry_pixels=337995 depth_probes=0
+[CPU MARKER] editor.ui mean_ms=0.758582
+[CPU MARKER] renderer.submit_present mean_ms=11.793540
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m6_player_standalone" classname="m6_player_standalone" time="12.5206" status="run">
+		<properties/>
+		<system-out>M6PlayerSmoke PASS: C:\Users\buriak_vi\Documents\ChatGPT\ProtoEngine\build\m7-debug\test-results\m6-player-smoke\run-286f88d00dc84fba8ad4ecb16ad3a392-Україна spaces\m6-player-smoke-report.json
+</system-out>
+	</testcase>
+	<testcase name="m5_behavior_contract" classname="m5_behavior_contract" time="0.287349" status="run">
+		<properties/>
+		<system-out>PASS registry schema roundtrip validates all property types
+PASS scene roundtrip preserves all values and missing references
+PASS normalization inserts defaults and clamps numeric ranges
+PASS integer normalization preserves exact int64 values
+PASS missing default EntityRef and AssetRef targets block Play
+PASS duplicate binding IDs fail before scene mutation and dense lifecycle retains IDs
+PASS bulk restore keeps binding uniqueness without scanning every existing entity
+7 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m5_process_contract" classname="m5_process_contract" time="0.820102" status="run">
+		<properties/>
+		<system-out>PASS Unicode, spaces, quotes and empty arguments survive CreateProcessW
+PASS stdout and stderr remain separate while a burst is drained
+PASS continuous output cannot starve bounded cancellation
+PASS owned named stop event signals a cooperative child
+PASS crashed and hung children are bounded
+PASS forceStop terminates the complete owned process tree
+PASS root exit closes owned descendants before process completion
+PASS failure before job assignment terminates the suspended root
+8 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m5_runtime_contract" classname="m5_runtime_contract" time="0.643216" status="run">
+		<properties/>
+		<system-out>M5 runtime: 16 contracts passed
+</system-out>
+	</testcase>
+	<testcase name="m5_build_contract" classname="m5_build_contract" time="26.2737" status="fail">
+		<failure message="Failed"/>
+		<properties/>
+		<system-out>PASS builds a real SDK consumer and discovers Spin
+PASS unchanged source reuses the compiled tree but refreshes schema discovery
+PASS the installed SDK package remains relocatable
+PASS compile diagnostics map to authored Code and never return a stale executable
+PASS cancellation leaves the project recoverable
+FAIL describe failure and timeout are rejected: throwing Player was rejected before describe
+PASS editor build identity mismatch is rejected before compilation
+PASS wrong SDK API metadata is rejected before consumer build
+7 passed, 1 failed
+</system-out>
+	</testcase>
+	<testcase name="m5_editor_play" classname="m5_editor_play" time="21.9013" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[INFO] Scene GPU readback: geometry_pixels=584726 depth_probes=0
+[CPU MARKER] editor.ui mean_ms=1.085279
+[CPU MARKER] renderer.submit_present mean_ms=10.187751
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m4_project_sessions" classname="m4_project_sessions" time="0.96852" status="run">
+		<properties/>
+		<system-out>PASS create publishes a complete UTF-8 project
+PASS single writer lock and manifest open
+PASS refresh rejects corrupt manifest without replacing state
+PASS scene sidecar mismatch and duplicate UUIDs reject
+PASS refresh preserves live transaction snapshots and Undo Redo
+PASS watcher reports authored changes and stays quiet for service files
+PASS watcher drains pending I/O during immediate and active-write shutdown
+PASS open recreates an omitted derived service directory
+PASS opening an ordinary folder does not create service files
+9 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m4_document_history" classname="m4_document_history" time="2.12432" status="run">
+		<properties/>
+		<system-out>PASS cancel gesture restores entity without history or dirty change
+PASS project workspace binds on an empty scene and refresh keeps document history
+PASS redo instantiate lazily reloads command target sources after refresh
+PASS external action preserves dirty token and orders with scene Undo
+PASS failed external action does not move cursor
+PASS external file history survives switching to a new project scene
+PASS project save writes canonical sidecar and Save As keeps entity IDs
+PASS project save rejects external same-path scene changes
+PASS material Undo survives project scene switch with exact metadata bytes
+NOTE file symlink fixture unavailable (Windows privilege); testing directory junction boundary
+PASS project loader rejects escaped assets and redirected metadata before outside I/O
+PASS relocate keeps unsaved scene state and next save publishes there
+11 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m4_project_editor" classname="m4_project_editor" time="6.50017" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[INFO] Scene GPU readback: geometry_pixels=119878 depth_probes=0
+[CPU MARKER] editor.ui mean_ms=12.173020
+[CPU MARKER] renderer.submit_present mean_ms=8.713030
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m4_asset_file_plans" classname="m4_asset_file_plans" time="14.4135" status="run">
+		<properties/>
+		<system-out>PASS asset index, enrollment and project URI bounds
+PASS read-only reload rejects a new texture locator without rewriting UUID metadata
+PASS move glTF transaction preserves material, model and scene UUIDs across reload and redo
+PASS group copy transaction remaps internal resources and preserves external dependency IDs
+PASS copy destination collision is rejected before any authored write
+PASS external-reference GLB URI rewrite reloads after journal move
+PASS case-only UTF-8 folder and file moves support Undo
+PASS nested Code and Config files are indexed and round-trip through Undo Redo
+PASS remove rejects referenced model source and dependency
+PASS group copy remaps typed behavior AssetRef and preserves opaque strings
+PASS remove protects assets referenced only by a behavior AssetRef
+PASS duplicate UUID metadata is rejected by project index
+PASS duplicate UUID within one ModelSource is rejected without a planner write
+PASS traversal, control roots and reparse boundaries are rejected
+PASS external edit before U...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="m4_gizmo_math" classname="m4_gizmo_math" time="0.023806" status="run">
+		<properties/>
+		<system-out>PASS world translation preserves linear transform through nonuniform negative parent
+PASS local rotation stays representable beneath a sheared world parent
+PASS ring angle uses an elliptical parent-transformed local frame
+PASS local scale preserves sign and clamps positive factor
+PASS singular parent and nonfinite inputs are rejected without mutation
+PASS axis parameter and angle wrapping are stable
+6 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m4_gizmo_editor" classname="m4_gizmo_editor" time="1.09675" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[INFO] Scene GPU readback: geometry_pixels=391485 depth_probes=0
+[CPU MARKER] editor.ui mean_ms=0.725083
+[CPU MARKER] renderer.submit_present mean_ms=11.702479
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m4_file_transactions" classname="m4_file_transactions" time="7.07615" status="run">
+		<properties/>
+		<system-out>PASS multi-file move, disk payloads and stable Undo/Redo
+PASS external edit and new child reject before Undo mutation
+PASS prepared operation rejects stale parsed source
+PASS read-only topology guards remain enforced on Undo and Redo
+PASS path escapes and Win32 aliases are rejected
+PASS fault callback rolls back to original namespace
+PASS case-only file and folder rename
+PASS process termination during redo and undo recovers whole tree
+PASS recovery can itself be interrupted without reversing intent
+PASS bad rollback blob prevents initial commit
+PASS external edit during multi-file apply is preserved
+PASS recovery rejects an unrelated directory before changing other paths
+12 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m3_lighting_math" classname="m3_lighting_math" time="0.04048" status="run">
+		<properties/>
+		<system-out>PASS positive-viewport cube face sc/tc mapping
+PASS point radius RH ZO clip depth and radial-depth separation
+PASS shadow frustum boundary cases
+PASS sphere and AABB contact
+PASS transformed bounds with negative nonuniform scale
+PASS cascade coverage, offscreen caster depth, and texel stability
+6 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m3_scene_contract" classname="m3_scene_contract" time="0.105817" status="run">
+		<properties/>
+		<system-out>PASS light components have dense lifecycle and reject mixed types
+PASS parent transform and enable state apply to lights
+PASS light property gesture creates one Undo command
+PASS lighting settings validate atomically and support Undo/Redo
+PASS old scenes keep canonical output and new lights save/reopen
+PASS invalid light JSON is rejected without loading mutation
+6 passed, 0 failed
+</system-out>
+	</testcase>
+	<testcase name="m2_asset_contract" classname="m2_asset_contract" time="2.81526" status="run">
+		<properties/>
+		<system-out>PASS SHA256 and scoped UTF-8/percent-encoded URIs
+PASS glTF external bin, PNG/JPEG/data URI, hierarchy and material slots
+PASS generated normals and Mikk tangents with normalized attributes
+PASS color/data spaces and normalized normal mip chain
+PASS cache hit decodes zero images and duplicate import reuses UUIDs
+PASS GLB bufferView embedded PNG and mixed dependencies
+PASS Windows uppercase model extensions import and reopen
+PASS deleted and corrupt cooked cache rebuild without changing IDs
+PASS scene instances share meshes; imported hierarchy Undo/Redo is atomic
+PASS material gesture persists once, shares across instances and undoes
+PASS BVH picking respects MASK holes, mirrored objects and slot overrides
+PASS model plus .meta move rebuilds registry and preserves saved scenes
+PASS geometry reimport retains IDs; structural remapping is rejected
+PASS duplicate detection verifies current source bytes, not stale metadata
+PASS duplicate UUID metadata detected instead of rebinding
+PASS missing/corrupt dependencies ...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="m2_editor" classname="m2_editor" time="2.2843" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[TEST] PBR probe normal map actual=189.000000,189.000000,189.000000 expected=189.055969,189.055969,189.055969
+[TEST] PBR probe mirrored double-sided normal actual=149.000000,149.000000,149.000000 expected=149.497147,149.497147,149.497147
+[TEST] PBR probe flat reference actual=188.000000,188.000000,188.000000 expected=187.629105,187.629105,187.629105
+[TEST] PBR probe double-sided back face actual=189.000000,189.000000,189.000000 expected=188.793030,188.793030,188.793030
+[TEST] PBR probe packed MR channels actual=91.000000,85.000000,27.000000 expected=90.816521,84.640373,26.609741
+[TEST] PBR probe MASK solid actual=80.000000,200.000000,120.000000 expected=80.000000,200.000000,120.000000
+[TEST] PBR probe mirrored MASK solid actual=80.000000,200.000000,120.000000 expected=80.000000,200.000000,120.000000
+[TEST]...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="m2_glb_editor" classname="m2_glb_editor" time="1.89839" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[TEST] PBR probe normal map actual=189.000000,189.000000,189.000000 expected=189.055969,189.055969,189.055969
+[TEST] PBR probe mirrored double-sided normal actual=149.000000,149.000000,149.000000 expected=149.497147,149.497147,149.497147
+[TEST] PBR probe flat reference actual=188.000000,188.000000,188.000000 expected=187.629105,187.629105,187.629105
+[TEST] PBR probe double-sided back face actual=189.000000,189.000000,189.000000 expected=188.793030,188.793030,188.793030
+[TEST] PBR probe packed MR channels actual=91.000000,85.000000,27.000000 expected=90.816521,84.640373,26.609741
+[TEST] PBR probe MASK solid actual=80.000000,200.000000,120.000000 expected=80.000000,200.000000,120.000000
+[TEST] PBR probe mirrored MASK solid actual=80.000000,200.000000,120.000000 expected=80.000000,200.000000,120.000000
+[TEST]...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="m3_lighting_gpu" classname="m3_lighting_gpu" time="15.318" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[TEST] PBR probe ground-2 actual=205.000000,203.000000,197.000000 expected=205.033081,202.542831,196.861130
+[TEST] PBR probe ground-7 actual=207.000000,204.000000,198.000000 expected=206.662064,203.863052,197.959198
+[TEST] PBR probe ground-8 actual=207.000000,204.000000,198.000000 expected=206.899048,204.062454,198.132629
+[TEST] PBR probe ground-9 actual=207.000000,204.000000,198.000000 expected=207.102264,204.236404,198.287064
+[TEST] PBR probe ground-10 actual=207.000000,204.000000,198.000000 expected=207.280243,204.392288,198.429108
+[TEST] PBR probe ground-11 actual=207.000000,205.000000,199.000000 expected=207.441711,204.537216,198.564819
+[TEST] PBR probe ground-12 actual=208.000000,205.000000,199.000000 expected=207.560043,204.650192,198.677475
+[TEST] PBR probe ground-13 actual=208.000000,205.000000,19...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="m3_dim_batches" classname="m3_dim_batches" time="8.1468" status="run">
+		<properties/>
+		<system-out>M3 dim batch passed: maxdiff=0, mean=0, differingChannels=0, maxBrightening=2
+</system-out>
+	</testcase>
+	<testcase name="m1_scene_contract" classname="m1_scene_contract" time="0.118732" status="run">
+		<properties/>
+		<system-out>PASS canonical UUID and distinct ID types
+PASS dense removal and stale handles including load replacement
+PASS parent rotation, non-uniform and negative scale with exact bounds
+PASS cycles, unknown IDs and duplicate IDs rejected
+PASS reparent keeps world transform or rejects shear/singular parents
+PASS strict finite transforms and camera ranges
+PASS save/load hierarchy and active camera retain UUIDs and properties
+PASS malformed, duplicate fields, future version and unknown resource rejection
+PASS delete subtree, Undo/Redo, stable IDs and fresh handles
+PASS one drag is one Undo and saved-state markers survive branching
+PASS atomic replacement preserves exact previous bytes
+PASS failed write preserves original bytes, path and dirty state
+PASS failed load preserves live scene, path and Undo history
+PASS external document change is detected before overwrite
+PASS picking negative scale and disabled hierarchy
+PASS no-op gesture preserves history and ordinary edits preserve sibling order
+PASS empty existing save ta...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="m0_gpu_window" classname="m0_gpu_window" time="1.8546" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[TEST] Clipboard UTF-8 roundtrip: passed_and_restored
+[INFO] Swapchain 1000x700; 2; 3 images
+[INFO] Swapchain 1440x900; 2; 3 images
+[TEST] Minimize: rendering pauses, event loop waits
+[INFO] GPU readback: y_up=1 front_face=1 back_culled=1 depth=1 clear_depth=1
+[INFO] GPU readback: y_up=1 front_face=1 back_culled=1 depth=1 clear_depth=1
+[CPU MARKER] editor.ui mean_ms=0.542207
+[CPU MARKER] renderer.submit_present mean_ms=9.385098
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m0_reopen" classname="m0_reopen" time="0.768568" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[INFO] GPU readback: y_up=1 front_face=1 back_culled=1 depth=1 clear_depth=1
+[CPU MARKER] editor.ui mean_ms=0.643750
+[CPU MARKER] renderer.submit_present mean_ms=21.583917
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m1_editor" classname="m1_editor" time="1.88083" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[TEST] Clipboard UTF-8 roundtrip: passed_and_restored
+[INFO] Swapchain 1000x700; 2; 3 images
+[INFO] Swapchain 1440x900; 2; 3 images
+[TEST] Minimize: rendering pauses, event loop waits
+[INFO] Scene GPU readback: geometry_pixels=257519 depth_probes=21
+[INFO] Scene GPU readback: geometry_pixels=276899 depth_probes=21
+[CPU MARKER] editor.ui mean_ms=0.859037
+[CPU MARKER] renderer.submit_present mean_ms=9.138232
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+	<testcase name="m1_scene_reopen" classname="m1_scene_reopen" time="0.702945" status="run">
+		<properties/>
+		<system-out>[INFO] Native GLFW window created; per-monitor DPI requested
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 1700x1075; 2; 3 images
+[INFO] Scene GPU readback: geometry_pixels=490899 depth_probes=21
+[CPU MARKER] editor.ui mean_ms=0.823333
+[CPU MARKER] renderer.submit_present mean_ms=17.456167
+[INFO] Vulkan resources released
+[INFO] Session completed successfully
+</system-out>
+	</testcase>
+</testsuite>

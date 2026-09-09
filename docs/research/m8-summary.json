@@ -1,0 +1,93 @@
+{
+  "format": "proto.m8.acceptance.summary",
+  "version": 1,
+  "verified": "2026-09-09T16:30:13.3269404+03:00",
+  "testsComplete": true,
+  "configs": [
+    {
+      "configuration": "debug",
+      "tests": 43,
+      "failures": 0,
+      "ctestSeconds": 235.0,
+      "sdkBuildId": "055688edb21c799d7103cbfbbff94a5e2f03069f7e362616f48e98550490e487",
+      "nativeAcceptance": true,
+      "validationEnabled": true,
+      "validationErrors": 0,
+      "playFrames": 370,
+      "behaviorStarts": 4,
+      "behaviorStops": 4,
+      "shadowFaces": 5550,
+      "distributionVerified": true,
+      "binaries": [
+        {
+          "name": "ProtoEditor.exe",
+          "bytes": 119734639,
+          "sha256": "E038F4F9FD31A9CCF41F26FD5A8076523FDB64FA7F384064FDCF3BD9AC77BEFB"
+        },
+        {
+          "name": "ProtoPlayer.exe",
+          "bytes": 47362570,
+          "sha256": "A7753C2781FCD4011A45EA2B54F791128A9FC342CA8E279A056938C33E783067"
+        },
+        {
+          "name": "ProtoPackage.exe",
+          "bytes": 52578272,
+          "sha256": "E287F7CC36FEB21584A034911E91616E05A9A99A159B7CEC803ECD13FFB521DD"
+        },
+        {
+          "name": "ProtoProject.exe",
+          "bytes": 31636966,
+          "sha256": "49F6106892877B19997608760EEB410E28FA9A252E6394BBC3ACD743AC79F8BD"
+        }
+      ]
+    },
+    {
+      "configuration": "release",
+      "tests": 43,
+      "failures": 0,
+      "ctestSeconds": 199.0,
+      "sdkBuildId": "5e87cfb5f24470e32a97c8ef2d84f8ed5d20602a4e44561b26af1b38e75e530c",
+      "nativeAcceptance": true,
+      "validationEnabled": false,
+      "validationErrors": 0,
+      "playFrames": 300,
+      "behaviorStarts": 4,
+      "behaviorStops": 4,
+      "shadowFaces": 4500,
+      "distributionVerified": true,
+      "binaries": [
+        {
+          "name": "ProtoEditor.exe",
+          "bytes": 9572675,
+          "sha256": "97A6B38E26BB83D0C7EE81E8096B7D31BDA3DA9C48402B541401B29B69ED92AF"
+        },
+        {
+          "name": "ProtoPlayer.exe",
+          "bytes": 5271860,
+          "sha256": "89FAC012C139E1FEAC19B3D345C72C635F327363873F2D14432F64D5DDAC7C23"
+        },
+        {
+          "name": "ProtoPackage.exe",
+          "bytes": 5833344,
+          "sha256": "0F95614E47B4DAAF4A037284E495AD497D1F5C0E42E4CD286A9EB311091CB8F5"
+        },
+        {
+          "name": "ProtoProject.exe",
+          "bytes": 4711644,
+          "sha256": "9C9B169B21302CDB9AA084C042D622481489FCA2F51309EF97981BBA61A9C4D5"
+        }
+      ]
+    }
+  ],
+  "rendererAlgorithmsUnchanged": true,
+  "performanceReport": "M7_REPORT.md",
+  "generalFpsImprovementEstablished": false,
+  "review": "m8-review.md",
+  "limitations": [
+    "Long authored paths beyond MAX_PATH are not fully supported",
+    "SDK uses current host exact GCC toolchain paths",
+    "Debug validation Unicode discovery depends on a usable short alias",
+    "Other hardware not certified",
+    "Raster shadow resolution/filter/bias artifacts remain"
+  ]
+}

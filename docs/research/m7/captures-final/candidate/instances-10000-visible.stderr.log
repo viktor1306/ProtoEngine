@@ -1,0 +1,6 @@
+[INFO] Vulkan 1.3; core + synchronization validation enabled
+[INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+[INFO] Swapchain 320x180; 2; 3 images
+[INFO] Swapchain 320x180; 0; 3 images
+[INFO] Scene GPU readback: geometry_pixels=134098 depth_probes=0
+[INFO] Vulkan resources released

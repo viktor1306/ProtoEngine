@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "sources": {
+    "cgltf": { "version": "1.15", "repository": "jkuhlmann/cgltf", "revision": "360db1a95480fe102ae9c69b27c5d101167ff5ba", "sha256": "ae52cc0ccb092793958735720e5b373b20463fefc36393e3e91c01e2287c8c6d" },
+    "stb": { "version": "2.30", "repository": "nothings/stb", "revision": "2c980bb59875b0d32144a71867fbdebb2f77cd20", "sha256": "8e59f72b0780690cda64726804269f638a3be77b9d1506ea95f443f7964bccf0" },
+    "mikktspace": { "version": "1.0", "repository": "mmikk/MikkTSpace", "revision": "3e895b49d05ea07e4c2133156cfa94369e19e409", "sha256": "0fd3d51f10dd521cfb72195c6fc8112fe935a48f7ed86c511f3b2b9ffebea45d" },
+    "glm": { "version": "1.0.3", "repository": "g-truc/glm", "revision": "8d1fd52e5ab5590e2c81768ace50c72bae28f2ed", "sha256": "3685779c341ed1c09a57ac038d119a735a63afb14f2365a24fbc3ffd31afe0db" },
+    "yyjson": { "version": "0.12.0", "repository": "ibireme/yyjson", "revision": "8b4a38dc994a110abaec8a400615567bd996105f", "sha256": "043d67e7b6230784c67102f0d5764db4bf7f81f6e5c13099a9bde2ae8af4913f" },
+    "glfw": { "version": "3.5.1", "repository": "glfw/glfw", "revision": "d9d6f0f1f967807ffade6598ea9a631ebaf37a56", "sha256": "0adf70be965af472c8b8d146d9c795c05510b6c1ef043df3451ac3e2656902e7" },
+    "imgui": { "version": "1.92.9b-docking", "repository": "ocornut/imgui", "revision": "b48d1afbe8ee8b238e2961dc363a949dd7304e23", "sha256": "21c822d9d4f3390baae2242da8711635e2349aecb239477264950ce035012686" },
+    "vulkan_headers": { "version": "1.4.357.0", "repository": "KhronosGroup/Vulkan-Headers", "revision": "e3b1eec08173d6b825cd3ac88c885a63b621504a", "sha256": "fdab38ab0077b491f387d8f0c53301c0005d6152f21973c32ed2c8fad00f625c" },
+    "volk": { "version": "1.4.357.0", "repository": "zeux/volk", "revision": "776893306c5d3b22b6185b5d4a258b81d94572bf", "sha256": "15c2783f46db3ebd1f86ca9f9c5e3344c450533ccf3262334d9589122872cda1" },
+    "vma": { "version": "3.4.0", "repository": "GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator", "revision": "3aa921224c154a0d2c43912bc88e1c42ce1f7607", "sha256": "eee11af6aa851cd64ad1be97ab125aa663516791240606b29ace4f7a9752491a" }
+  },
+  "tools": {
+    "glslang": { "version": "16.5.0", "url": "https://github.com/KhronosGroup/glslang/releases/download/16.5.0/glslang-16.5.0-windows-x86_64-release.zip", "sha256": "06b71298b750268c127f2ee7ae0ef7525e2068120c6c8a3a08b2f58ca6f325ce" },
+    "validation": { "version": "1.4.357.0", "url": "https://sdk.lunarg.com/sdk/download/1.4.357.0/windows/vulkan_sdk.exe", "sha256": "81f474711e9042f4cd22b31b2f7a8870db2e428b21586fb43dd80150be97310d", "distribution": "LunarG signed Windows x64 package; copy_only extraction, retain validation layer and notices only", "files": { "VkLayer_khronos_validation.dll": "9725ce7a9225f42f8961c433dacae4cc8fae3a16e95ef1d0a7c7e8bc09132c40", "VkLayer_khronos_validation.json": "20d3ef44fe96aa41fceefab2308892f9d4b346d23eebfe8b5e1690715f23f472" } }
+  },
+  "deferred_sources": {
+    "imguizmo": "18cef5e031d8c6973d80284c67f60549fafd78c1"
+  }
+}

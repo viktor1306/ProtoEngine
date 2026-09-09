@@ -1,0 +1,2241 @@
+{
+  "executable": "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\.cache\\m7-instrumented-baseline\\bin\\ProtoBenchmark.exe",
+  "executable_sha256": "FF205CA30DEC6D5FE856DE3FA1BBF2115DE2F48A3E29FFF2A77768E894A74ED6",
+  "arguments": [
+    "--scenario",
+    "instances-10000-visible",
+    "--warmup",
+    "2",
+    "--seconds",
+    "5",
+    "--output",
+    "C:\\Users\\buriak_vi\\Documents\\ChatGPT\\ProtoEngine\\docs\\research\\m7\\probe-1\\baseline\\instances-10000-visible-r1.json"
+  ],
+  "duration_ms": 7693.2566,
+  "exit_code": 0,
+  "process_cpu_seconds": 6.8125,
+  "before": {
+    "at": "2026-09-09T13:08:07.4996310+03:00",
+    "logical_processors": 16,
+    "power_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Збалансований)",
+    "processes": [
+      {
+        "pid": 1284,
+        "name": "adb",
+        "cpu_seconds": 50.015625
+      },
+      {
+        "pid": 25656,
+        "name": "AppActions",
+        "cpu_seconds": 0.6875
+      },
+      {
+        "pid": 30268,
+        "name": "ApplicationFrameHost",
+        "cpu_seconds": 0.796875
+      },
+      {
+        "pid": 19116,
+        "name": "audiodg",
+        "cpu_seconds": 3.515625
+      },
+      {
+        "pid": 22692,
+        "name": "backgroundTaskHost",
+        "cpu_seconds": 0.609375
+      },
+      {
+        "pid": 2032,
+        "name": "ChatGPT",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 2756,
+        "name": "ChatGPT",
+        "cpu_seconds": 2242.859375
+      },
+      {
+        "pid": 3692,
+        "name": "ChatGPT",
+        "cpu_seconds": 534.234375
+      },
+      {
+        "pid": 5896,
+        "name": "ChatGPT",
+        "cpu_seconds": 28.75
+      },
+      {
+        "pid": 7800,
+        "name": "ChatGPT",
+        "cpu_seconds": 6.765625
+      },
+      {
+        "pid": 8792,
+        "name": "ChatGPT",
+        "cpu_seconds": 6.5625
+      },
+      {
+        "pid": 10120,
+        "name": "ChatGPT",
+        "cpu_seconds": 17.390625
+      },
+      {
+        "pid": 13560,
+        "name": "ChatGPT",
+        "cpu_seconds": 9.765625
+      },
+      {
+        "pid": 16016,
+        "name": "ChatGPT",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 17056,
+        "name": "ChatGPT",
+        "cpu_seconds": 1.171875
+      },
+      {
+        "pid": 18196,
+        "name": "ChatGPT",
+        "cpu_seconds": 8.65625
+      },
+      {
+        "pid": 19592,
+        "name": "ChatGPT",
+        "cpu_seconds": 2077.4375
+      },
+      {
+        "pid": 20256,
+        "name": "ChatGPT",
+        "cpu_seconds": 39.96875
+      },
+      {
+        "pid": 21140,
+        "name": "ChatGPT",
+        "cpu_seconds": 46.6875
+      },
+      {
+        "pid": 26444,
+        "name": "ChatGPT",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 28896,
+        "name": "ChatGPT",
+        "cpu_seconds": 9.8125
+      },
+      {
+        "pid": 29364,
+        "name": "ChatGPT",
+        "cpu_seconds": 14.6875
+      },
+      {
+        "pid": 2088,
+        "name": "chrome",
+        "cpu_seconds": 2273.671875
+      },
+      {
+        "pid": 3272,
+        "name": "chrome",
+        "cpu_seconds": 309.671875
+      },
+      {
+        "pid": 3520,
+        "name": "chrome",
+        "cpu_seconds": 193.6875
+      },
+      {
+        "pid": 10264,
+        "name": "chrome",
+        "cpu_seconds": 2291.890625
+      },
+      {
+        "pid": 10376,
+        "name": "chrome",
+        "cpu_seconds": 0.546875
+      },
+      {
+        "pid": 11104,
+        "name": "chrome",
+        "cpu_seconds": 0.828125
+      },
+      {
+        "pid": 15020,
+        "name": "chrome",
+        "cpu_seconds": 45.09375
+      },
+      {
+        "pid": 16536,
+        "name": "chrome",
+        "cpu_seconds": 1769.421875
+      },
+      {
+        "pid": 16984,
+        "name": "chrome",
+        "cpu_seconds": 164.5625
+      },
+      {
+        "pid": 17508,
+        "name": "chrome",
+        "cpu_seconds": 1960.453125
+      },
+      {
+        "pid": 17556,
+        "name": "chrome",
+        "cpu_seconds": 0.34375
+      },
+      {
+        "pid": 17700,
+        "name": "chrome",
+        "cpu_seconds": 234.296875
+      },
+      {
+        "pid": 17968,
+        "name": "chrome",
+        "cpu_seconds": 1864.140625
+      },
+      {
+        "pid": 17984,
+        "name": "chrome",
+        "cpu_seconds": 574.40625
+      },
+      {
+        "pid": 18116,
+        "name": "chrome",
+        "cpu_seconds": 5.828125
+      },
+      {
+        "pid": 18384,
+        "name": "chrome",
+        "cpu_seconds": 11.15625
+      },
+      {
+        "pid": 18408,
+        "name": "chrome",
+        "cpu_seconds": 22.765625
+      },
+      {
+        "pid": 18796,
+        "name": "chrome",
+        "cpu_seconds": 333.78125
+      },
+      {
+        "pid": 19000,
+        "name": "chrome",
+        "cpu_seconds": 4.78125
+      },
+      {
+        "pid": 19228,
+        "name": "chrome",
+        "cpu_seconds": 1.859375
+      },
+      {
+        "pid": 19384,
+        "name": "chrome",
+        "cpu_seconds": 2.28125
+      },
+      {
+        "pid": 19876,
+        "name": "chrome",
+        "cpu_seconds": 114.15625
+      },
+      {
+        "pid": 19920,
+        "name": "chrome",
+        "cpu_seconds": 89.671875
+      },
+      {
+        "pid": 20036,
+        "name": "chrome",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 20816,
+        "name": "chrome",
+        "cpu_seconds": 21.421875
+      },
+      {
+        "pid": 20976,
+        "name": "chrome",
+        "cpu_seconds": 1.453125
+      },
+      {
+        "pid": 21388,
+        "name": "chrome",
+        "cpu_seconds": 1750.015625
+      },
+      {
+        "pid": 21600,
+        "name": "chrome",
+        "cpu_seconds": 2174.28125
+      },
+      {
+        "pid": 21688,
+        "name": "chrome",
+        "cpu_seconds": 359.609375
+      },
+      {
+        "pid": 22004,
+        "name": "chrome",
+        "cpu_seconds": 0.703125
+      },
+      {
+        "pid": 22116,
+        "name": "chrome",
+        "cpu_seconds": 33.125
+      },
+      {
+        "pid": 22184,
+        "name": "chrome",
+        "cpu_seconds": 1847.15625
+      },
+      {
+        "pid": 22732,
+        "name": "chrome",
+        "cpu_seconds": 96.546875
+      },
+      {
+        "pid": 23120,
+        "name": "chrome",
+        "cpu_seconds": 583.71875
+      },
+      {
+        "pid": 23412,
+        "name": "chrome",
+        "cpu_seconds": 578.625
+      },
+      {
+        "pid": 1528,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 5744,
+        "name": "cmd",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 7096,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 9764,
+        "name": "cmd",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 10632,
+        "name": "cmd",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 15340,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 18344,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 18440,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 18488,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 18916,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 19648,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 23096,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 26100,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 26568,
+        "name": "cmd",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 27996,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 17380,
+        "name": "CMFNSS6",
+        "cpu_seconds": 15.671875
+      },
+      {
+        "pid": 964,
+        "name": "codex",
+        "cpu_seconds": 4.8125
+      },
+      {
+        "pid": 10288,
+        "name": "codex",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 15196,
+        "name": "codex",
+        "cpu_seconds": 862.125
+      },
+      {
+        "pid": 15348,
+        "name": "codex",
+        "cpu_seconds": 0.859375
+      },
+      {
+        "pid": 24424,
+        "name": "codex",
+        "cpu_seconds": 0.34375
+      },
+      {
+        "pid": 26020,
+        "name": "codex",
+        "cpu_seconds": 2.78125
+      },
+      {
+        "pid": 26272,
+        "name": "codex",
+        "cpu_seconds": 0.625
+      },
+      {
+        "pid": 29052,
+        "name": "codex",
+        "cpu_seconds": 0.203125
+      },
+      {
+        "pid": 6116,
+        "name": "codex-code-mode-host",
+        "cpu_seconds": 10.421875
+      },
+      {
+        "pid": 10332,
+        "name": "com.docker.backend",
+        "cpu_seconds": 4.203125
+      },
+      {
+        "pid": 26052,
+        "name": "com.docker.backend",
+        "cpu_seconds": 64.65625
+      },
+      {
+        "pid": 14432,
+        "name": "com.docker.build",
+        "cpu_seconds": 1.453125
+      },
+      {
+        "pid": 464,
+        "name": "conhost",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 10004,
+        "name": "conhost",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 12732,
+        "name": "conhost",
+        "cpu_seconds": 0.328125
+      },
+      {
+        "pid": 14104,
+        "name": "conhost",
+        "cpu_seconds": 1.078125
+      },
+      {
+        "pid": 14468,
+        "name": "conhost",
+        "cpu_seconds": 12.4375
+      },
+      {
+        "pid": 17244,
+        "name": "conhost",
+        "cpu_seconds": 0.1875
+      },
+      {
+        "pid": 17668,
+        "name": "conhost",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 20784,
+        "name": "conhost",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 22688,
+        "name": "conhost",
+        "cpu_seconds": 0.15625
+      },
+      {
+        "pid": 26468,
+        "name": "conhost",
+        "cpu_seconds": 0.625
+      },
+      {
+        "pid": 26700,
+        "name": "conhost",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 31056,
+        "name": "conhost",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 31472,
+        "name": "conhost",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 21100,
+        "name": "crashpad_handler",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 1544,
+        "name": "CrossDeviceResume",
+        "cpu_seconds": 0.90625
+      },
+      {
+        "pid": 17036,
+        "name": "ctfmon",
+        "cpu_seconds": 28.21875
+      },
+      {
+        "pid": 16076,
+        "name": "dbeaver",
+        "cpu_seconds": 170.578125
+      },
+      {
+        "pid": 5760,
+        "name": "Docker Desktop",
+        "cpu_seconds": 0.84375
+      },
+      {
+        "pid": 7496,
+        "name": "Docker Desktop",
+        "cpu_seconds": 31.328125
+      },
+      {
+        "pid": 26204,
+        "name": "Docker Desktop",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 26972,
+        "name": "Docker Desktop",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 28300,
+        "name": "Docker Desktop",
+        "cpu_seconds": 2.015625
+      },
+      {
+        "pid": 17312,
+        "name": "eguiProxy",
+        "cpu_seconds": 3.46875
+      },
+      {
+        "pid": 13396,
+        "name": "EnergyHubAuthHelper",
+        "cpu_seconds": 2.203125
+      },
+      {
+        "pid": 16676,
+        "name": "EnergyHubAuthHelper",
+        "cpu_seconds": 5.21875
+      },
+      {
+        "pid": 12756,
+        "name": "explorer",
+        "cpu_seconds": 153.96875
+      },
+      {
+        "pid": 18552,
+        "name": "extension-host",
+        "cpu_seconds": 0.625
+      },
+      {
+        "pid": 28200,
+        "name": "FMAudioMonitor",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 28928,
+        "name": "FMToastNotification",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 11448,
+        "name": "ipf_helper",
+        "cpu_seconds": 0.71875
+      },
+      {
+        "pid": 10080,
+        "name": "java",
+        "cpu_seconds": 129.484375
+      },
+      {
+        "pid": 6364,
+        "name": "Lightshot",
+        "cpu_seconds": 5.984375
+      },
+      {
+        "pid": 28136,
+        "name": "LockApp",
+        "cpu_seconds": 0.96875
+      },
+      {
+        "pid": 1032,
+        "name": "msedgewebview2",
+        "cpu_seconds": 7.6875
+      },
+      {
+        "pid": 1548,
+        "name": "msedgewebview2",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 4832,
+        "name": "msedgewebview2",
+        "cpu_seconds": 1.0625
+      },
+      {
+        "pid": 5348,
+        "name": "msedgewebview2",
+        "cpu_seconds": 5.875
+      },
+      {
+        "pid": 11824,
+        "name": "msedgewebview2",
+        "cpu_seconds": 3.515625
+      },
+      {
+        "pid": 11916,
+        "name": "msedgewebview2",
+        "cpu_seconds": 0.1875
+      },
+      {
+        "pid": 14544,
+        "name": "msedgewebview2",
+        "cpu_seconds": 59.625
+      },
+      {
+        "pid": 14996,
+        "name": "msedgewebview2",
+        "cpu_seconds": 7.296875
+      },
+      {
+        "pid": 15416,
+        "name": "msedgewebview2",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 16156,
+        "name": "msedgewebview2",
+        "cpu_seconds": 1.28125
+      },
+      {
+        "pid": 16180,
+        "name": "msedgewebview2",
+        "cpu_seconds": 1.90625
+      },
+      {
+        "pid": 16272,
+        "name": "msedgewebview2",
+        "cpu_seconds": 0.15625
+      },
+      {
+        "pid": 2844,
+        "name": "node",
+        "cpu_seconds": 0.671875
+      },
+      {
+        "pid": 5464,
+        "name": "node",
+        "cpu_seconds": 0.25
+      },
+      {
+        "pid": 6196,
+        "name": "node",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 7128,
+        "name": "node",
+        "cpu_seconds": 0.53125
+      },
+      {
+        "pid": 7564,
+        "name": "node",
+        "cpu_seconds": 7.53125
+      },
+      {
+        "pid": 8144,
+        "name": "node",
+        "cpu_seconds": 20.90625
+      },
+      {
+        "pid": 8468,
+        "name": "node",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 10364,
+        "name": "node",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 12132,
+        "name": "node",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 13668,
+        "name": "node",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 14592,
+        "name": "node",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 14616,
+        "name": "node",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 15616,
+        "name": "node",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 15924,
+        "name": "node",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 16088,
+        "name": "node",
+        "cpu_seconds": 0.71875
+      },
+      {
+        "pid": 17516,
+        "name": "node",
+        "cpu_seconds": 0.171875
+      },
+      {
+        "pid": 18880,
+        "name": "node",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 21816,
+        "name": "node",
+        "cpu_seconds": 0.3125
+      },
+      {
+        "pid": 22700,
+        "name": "node",
+        "cpu_seconds": 0.75
+      },
+      {
+        "pid": 23252,
+        "name": "node",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 23488,
+        "name": "node",
+        "cpu_seconds": 2.390625
+      },
+      {
+        "pid": 23820,
+        "name": "node",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 23956,
+        "name": "node",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 24276,
+        "name": "node",
+        "cpu_seconds": 0.578125
+      },
+      {
+        "pid": 24444,
+        "name": "node",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 24732,
+        "name": "node",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 26476,
+        "name": "node",
+        "cpu_seconds": 0.640625
+      },
+      {
+        "pid": 26528,
+        "name": "node",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 26680,
+        "name": "node",
+        "cpu_seconds": 0.375
+      },
+      {
+        "pid": 26784,
+        "name": "node",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 26844,
+        "name": "node",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 27204,
+        "name": "node",
+        "cpu_seconds": 0.40625
+      },
+      {
+        "pid": 27468,
+        "name": "node",
+        "cpu_seconds": 0.484375
+      },
+      {
+        "pid": 28304,
+        "name": "node",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 28968,
+        "name": "node",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 29028,
+        "name": "node",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 29956,
+        "name": "node",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 30160,
+        "name": "node",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 31072,
+        "name": "node",
+        "cpu_seconds": 0.28125
+      },
+      {
+        "pid": 8020,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 8568,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 9476,
+        "name": "node_repl",
+        "cpu_seconds": 3.84375
+      },
+      {
+        "pid": 10636,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 13348,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 14192,
+        "name": "node_repl",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 16188,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 20632,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 22248,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 23596,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 24232,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 24724,
+        "name": "node_repl",
+        "cpu_seconds": 1.734375
+      },
+      {
+        "pid": 24768,
+        "name": "node_repl",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 25956,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 26448,
+        "name": "node_repl",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 26864,
+        "name": "node_repl",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 27880,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 29304,
+        "name": "node_repl",
+        "cpu_seconds": 0.375
+      },
+      {
+        "pid": 30504,
+        "name": "node_repl",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 31048,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 9472,
+        "name": "powershell",
+        "cpu_seconds": 1.125
+      },
+      {
+        "pid": 13472,
+        "name": "powershell",
+        "cpu_seconds": 4.53125
+      },
+      {
+        "pid": 17656,
+        "name": "powershell",
+        "cpu_seconds": 2.75
+      },
+      {
+        "pid": 19136,
+        "name": "powershell",
+        "cpu_seconds": 4.171875
+      },
+      {
+        "pid": 30660,
+        "name": "powershell",
+        "cpu_seconds": 3.359375
+      },
+      {
+        "pid": 21132,
+        "name": "pwsh",
+        "cpu_seconds": 0.75
+      },
+      {
+        "pid": 22044,
+        "name": "py",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 17232,
+        "name": "python",
+        "cpu_seconds": 7.296875
+      },
+      {
+        "pid": 25196,
+        "name": "python",
+        "cpu_seconds": 5.046875
+      },
+      {
+        "pid": 11876,
+        "name": "rundll32",
+        "cpu_seconds": 0.15625
+      },
+      {
+        "pid": 5352,
+        "name": "RuntimeBroker",
+        "cpu_seconds": 0.46875
+      },
+      {
+        "pid": 8016,
+        "name": "RuntimeBroker",
+        "cpu_seconds": 0.25
+      },
+      {
+        "pid": 14184,
+        "name": "RuntimeBroker",
+        "cpu_seconds": 2.34375
+      },
+      {
+        "pid": 28420,
+        "name": "RuntimeBroker",
+        "cpu_seconds": 0.859375
+      },
+      {
+        "pid": 14248,
+        "name": "SearchHost",
+        "cpu_seconds": 5.078125
+      },
+      {
+        "pid": 15296,
+        "name": "ShellExperienceHost",
+        "cpu_seconds": 3.171875
+      },
+      {
+        "pid": 22460,
+        "name": "ShellHost",
+        "cpu_seconds": 0.171875
+      },
+      {
+        "pid": 12176,
+        "name": "sihost",
+        "cpu_seconds": 11.375
+      },
+      {
+        "pid": 31464,
+        "name": "ssh",
+        "cpu_seconds": 1.078125
+      },
+      {
+        "pid": 14256,
+        "name": "StartMenuExperienceHost",
+        "cpu_seconds": 9.890625
+      },
+      {
+        "pid": 11328,
+        "name": "svchost",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 11656,
+        "name": "svchost",
+        "cpu_seconds": 2.984375
+      },
+      {
+        "pid": 12244,
+        "name": "svchost",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 13720,
+        "name": "svchost",
+        "cpu_seconds": 3.125
+      },
+      {
+        "pid": 14356,
+        "name": "svchost",
+        "cpu_seconds": 0.921875
+      },
+      {
+        "pid": 18504,
+        "name": "svchost",
+        "cpu_seconds": 0.5625
+      },
+      {
+        "pid": 20244,
+        "name": "svchost",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 9484,
+        "name": "tailscale-ipn",
+        "cpu_seconds": 9.453125
+      },
+      {
+        "pid": 11996,
+        "name": "taskhostw",
+        "cpu_seconds": 1.921875
+      },
+      {
+        "pid": 13800,
+        "name": "TeamViewer",
+        "cpu_seconds": 291.546875
+      },
+      {
+        "pid": 21044,
+        "name": "Telegram",
+        "cpu_seconds": 221.546875
+      },
+      {
+        "pid": 16800,
+        "name": "TextInputHost",
+        "cpu_seconds": 23.453125
+      }
+    ]
+  },
+  "after": {
+    "at": "2026-09-09T13:08:15.1940090+03:00",
+    "logical_processors": 16,
+    "power_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Збалансований)",
+    "processes": [
+      {
+        "pid": 1284,
+        "name": "adb",
+        "cpu_seconds": 50.015625
+      },
+      {
+        "pid": 25656,
+        "name": "AppActions",
+        "cpu_seconds": 0.6875
+      },
+      {
+        "pid": 30268,
+        "name": "ApplicationFrameHost",
+        "cpu_seconds": 0.796875
+      },
+      {
+        "pid": 19116,
+        "name": "audiodg",
+        "cpu_seconds": 3.515625
+      },
+      {
+        "pid": 22692,
+        "name": "backgroundTaskHost",
+        "cpu_seconds": 0.609375
+      },
+      {
+        "pid": 2032,
+        "name": "ChatGPT",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 2756,
+        "name": "ChatGPT",
+        "cpu_seconds": 2243.59375
+      },
+      {
+        "pid": 3692,
+        "name": "ChatGPT",
+        "cpu_seconds": 534.578125
+      },
+      {
+        "pid": 5896,
+        "name": "ChatGPT",
+        "cpu_seconds": 28.765625
+      },
+      {
+        "pid": 7800,
+        "name": "ChatGPT",
+        "cpu_seconds": 6.765625
+      },
+      {
+        "pid": 8792,
+        "name": "ChatGPT",
+        "cpu_seconds": 6.5625
+      },
+      {
+        "pid": 10120,
+        "name": "ChatGPT",
+        "cpu_seconds": 17.390625
+      },
+      {
+        "pid": 13560,
+        "name": "ChatGPT",
+        "cpu_seconds": 9.796875
+      },
+      {
+        "pid": 16016,
+        "name": "ChatGPT",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 17056,
+        "name": "ChatGPT",
+        "cpu_seconds": 1.171875
+      },
+      {
+        "pid": 18196,
+        "name": "ChatGPT",
+        "cpu_seconds": 8.65625
+      },
+      {
+        "pid": 19592,
+        "name": "ChatGPT",
+        "cpu_seconds": 2078.34375
+      },
+      {
+        "pid": 20256,
+        "name": "ChatGPT",
+        "cpu_seconds": 39.96875
+      },
+      {
+        "pid": 21140,
+        "name": "ChatGPT",
+        "cpu_seconds": 46.703125
+      },
+      {
+        "pid": 26444,
+        "name": "ChatGPT",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 28896,
+        "name": "ChatGPT",
+        "cpu_seconds": 9.8125
+      },
+      {
+        "pid": 29364,
+        "name": "ChatGPT",
+        "cpu_seconds": 14.6875
+      },
+      {
+        "pid": 2088,
+        "name": "chrome",
+        "cpu_seconds": 2275.265625
+      },
+      {
+        "pid": 3272,
+        "name": "chrome",
+        "cpu_seconds": 309.9375
+      },
+      {
+        "pid": 3520,
+        "name": "chrome",
+        "cpu_seconds": 193.6875
+      },
+      {
+        "pid": 10264,
+        "name": "chrome",
+        "cpu_seconds": 2293.640625
+      },
+      {
+        "pid": 10376,
+        "name": "chrome",
+        "cpu_seconds": 0.546875
+      },
+      {
+        "pid": 11104,
+        "name": "chrome",
+        "cpu_seconds": 0.828125
+      },
+      {
+        "pid": 15020,
+        "name": "chrome",
+        "cpu_seconds": 45.09375
+      },
+      {
+        "pid": 16536,
+        "name": "chrome",
+        "cpu_seconds": 1771.015625
+      },
+      {
+        "pid": 16984,
+        "name": "chrome",
+        "cpu_seconds": 164.78125
+      },
+      {
+        "pid": 17508,
+        "name": "chrome",
+        "cpu_seconds": 1962.046875
+      },
+      {
+        "pid": 17556,
+        "name": "chrome",
+        "cpu_seconds": 0.34375
+      },
+      {
+        "pid": 17700,
+        "name": "chrome",
+        "cpu_seconds": 234.71875
+      },
+      {
+        "pid": 17968,
+        "name": "chrome",
+        "cpu_seconds": 1865.578125
+      },
+      {
+        "pid": 17984,
+        "name": "chrome",
+        "cpu_seconds": 575.0625
+      },
+      {
+        "pid": 18116,
+        "name": "chrome",
+        "cpu_seconds": 5.828125
+      },
+      {
+        "pid": 18384,
+        "name": "chrome",
+        "cpu_seconds": 11.15625
+      },
+      {
+        "pid": 18408,
+        "name": "chrome",
+        "cpu_seconds": 22.765625
+      },
+      {
+        "pid": 18796,
+        "name": "chrome",
+        "cpu_seconds": 333.78125
+      },
+      {
+        "pid": 19000,
+        "name": "chrome",
+        "cpu_seconds": 4.78125
+      },
+      {
+        "pid": 19228,
+        "name": "chrome",
+        "cpu_seconds": 1.859375
+      },
+      {
+        "pid": 19384,
+        "name": "chrome",
+        "cpu_seconds": 2.28125
+      },
+      {
+        "pid": 19876,
+        "name": "chrome",
+        "cpu_seconds": 114.15625
+      },
+      {
+        "pid": 19920,
+        "name": "chrome",
+        "cpu_seconds": 89.671875
+      },
+      {
+        "pid": 20036,
+        "name": "chrome",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 20816,
+        "name": "chrome",
+        "cpu_seconds": 21.421875
+      },
+      {
+        "pid": 20976,
+        "name": "chrome",
+        "cpu_seconds": 1.453125
+      },
+      {
+        "pid": 21388,
+        "name": "chrome",
+        "cpu_seconds": 1750.5
+      },
+      {
+        "pid": 21600,
+        "name": "chrome",
+        "cpu_seconds": 2175.8125
+      },
+      {
+        "pid": 21688,
+        "name": "chrome",
+        "cpu_seconds": 359.78125
+      },
+      {
+        "pid": 22004,
+        "name": "chrome",
+        "cpu_seconds": 0.703125
+      },
+      {
+        "pid": 22116,
+        "name": "chrome",
+        "cpu_seconds": 33.3125
+      },
+      {
+        "pid": 22184,
+        "name": "chrome",
+        "cpu_seconds": 1848.4375
+      },
+      {
+        "pid": 22732,
+        "name": "chrome",
+        "cpu_seconds": 96.78125
+      },
+      {
+        "pid": 23120,
+        "name": "chrome",
+        "cpu_seconds": 584.59375
+      },
+      {
+        "pid": 23412,
+        "name": "chrome",
+        "cpu_seconds": 579.75
+      },
+      {
+        "pid": 1528,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 5744,
+        "name": "cmd",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 7096,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 9764,
+        "name": "cmd",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 10632,
+        "name": "cmd",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 15340,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 18344,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 18440,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 18488,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 18916,
+        "name": "cmd",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 19648,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 23096,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 26100,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 26568,
+        "name": "cmd",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 27996,
+        "name": "cmd",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 17380,
+        "name": "CMFNSS6",
+        "cpu_seconds": 15.671875
+      },
+      {
+        "pid": 964,
+        "name": "codex",
+        "cpu_seconds": 4.8125
+      },
+      {
+        "pid": 10288,
+        "name": "codex",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 15196,
+        "name": "codex",
+        "cpu_seconds": 863.25
+      },
+      {
+        "pid": 15348,
+        "name": "codex",
+        "cpu_seconds": 0.859375
+      },
+      {
+        "pid": 24424,
+        "name": "codex",
+        "cpu_seconds": 0.34375
+      },
+      {
+        "pid": 26020,
+        "name": "codex",
+        "cpu_seconds": 2.78125
+      },
+      {
+        "pid": 26272,
+        "name": "codex",
+        "cpu_seconds": 0.625
+      },
+      {
+        "pid": 29052,
+        "name": "codex",
+        "cpu_seconds": 0.203125
+      },
+      {
+        "pid": 6116,
+        "name": "codex-code-mode-host",
+        "cpu_seconds": 10.4375
+      },
+      {
+        "pid": 10332,
+        "name": "com.docker.backend",
+        "cpu_seconds": 4.203125
+      },
+      {
+        "pid": 26052,
+        "name": "com.docker.backend",
+        "cpu_seconds": 64.6875
+      },
+      {
+        "pid": 14432,
+        "name": "com.docker.build",
+        "cpu_seconds": 1.453125
+      },
+      {
+        "pid": 464,
+        "name": "conhost",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 10004,
+        "name": "conhost",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 12732,
+        "name": "conhost",
+        "cpu_seconds": 0.328125
+      },
+      {
+        "pid": 14104,
+        "name": "conhost",
+        "cpu_seconds": 1.078125
+      },
+      {
+        "pid": 14468,
+        "name": "conhost",
+        "cpu_seconds": 12.453125
+      },
+      {
+        "pid": 17244,
+        "name": "conhost",
+        "cpu_seconds": 0.1875
+      },
+      {
+        "pid": 17668,
+        "name": "conhost",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 20784,
+        "name": "conhost",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 22688,
+        "name": "conhost",
+        "cpu_seconds": 0.15625
+      },
+      {
+        "pid": 26468,
+        "name": "conhost",
+        "cpu_seconds": 0.625
+      },
+      {
+        "pid": 26700,
+        "name": "conhost",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 31056,
+        "name": "conhost",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 31472,
+        "name": "conhost",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 21100,
+        "name": "crashpad_handler",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 1544,
+        "name": "CrossDeviceResume",
+        "cpu_seconds": 0.90625
+      },
+      {
+        "pid": 17036,
+        "name": "ctfmon",
+        "cpu_seconds": 28.234375
+      },
+      {
+        "pid": 16076,
+        "name": "dbeaver",
+        "cpu_seconds": 170.65625
+      },
+      {
+        "pid": 5760,
+        "name": "Docker Desktop",
+        "cpu_seconds": 0.84375
+      },
+      {
+        "pid": 7496,
+        "name": "Docker Desktop",
+        "cpu_seconds": 31.328125
+      },
+      {
+        "pid": 26204,
+        "name": "Docker Desktop",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 26972,
+        "name": "Docker Desktop",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 28300,
+        "name": "Docker Desktop",
+        "cpu_seconds": 2.015625
+      },
+      {
+        "pid": 17312,
+        "name": "eguiProxy",
+        "cpu_seconds": 3.46875
+      },
+      {
+        "pid": 13396,
+        "name": "EnergyHubAuthHelper",
+        "cpu_seconds": 2.203125
+      },
+      {
+        "pid": 16676,
+        "name": "EnergyHubAuthHelper",
+        "cpu_seconds": 5.21875
+      },
+      {
+        "pid": 12756,
+        "name": "explorer",
+        "cpu_seconds": 154.1875
+      },
+      {
+        "pid": 18552,
+        "name": "extension-host",
+        "cpu_seconds": 0.625
+      },
+      {
+        "pid": 28200,
+        "name": "FMAudioMonitor",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 28928,
+        "name": "FMToastNotification",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 11448,
+        "name": "ipf_helper",
+        "cpu_seconds": 0.71875
+      },
+      {
+        "pid": 10080,
+        "name": "java",
+        "cpu_seconds": 129.484375
+      },
+      {
+        "pid": 6364,
+        "name": "Lightshot",
+        "cpu_seconds": 5.984375
+      },
+      {
+        "pid": 28136,
+        "name": "LockApp",
+        "cpu_seconds": 0.96875
+      },
+      {
+        "pid": 1032,
+        "name": "msedgewebview2",
+        "cpu_seconds": 7.6875
+      },
+      {
+        "pid": 1548,
+        "name": "msedgewebview2",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 4832,
+        "name": "msedgewebview2",
+        "cpu_seconds": 1.0625
+      },
+      {
+        "pid": 5348,
+        "name": "msedgewebview2",
+        "cpu_seconds": 5.875
+      },
+      {
+        "pid": 11824,
+        "name": "msedgewebview2",
+        "cpu_seconds": 3.515625
+      },
+      {
+        "pid": 11916,
+        "name": "msedgewebview2",
+        "cpu_seconds": 0.1875
+      },
+      {
+        "pid": 14544,
+        "name": "msedgewebview2",
+        "cpu_seconds": 59.625
+      },
+      {
+        "pid": 14996,
+        "name": "msedgewebview2",
+        "cpu_seconds": 7.296875
+      },
+      {
+        "pid": 15416,
+        "name": "msedgewebview2",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 16156,
+        "name": "msedgewebview2",
+        "cpu_seconds": 1.28125
+      },
+      {
+        "pid": 16180,
+        "name": "msedgewebview2",
+        "cpu_seconds": 1.90625
+      },
+      {
+        "pid": 16272,
+        "name": "msedgewebview2",
+        "cpu_seconds": 0.15625
+      },
+      {
+        "pid": 2844,
+        "name": "node",
+        "cpu_seconds": 0.671875
+      },
+      {
+        "pid": 5464,
+        "name": "node",
+        "cpu_seconds": 0.25
+      },
+      {
+        "pid": 6196,
+        "name": "node",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 7128,
+        "name": "node",
+        "cpu_seconds": 0.53125
+      },
+      {
+        "pid": 7564,
+        "name": "node",
+        "cpu_seconds": 7.53125
+      },
+      {
+        "pid": 8144,
+        "name": "node",
+        "cpu_seconds": 21.15625
+      },
+      {
+        "pid": 8468,
+        "name": "node",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 10364,
+        "name": "node",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 12132,
+        "name": "node",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 13668,
+        "name": "node",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 14592,
+        "name": "node",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 14616,
+        "name": "node",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 15616,
+        "name": "node",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 15924,
+        "name": "node",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 16088,
+        "name": "node",
+        "cpu_seconds": 0.71875
+      },
+      {
+        "pid": 17516,
+        "name": "node",
+        "cpu_seconds": 0.171875
+      },
+      {
+        "pid": 18880,
+        "name": "node",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 21816,
+        "name": "node",
+        "cpu_seconds": 0.3125
+      },
+      {
+        "pid": 22700,
+        "name": "node",
+        "cpu_seconds": 0.75
+      },
+      {
+        "pid": 23252,
+        "name": "node",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 23488,
+        "name": "node",
+        "cpu_seconds": 2.390625
+      },
+      {
+        "pid": 23820,
+        "name": "node",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 23956,
+        "name": "node",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 24276,
+        "name": "node",
+        "cpu_seconds": 0.578125
+      },
+      {
+        "pid": 24444,
+        "name": "node",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 24732,
+        "name": "node",
+        "cpu_seconds": 0.078125
+      },
+      {
+        "pid": 26476,
+        "name": "node",
+        "cpu_seconds": 0.640625
+      },
+      {
+        "pid": 26528,
+        "name": "node",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 26680,
+        "name": "node",
+        "cpu_seconds": 0.375
+      },
+      {
+        "pid": 26784,
+        "name": "node",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 26844,
+        "name": "node",
+        "cpu_seconds": 0.125
+      },
+      {
+        "pid": 27204,
+        "name": "node",
+        "cpu_seconds": 0.40625
+      },
+      {
+        "pid": 27468,
+        "name": "node",
+        "cpu_seconds": 0.484375
+      },
+      {
+        "pid": 28304,
+        "name": "node",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 28968,
+        "name": "node",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 29028,
+        "name": "node",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 29956,
+        "name": "node",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 30160,
+        "name": "node",
+        "cpu_seconds": 0.109375
+      },
+      {
+        "pid": 31072,
+        "name": "node",
+        "cpu_seconds": 0.28125
+      },
+      {
+        "pid": 8020,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 8568,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 9476,
+        "name": "node_repl",
+        "cpu_seconds": 3.84375
+      },
+      {
+        "pid": 10636,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 13348,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 14192,
+        "name": "node_repl",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 16188,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 20632,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 22248,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 23596,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 24232,
+        "name": "node_repl",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 24724,
+        "name": "node_repl",
+        "cpu_seconds": 1.734375
+      },
+      {
+        "pid": 24768,
+        "name": "node_repl",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 25956,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 26448,
+        "name": "node_repl",
+        "cpu_seconds": 0.046875
+      },
+      {
+        "pid": 26864,
+        "name": "node_repl",
+        "cpu_seconds": 0.09375
+      },
+      {
+        "pid": 27880,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 29304,
+        "name": "node_repl",
+        "cpu_seconds": 0.375
+      },
+      {
+        "pid": 30504,
+        "name": "node_repl",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 31048,
+        "name": "node_repl",
+        "cpu_seconds": 0.03125
+      },
+      {
+        "pid": 9472,
+        "name": "powershell",
+        "cpu_seconds": 1.125
+      },
+      {
+        "pid": 13472,
+        "name": "powershell",
+        "cpu_seconds": 4.53125
+      },
+      {
+        "pid": 17656,
+        "name": "powershell",
+        "cpu_seconds": 2.75
+      },
+      {
+        "pid": 19136,
+        "name": "powershell",
+        "cpu_seconds": 4.171875
+      },
+      {
+        "pid": 30660,
+        "name": "powershell",
+        "cpu_seconds": 3.375
+      },
+      {
+        "pid": 21132,
+        "name": "pwsh",
+        "cpu_seconds": 0.8125
+      },
+      {
+        "pid": 22044,
+        "name": "py",
+        "cpu_seconds": 0.015625
+      },
+      {
+        "pid": 17232,
+        "name": "python",
+        "cpu_seconds": 7.296875
+      },
+      {
+        "pid": 25196,
+        "name": "python",
+        "cpu_seconds": 5.046875
+      },
+      {
+        "pid": 11876,
+        "name": "rundll32",
+        "cpu_seconds": 0.15625
+      },
+      {
+        "pid": 5352,
+        "name": "RuntimeBroker",
+        "cpu_seconds": 0.46875
+      },
+      {
+        "pid": 8016,
+        "name": "RuntimeBroker",
+        "cpu_seconds": 0.25
+      },
+      {
+        "pid": 14184,
+        "name": "RuntimeBroker",
+        "cpu_seconds": 2.34375
+      },
+      {
+        "pid": 28420,
+        "name": "RuntimeBroker",
+        "cpu_seconds": 0.859375
+      },
+      {
+        "pid": 14248,
+        "name": "SearchHost",
+        "cpu_seconds": 5.078125
+      },
+      {
+        "pid": 15296,
+        "name": "ShellExperienceHost",
+        "cpu_seconds": 3.171875
+      },
+      {
+        "pid": 22460,
+        "name": "ShellHost",
+        "cpu_seconds": 0.171875
+      },
+      {
+        "pid": 12176,
+        "name": "sihost",
+        "cpu_seconds": 11.375
+      },
+      {
+        "pid": 31464,
+        "name": "ssh",
+        "cpu_seconds": 1.078125
+      },
+      {
+        "pid": 14256,
+        "name": "StartMenuExperienceHost",
+        "cpu_seconds": 9.890625
+      },
+      {
+        "pid": 11328,
+        "name": "svchost",
+        "cpu_seconds": 0.140625
+      },
+      {
+        "pid": 11656,
+        "name": "svchost",
+        "cpu_seconds": 2.984375
+      },
+      {
+        "pid": 12244,
+        "name": "svchost",
+        "cpu_seconds": 0.296875
+      },
+      {
+        "pid": 13720,
+        "name": "svchost",
+        "cpu_seconds": 3.125
+      },
+      {
+        "pid": 14356,
+        "name": "svchost",
+        "cpu_seconds": 0.921875
+      },
+      {
+        "pid": 18504,
+        "name": "svchost",
+        "cpu_seconds": 0.5625
+      },
+      {
+        "pid": 20244,
+        "name": "svchost",
+        "cpu_seconds": 0.0625
+      },
+      {
+        "pid": 9484,
+        "name": "tailscale-ipn",
+        "cpu_seconds": 9.453125
+      },
+      {
+        "pid": 11996,
+        "name": "taskhostw",
+        "cpu_seconds": 1.921875
+      },
+      {
+        "pid": 13800,
+        "name": "TeamViewer",
+        "cpu_seconds": 291.640625
+      },
+      {
+        "pid": 21044,
+        "name": "Telegram",
+        "cpu_seconds": 221.546875
+      },
+      {
+        "pid": 16800,
+        "name": "TextInputHost",
+        "cpu_seconds": 23.484375
+      }
+    ]
+  }
+}

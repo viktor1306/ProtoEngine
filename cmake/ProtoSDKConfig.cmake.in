@@ -1,0 +1,44 @@
+get_filename_component(PROTO_SDK_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+set(PROTO_SDK_BUILD_ID "@PROTO_SDK_BUILD_ID@")
+set(PROTO_SDK_CONFIGURATION "@CMAKE_BUILD_TYPE@")
+if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(FATAL_ERROR "Proto SDK requires Windows x64 GCC.")
+endif()
+if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "@CMAKE_CXX_COMPILER_VERSION@")
+    message(FATAL_ERROR "Proto SDK compiler version mismatch.")
+endif()
+if(NOT CMAKE_BUILD_TYPE STREQUAL PROTO_SDK_CONFIGURATION)
+    message(FATAL_ERROR "Proto SDK configuration mismatch.")
+endif()
+if(NOT TARGET ProtoSDK::Runtime)
+    add_library(ProtoSDK::Runtime INTERFACE IMPORTED)
+    set(libraries "")
+    foreach(name proto_runtime proto_renderer proto_lighting_math proto_cooked proto_scene proto_assets_runtime proto_core proto_json proto_vma proto_volk glfw3)
+        list(APPEND libraries "${PROTO_SDK_ROOT}/lib/lib${name}.a")
+    endforeach()
+    set_target_properties(ProtoSDK::Runtime PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${PROTO_SDK_ROOT}/include"
+        INTERFACE_COMPILE_FEATURES cxx_std_20
+        INTERFACE_COMPILE_DEFINITIONS "WIN32_LEAN_AND_MEAN;NOMINMAX;UNICODE;_UNICODE"
+        INTERFACE_LINK_LIBRARIES "-Wl,--start-group;${libraries};-Wl,--end-group;windowscodecs;ole32;bcrypt;gdi32;user32;shell32;winmm;uuid")
+endif()
+function(proto_add_player target)
+    cmake_parse_arguments(PLAYER "" "" "SOURCES" ${ARGN})
+    if(NOT PLAYER_SOURCES)
+        message(FATAL_ERROR "proto_add_player needs SOURCES including RegisterProjectBehaviors.")
+    endif()
+    add_executable(${target} WIN32 "${PROTO_SDK_ROOT}/src/PlayerMain.cpp" ${PLAYER_SOURCES})
+    target_link_libraries(${target} PRIVATE ProtoSDK::Runtime)
+    target_link_options(${target} PRIVATE -municode -static -static-libgcc -static-libstdc++)
+    target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF CXX_SCAN_FOR_MODULES OFF)
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROTO_SDK_ROOT}/shaders" "$<TARGET_FILE_DIR:${target}>/shaders"
+        VERBATIM)
+    if(PROTO_SDK_CONFIGURATION STREQUAL "Debug")
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROTO_SDK_ROOT}/validation" "$<TARGET_FILE_DIR:${target}>/validation"
+            VERBATIM)
+    endif()
+endfunction()

@@ -1,0 +1,12 @@
+{
+  "format":"proto.project",
+  "formatVersion":1,
+  "projectId":"67aad6b4-8574-4375-a1a1-d895b35ad89c",
+  "name":"Proto M8 Demo",
+  "engine":{"sdkVersion":"0.1","behaviorApiVersion":1},
+  "startupScene":"c6db67b8-02bc-49ea-9f2f-0226457a8c3f",
+  "contentRoots":["Assets","Scenes"],
+  "code":{"sourceRoot":"Code","registrationFile":"Code/Behaviors.cpp"},
+  "graphicsSettings":"Config/graphics.json",
+  "build":{"target":"windows-x64","name":"Proto M8 Demo","additionalAssets":[]}
+}

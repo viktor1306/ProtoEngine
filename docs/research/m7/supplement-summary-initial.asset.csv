@@ -1,0 +1,5 @@
+label,repeat,initial_import_ms,cooked_cold_load_ms,cooked_warm_load_ms,material_document_load_unload_ms,material_private_peak,cycle_private_peak,cycles_restored,weak_owners_expired,hashes_restored,ids_restored,cleanup_all,move_redo_first_ms,move_undo_first_ms,move_redo_again_ms,move_undo_final_ms,copy_redo_first_ms,copy_undo_first_ms,copy_redo_again_ms,copy_undo_final_ms
+baseline,1,95.134,76,26.099,240.966,20742144,10047488,true,true,true,true,true,88.983,87.156,88.1555,90.79849999999999,68.53049999999999,60.876999999999995,67.07900000000001,59.551500000000004
+baseline,2,106.768,86.164,28.98,259.197,20750336,10043392,true,true,true,true,true,93.251,89.8665,93.38900000000001,95.6035,69.47200000000001,62.8185,69.8865,62.269000000000005
+baseline,3,91.073,83.558,30.179,260.605,20770816,10072064,true,true,true,true,true,93.0555,96.5265,90.1525,89.97800000000001,67.5415,63.1075,67.5925,58.8065
+baseline,aggregate,95.134,83.558,28.98,259.197,20750336,10047488,true,true,true,true,true,93.0555,89.8665,90.1525,90.7985,68.5305,62.8185,67.5925,59.5515

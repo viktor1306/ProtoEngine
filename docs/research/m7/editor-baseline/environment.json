@@ -1,0 +1,20 @@
+{
+  "at": "2026-09-09T11:54:36.7888774+03:00",
+  "power_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Збалансований)",
+  "cpu": {
+    "Name": "Intel(R) Core(TM) Ultra 7 255H",
+    "NumberOfCores": 16,
+    "NumberOfLogicalProcessors": 16
+  },
+  "memory_bytes": 68111511552,
+  "gpu": {
+    "Name": "Intel(R) Arc(TM) 140T GPU (32GB)",
+    "DriverVersion": "32.0.101.8508",
+    "DriverDate": "2026-01-30T02:00:00+02:00"
+  },
+  "battery": {
+    "BatteryStatus": 2,
+    "EstimatedChargeRemaining": 99
+  },
+  "engine_processes": null
+}

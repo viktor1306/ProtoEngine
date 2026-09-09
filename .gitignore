@@ -1,14 +1,19 @@
-/bin/*.exe
-/bin/*.spv
-/obj/
-*.o
-
-# Local editor/runtime state
-.vscode/
+/build/
+/.cache/
+/out/
+/dist/
+/releases/
+/examples/**/Build/
+# Local credentials and developer configuration never belong in publication.
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+/CMakeUserPresets.json
+*.user
 imgui.ini
-/logs/
-log.txt
-log_*.txt
-run_out.txt
-build.log
-make_log.txt
+**/.proto/
+*.scene.json.bak
+*.gltf.meta.bak
+*.glb.meta.bak

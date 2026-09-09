@@ -1,0 +1,49 @@
+{
+  "milestone": "M4",
+  "verified": true,
+  "date": "2026-09-08",
+  "full_ctest": {
+    "release": 19,
+    "debug": 19
+  },
+  "contracts": {
+    "projects": 9,
+    "gizmo_math": 6,
+    "asset_plans": 14,
+    "documents": 11,
+    "files": 12
+  },
+  "followup_tests": {
+    "project_open_without_cache": "passed Debug and Release",
+    "unused_raw_copy_delete": "passed Debug and Release",
+    "scene_suffix_and_uppercase": "passed Debug and Release"
+  },
+  "native": {
+    "release": {
+      "gizmo_workflow": true,
+      "project_workflow": true,
+      "validation_errors": 0,
+      "validation_warnings": 0,
+      "validation_enabled": false
+    },
+    "debug": {
+      "gizmo_workflow": true,
+      "project_workflow": true,
+      "validation_errors": 0,
+      "validation_warnings": 0,
+      "validation_enabled": true
+    }
+  },
+  "binaries": {
+    "release": {
+      "bytes": 7981006,
+      "path": "build/m4-release/bin/ProtoEditor.exe",
+      "sha256": "31D827A9AEF2C1E22FC12AFD4042C62BB8DF55F0055C3A1BD80CD79991BD71F3"
+    },
+    "debug": {
+      "bytes": 67165354,
+      "path": "build/m4-debug/bin/ProtoEditor.exe",
+      "sha256": "CD3F559A20E84BC60F527CFDF526812515A2AA3ACC56A4CA78BDBFC810A751EE"
+    }
+  }
+}

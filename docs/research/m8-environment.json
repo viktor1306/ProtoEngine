@@ -1,0 +1,21 @@
+{
+  "captured": "2026-09-09T15:40:26.3483779+03:00",
+  "cpu": {
+    "Name": "Intel(R) Core(TM) Ultra 7 255H",
+    "NumberOfCores": 16,
+    "NumberOfLogicalProcessors": 16
+  },
+  "memory": {
+    "TotalPhysicalMemory": 68111511552
+  },
+  "gpu": {
+    "Name": "Intel(R) Arc(TM) 140T GPU (32GB)",
+    "DriverVersion": "32.0.101.8508",
+    "DriverDate": "2026-01-30T02:00:00+02:00"
+  },
+  "os": {
+    "Caption": "Майкрософт Windows 11 Pro",
+    "Version": "10.0.26200",
+    "BuildNumber": "26200"
+  }
+}

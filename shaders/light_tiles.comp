@@ -1,0 +1,47 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#define PROTO_TILE_WRITE
+#include "lighting.glsl"
+layout(local_size_x=16,local_size_y=16) in;
+shared uint nearBits,farBits;
+void main() {
+    uint lane=gl_LocalInvocationIndex;
+    if(lane==0){nearBits=floatBitsToUint(3.402823e38);farBits=0;}
+    barrier();
+    uvec2 pixel=gl_GlobalInvocationID.xy;
+    if(all(lessThan(pixel,frame.extent.xy))) {
+        float depth=texelFetch(mainDepth,ivec2(pixel),0).r;
+        if(depth<1) {
+            vec2 uv=(vec2(pixel)+.5)/vec2(frame.extent.xy);
+            vec4 world=frame.inverseVP*vec4(uv.x*2-1,1-uv.y*2,depth,1);world/=world.w;
+            float distance=-(frame.view*world).z;
+            if(distance>0){atomicMin(nearBits,floatBitsToUint(distance));atomicMax(farBits,floatBitsToUint(distance));}
+        }
+    }
+    barrier();
+    if(lane!=0)return;
+    uint at=(gl_WorkGroupID.y*frame.extent.z+gl_WorkGroupID.x)*frame.extent.w;
+    if(farBits==0){tileWords[at]=0;tileWords[at+1]=0;return;}
+    float near=uintBitsToFloat(nearBits),far=uintBitsToFloat(farBits);
+    vec2 low=vec2(gl_WorkGroupID.xy*16)/vec2(frame.extent.xy);
+    vec2 high=vec2(min(gl_WorkGroupID.xy*16+uvec2(16),frame.extent.xy))/vec2(frame.extent.xy);
+    vec2 x=vec2(low.x*2-1,high.x*2-1)*frame.camera.x;
+    vec2 y=vec2(1-high.y*2,1-low.y*2)*frame.camera.y;
+    vec3 minimum=vec3(min(x.x*near,x.x*far),min(y.x*near,y.x*far),near);
+    vec3 maximum=vec3(max(x.y*near,x.y*far),max(y.y*near,y.y*far),far);
+    // Quantization/reconstruction roundoff must only add candidates, never lose light.
+    float margin=max(.002,far*far*5e-7/max(frame.camera.z,.001))*(1+max(frame.camera.x,frame.camera.y));
+    minimum-=vec3(margin);maximum+=vec3(margin);
+    uint count=0;
+    for(uint i=0;i<pass.mode.z;++i) {
+        uint index=pass.mode.y+i;Light light=lights[index];bool includeLight=light.directionType.w<.5;
+        if(!includeLight) {
+            vec3 p=(frame.view*vec4(light.positionRadius.xyz,1)).xyz;p.z=-p.z;
+            vec3 delta=p-clamp(p,minimum,maximum);includeLight=dot(delta,delta)<=light.positionRadius.w*light.positionRadius.w;
+        }
+        if(includeLight){if(count<64)tileWords[at+2+count]=index;++count;}
+    }
+    tileWords[at]=count;tileWords[at+1]=count>64?1:0;
+    if(count>64)atomicAdd(overflowTiles,1);
+    atomicAdd(populatedTiles,1);
+}

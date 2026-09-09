@@ -1,0 +1,27 @@
+{
+  "format": "proto.project",
+  "formatVersion": 1,
+  "projectId": "4d3baf8a-cf2b-4d1b-a87f-9f0a4b8f2c61",
+  "name": "Proto Standalone",
+  "engine": {
+    "sdkVersion": "0.1",
+    "behaviorApiVersion": 1
+  },
+  "startupScene": "6c6b98fe-7d5f-4e42-a4f7-2dbfd6e92a10",
+  "contentRoots": [
+    "Assets",
+    "Scenes"
+  ],
+  "code": {
+    "sourceRoot": "Code",
+    "registrationFile": "Code/Behaviors.cpp"
+  },
+  "graphicsSettings": "Config/graphics.json",
+  "build": {
+    "target": "windows-x64",
+    "name": "Proto Standalone",
+    "additionalAssets": [
+      "9f21b5d0-7f62-4e93-a8b3-68d2c4f11022"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+30.951 ms [INFO] Native GLFW window created; per-monitor DPI requested
+57.222 ms [VULKAN LOADER] windows_read_data_files_in_registry: Registry lookup failed to get layer manifest files.
+85.269 ms [INFO] Vulkan 1.3; release validation disabled
+115.194 ms [INFO] GPU: Intel(R) Arc(TM) 140T GPU (32GB)
+146.679 ms [INFO] Swapchain 1700x1075; FIFO; 3 images
+1371.479 ms [TEST] PBR probe normal map actual=189.000000,189.000000,189.000000 expected=189.055969,189.055969,189.055969
+1371.519 ms [TEST] PBR probe mirrored double-sided normal actual=149.000000,149.000000,149.000000 expected=149.497147,149.497147,149.497147
+1371.531 ms [TEST] PBR probe flat reference actual=188.000000,188.000000,188.000000 expected=187.629105,187.629105,187.629105
+1371.549 ms [TEST] PBR probe double-sided back face actual=189.000000,189.000000,189.000000 expected=188.793030,188.793030,188.793030
+1371.633 ms [TEST] PBR probe packed MR channels actual=91.000000,85.000000,27.000000 expected=90.816521,84.640373,26.609741
+1371.692 ms [TEST] PBR probe MASK solid actual=80.000000,200.000000,120.000000 expected=80.000000,200.000000,120.000000
+1371.702 ms [TEST] PBR probe mirrored MASK solid actual=80.000000,200.000000,120.000000 expected=80.000000,200.000000,120.000000
+1371.712 ms [TEST] PBR probe JPEG and UV transform actual=0.000000,255.000000,1.000000 expected=0.000000,255.000000,0.000000
+1371.723 ms [TEST] PBR probe OPAQUE ignores texture alpha actual=80.000000,200.000000,120.000000 expected=80.000000,200.000000,120.000000
+1372.022 ms [INFO] Scene GPU readback: geometry_pixels=86680 depth_probes=11
+1400.693 ms [CPU MARKER] editor.ui mean_ms=0.368010
+1400.774 ms [CPU MARKER] renderer.submit_present mean_ms=10.733910
+1454.544 ms [INFO] Vulkan resources released
+1472.583 ms [INFO] Session completed successfully
